@@ -13,6 +13,8 @@ What the first working build does, how it is wired, and the shortcuts it takes. 
 - Probe: `ffprobe` once per file, 2 at a time, re-run only when size or mtime changes. Sidecar subtitles (`Movie.en.srt`, `.forced`, `.sdh`) are stored as extra subtitle streams.
 - Metadata: TMDB (v3 key or v4 token, set in Settings). Movies, shows, seasons and episodes get titles, summaries, ratings, genres and art. A lookup that finds nothing is not repeated; saving a new key retries every unmatched item.
 - Artwork: fetched from TMDB on first view, cached under `data/cache/images/<size>/`, served `immutable`.
+- Thumbnails: items without TMDB art show a video frame from `GET /api/items/{id}/thumb` (a show uses its first episode). One ffmpeg grab per file version at 15 % of the runtime (keyframe-only decode, full-decode retry), 640 px JPEG in `data/cache/thumbs/{file}-{mtime}.jpg`, 2 at a time. A failed grab leaves a `.fail` marker so it is never retried for that file version.
+- Home: hero carousel (continue watching, then newest titles), Continue Watching, and per library Recently Added Movies, New Episodes and Recently Added Shows rows.
 - Browse: home (Continue Watching, Recently Added per library), library grid with sort, show, season and episode pages, title search.
 - Playback: direct play, remux or transcode chosen per file and browser. Audio track switch, subtitle switch, resume, progress every 10 s, watched at 92 %, next episode on end.
 

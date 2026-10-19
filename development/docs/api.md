@@ -18,7 +18,7 @@ This is Kinema's own API. It is not Plex-compatible.
 | POST | `/libraries/{id}/scan` | Admin: rescan |
 | GET | `/libraries/{id}/items` | Top-level items with watch state |
 | GET | `/fs?path=` | Admin: folders on the server, for the folder picker |
-| GET | `/home` | Continue Watching and Recently Added per library |
+| GET | `/home` | `{continue_watching, shelves: [{library, kind: movies\|shows\|episodes, items}]}` |
 | GET | `/search?q=` | Title search |
 | GET | `/items/{id}` | Item, genres, files with streams, children, prev/next sibling |
 | PUT | `/items/{id}/progress` | `{position_s, watched?}` |
@@ -26,6 +26,7 @@ This is Kinema's own API. It is not Plex-compatible.
 | GET | `/stream/{id}?audio=&start=&hevc=&av1=` | Direct (Range) or fMP4 pipe, per the plan |
 | GET | `/subtitles/{stream_id}` | Text subtitle as WebVTT, cached |
 | GET | `/images/{size}/{name}` | TMDB art, cached |
+| GET | `/items/{id}/thumb` | Video frame JPEG for items without art, cached per file version |
 | GET | `/items/{id}/match?q=&year=` | Admin: TMDB candidates for a movie or show |
 | POST | `/items/{id}/match` | Admin: `{tmdb_id}`, replace the item's metadata with that result |
 | GET/PUT | `/settings` | Admin: `{tmdb_configured, ffmpeg_found}` / `{tmdb_api_key}` (verified before saving) |
