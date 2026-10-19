@@ -45,7 +45,7 @@ export function App() {
               <Route path="/library/:id" element={<LibraryPage />} />
               <Route path="/item/:id" element={<ItemPage />} />
               <Route path="/search" element={<SearchPage />} />
-              {user.is_admin && <Route path="/settings" element={<SettingsPage />} />}
+              {user.is_admin && <Route path="/settings/*" element={<SettingsPage />} />}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AppShell>

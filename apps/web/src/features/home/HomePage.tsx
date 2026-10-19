@@ -146,7 +146,7 @@ export function HomePage() {
         action={
           admin &&
           !scanning && (
-            <Link to="/settings">
+            <Link to="/settings/libraries">
               <Button variant="primary" icon={<Plus size={16} />}>
                 {t('library.add')}
               </Button>

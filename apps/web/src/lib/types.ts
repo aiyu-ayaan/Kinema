@@ -14,6 +14,7 @@ export interface Library {
   show_count: number
   roots: string[]
   scanning: boolean
+  generating_thumbnails: boolean
 }
 
 export type ItemKind = 'movie' | 'show' | 'season' | 'episode' | 'video'
@@ -85,6 +86,8 @@ export interface PlaybackPlan {
   audio: number | null
   /** Where the stream really starts (a seek point before the requested time); the player's time offset. */
   start: number
+  /** Subtitle stream id the server's language settings pick; applied on first load. */
+  subtitle: number | null
 }
 
 export interface MatchCandidate {
@@ -102,7 +105,57 @@ export interface DirListing {
   dirs: { name: string; path: string }[]
 }
 
-export interface ServerSettings {
+/** Admin-editable server options (backend `server_settings.rs`). */
+export interface ServerOptions {
+  server_name: string
+  watch_changes: boolean
+  thumbnails: boolean
+  thumbnail_position: number
+  metadata_language: string
+  preferred_audio_language: string
+  preferred_subtitle_language: string
+  subtitle_mode: 'off' | 'always' | 'foreign'
+  max_transcodes: number
+  transcode_preset: string
+  transcode_crf: number
+  transcode_max_height: number
+  rescan_hours: number
+}
+
+export interface SettingsView {
+  server: ServerOptions
   tmdb_configured: boolean
   ffmpeg_found: boolean
+  options: {
+    presets: string[]
+    max_heights: number[]
+    subtitle_modes: ServerOptions['subtitle_mode'][]
+    metadata_languages: string[]
+    track_languages: string[]
+  }
+}
+
+export interface ServerStatus {
+  name: string
+  version: string
+  uptime_s: number
+  ffmpeg: string | null
+  ffprobe: string | null
+  data_dir: string
+  listen: string
+  lan_urls: string[]
+  stats: { movies: number; shows: number; episodes: number; files: number; bytes: number; hours: number }
+  libraries: {
+    id: number
+    name: string
+    kind: LibraryKind
+    titles: number
+    files: number
+    thumbnails: number
+    scanning: boolean
+    generating_thumbnails: boolean
+  }[]
+  active_streams: number
+  active_transcodes: number
+  caches: { thumbnails: number; subtitles: number; images: number }
 }

@@ -4,12 +4,14 @@ import { ErrorText } from '@/components/ui/Card'
 import { Field } from '@/components/ui/Field'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
+import { useServerInfo } from '@/lib/queries'
 import { isDev } from '@/lib/flavor'
 import { t } from '@/lib/i18n'
 
 /** First run creates the administrator; afterwards it is the sign-in form. */
 export function AuthScreen() {
   const { needsSetup, signIn } = useAuth()
+  const { data: info } = useServerInfo()
   const setup = !!needsSetup
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
@@ -45,7 +47,7 @@ export function AuthScreen() {
       <div className="anim-enter relative w-full max-w-[380px]">
         <img src={isDev ? '/favicon-dev.svg' : '/favicon.svg'} alt="" className="h-10 w-10" />
         <h1 className="mt-6 text-page font-semibold tracking-[-0.01em]">{t(setup ? 'auth.setup.title' : 'auth.signIn.title')}</h1>
-        <p className="mt-1 text-body text-muted">{t(setup ? 'auth.setup.description' : 'auth.signIn.description')}</p>
+        <p className="mt-1 text-body text-muted">{setup ? t('auth.setup.description') : t('auth.signIn.description', { name: info?.name ?? t('app.name') })}</p>
         <form onSubmit={submit} className="mt-6 flex flex-col gap-4 rounded-lg border border-border bg-panel p-5 shadow-overlay">
           <Field label={t('auth.name')} autoComplete="username" required autoFocus value={name} onChange={(e) => setName(e.target.value)} />
           <Field

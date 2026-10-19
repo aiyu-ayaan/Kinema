@@ -7,7 +7,7 @@ import { useAuth, useIsAdmin } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { isDev } from '@/lib/flavor'
 import { t } from '@/lib/i18n'
-import { useLibraries } from '@/lib/queries'
+import { useLibraries, useServerInfo } from '@/lib/queries'
 import { setTheme, useTheme } from '@/lib/theme'
 import type { Library } from '@/lib/types'
 
@@ -148,6 +148,7 @@ function UserMenu() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  useServerInfo()
   const [drawer, setDrawer] = useState(false)
   const location = useLocation()
   useEffect(() => setDrawer(false), [location.pathname])

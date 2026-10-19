@@ -106,7 +106,8 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   const shellRef = useRef<HTMLDivElement>(null)
   const [plan, setPlan] = useState<PlaybackPlan | null>(null)
   const [src, setSrc] = useState<string | null>(null)
-  const [audio, setAudio] = useState<number | null>(() => (audios.find((a) => a.is_default) ?? audios[0])?.idx ?? null)
+  // null until the first plan: the server picks the track from the language settings.
+  const [audio, setAudio] = useState<number | null>(null)
   const [subId, setSubId] = useState<number | null>(null)
   const [cues, setCues] = useState<Cue[]>([])
   const [time, setTime] = useState(startAt)
@@ -125,6 +126,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   const pendingSeek = useRef<number | null>(null)
   const mode = useRef<PlaybackPlan['mode']>('direct')
   const watchedSent = useRef(false)
+  const planned = useRef(false)
 
   const absTime = useCallback(() => {
     const v = videoRef.current
@@ -139,6 +141,10 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
       setWaiting(true)
       try {
         const p = await api.plan(file.id, audioIdx, caps, at)
+        // Language settings pick the starting subtitle; later choices are the viewer's.
+        if (!planned.current && p.subtitle != null) setSubId(p.subtitle)
+        planned.current = true
+        setAudio(p.audio)
         setPlan(p)
         mode.current = p.mode
         if (p.mode === 'direct') {

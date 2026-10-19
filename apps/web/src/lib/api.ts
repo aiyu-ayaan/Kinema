@@ -8,7 +8,9 @@ import type {
   Library,
   LibraryKind,
   PlaybackPlan,
-  ServerSettings,
+  ServerOptions,
+  ServerStatus,
+  SettingsView,
   User,
 } from './types'
 
@@ -125,8 +127,13 @@ export const api = {
     return res.text()
   },
 
-  settings: () => request<ServerSettings>('GET', '/settings'),
-  saveSettings: (tmdb_api_key: string) => request<ServerSettings>('PUT', '/settings', { tmdb_api_key }),
+  settings: () => request<SettingsView>('GET', '/settings'),
+  saveServerSettings: (s: ServerOptions) => request<SettingsView>('PUT', '/settings/server', s),
+  saveTmdbKey: (tmdb_api_key: string) => request<SettingsView>('PUT', '/settings/tmdb', { tmdb_api_key }),
+  status: () => request<ServerStatus>('GET', '/server/status'),
+  clearCache: (kind: 'thumbnails' | 'subtitles' | 'images') => request<void>('POST', `/server/cache/${kind}/clear`),
+  regenerateThumbnails: (id: number) => request<void>('POST', `/libraries/${id}/thumbnails`),
+  matchMissing: (id: number) => request<void>('POST', `/libraries/${id}/match`),
 }
 
 /** Server-made video frame for an item without artwork (a show uses its first episode). */
