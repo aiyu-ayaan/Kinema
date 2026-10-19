@@ -29,6 +29,38 @@ Priorities: **near-zero idle CPU**, support for any media container and codec, a
 
 ---
 
+## Quick Install
+
+### Home Server (Linux x86_64 / aarch64)
+
+Installs the standalone server bundle (backend, web UI, bundled FFmpeg 8.1, systemd service in `/opt/kinema`, data in `/var/lib/kinema`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-server.sh | sudo sh
+# ... | sudo sh -s -- --port 32400       custom port (default 3000; auto-falls back if taken)
+# ... | sudo sh -s -- --channel beta     beta builds (or alpha)
+# ... | sudo sh -s -- --uninstall        remove service (database & libraries kept in /var/lib/kinema)
+```
+
+### Desktop App (Linux x86_64)
+
+Installs the desktop player for the current user (AppImage in `~/.local/share/kinema`, desktop menu entry with icon, and `kinema` command):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-desktop.sh | sh
+# ... | sh -s -- --channel beta          beta builds (or alpha)
+# ... | sh -s -- --uninstall             remove app (settings kept in ~/.config/Kinema)
+```
+
+### Docker Compose
+
+```bash
+wget https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/docker-compose.yml
+MEDIA_DIR=/path/to/media docker compose up -d
+```
+
+---
+
 ## Documentation
 
 Full design documents, architectural decisions, and roadmaps are tracked in [`development/docs`](development/docs):
