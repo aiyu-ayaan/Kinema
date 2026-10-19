@@ -103,6 +103,7 @@ struct Detail {
     genres: Vec<String>,
     files: Vec<FileView>,
     children: Vec<ItemCard>,
+    cast: Vec<items::CastMember>,
     /// Previous and next sibling, for episode navigation and autoplay.
     prev_id: Option<i64>,
     next_id: Option<i64>,
@@ -133,11 +134,13 @@ async fn detail(
             next_id = siblings.get(pos + 1).map(|s| s.id);
         }
     }
+    let cast = items::item_cast(db, id).await?;
     Ok(Json(Detail {
         genres: items::genres(db, id).await?,
         children: items::children(db, user.id, id).await?,
         files,
         item,
+        cast,
         prev_id,
         next_id,
     }))

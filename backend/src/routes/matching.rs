@@ -80,6 +80,17 @@ async fn apply(
             poster: image("w500", d.poster),
             backdrop: image("w1280", d.backdrop),
             genres: d.genres,
+            cast: Some(
+                d.cast
+                    .into_iter()
+                    .map(|c| items::CastMember {
+                        id: c.id,
+                        name: c.name,
+                        role: c.role,
+                        image: c.image,
+                    })
+                    .collect(),
+            ),
         },
     )
     .await?;

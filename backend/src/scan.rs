@@ -468,6 +468,17 @@ async fn fetch_metadata(state: &AppState, library_id: i64) -> anyhow::Result<()>
                     poster: image_key("w500", d.poster),
                     backdrop: image_key("w1280", d.backdrop),
                     genres: d.genres,
+                    cast: Some(
+                        d.cast
+                            .into_iter()
+                            .map(|c| items::CastMember {
+                                id: c.id,
+                                name: c.name,
+                                role: c.role,
+                                image: c.image,
+                            })
+                            .collect(),
+                    ),
                 };
                 items::save_meta(db, target.id, &meta).await?;
             }

@@ -9,7 +9,15 @@ const API: &str = "https://api.themoviedb.org/3";
 const IMAGES: &str = "https://image.tmdb.org/t/p";
 
 /// Image sizes the server asks TMDB for; also the allow-list for the image route.
-pub const IMAGE_SIZES: &[&str] = &["w300", "w500", "w780", "w1280"];
+pub const IMAGE_SIZES: &[&str] = &["w185", "w300", "w500", "w780", "w1280"];
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default, PartialEq, Eq)]
+pub struct CastMember {
+    pub id: i64,
+    pub name: String,
+    pub role: String,
+    pub image: Option<String>,
+}
 
 /// Metadata for a movie, show or episode. Images are TMDB paths like "/abc.jpg".
 #[derive(Debug, Clone, Default)]
@@ -23,6 +31,7 @@ pub struct Details {
     pub poster: Option<String>,
     pub backdrop: Option<String>,
     pub genres: Vec<String>,
+    pub cast: Vec<CastMember>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -79,6 +88,32 @@ struct Genre {
     name: String,
 }
 
+#[derive(Deserialize, Default)]
+struct RawCredits {
+    #[serde(default)]
+    cast: Vec<RawCast>,
+    #[serde(default)]
+    crew: Vec<RawCrew>,
+}
+
+#[derive(Deserialize)]
+struct RawCast {
+    id: i64,
+    name: String,
+    character: Option<String>,
+    profile_path: Option<String>,
+    #[serde(default)]
+    order: i64,
+}
+
+#[derive(Deserialize)]
+struct RawCrew {
+    id: i64,
+    name: String,
+    job: Option<String>,
+    profile_path: Option<String>,
+}
+
 #[derive(Deserialize)]
 struct RawDetails {
     id: i64,
@@ -93,6 +128,8 @@ struct RawDetails {
     backdrop_path: Option<String>,
     #[serde(default)]
     genres: Vec<Genre>,
+    #[serde(default)]
+    credits: Option<RawCredits>,
 }
 
 #[derive(Deserialize)]
@@ -230,7 +267,43 @@ impl TmdbClient {
     }
 
     async fn details(&self, path: &str) -> Result<Details, MetaError> {
-        let d: RawDetails = self.get(path, &[]).await?;
+        let d: RawDetails = self
+            .get(path, &[("append_to_response", "credits".to_string())])
+            .await?;
+        let mut cast = Vec::new();
+        if let Some(credits) = d.credits {
+            let mut raw_cast = credits.cast;
+            raw_cast.sort_by_key(|c| c.order);
+            for c in raw_cast.into_iter().take(20) {
+                cast.push(CastMember {
+                    id: c.id,
+                    name: c.name,
+                    role: c
+                        .character
+                        .filter(|s| !s.trim().is_empty())
+                        .unwrap_or_else(|| "Cast".to_string()),
+                    image: c
+                        .profile_path
+                        .map(|p| format!("w185/{}", p.trim_start_matches('/'))),
+                });
+            }
+            for cr in credits.crew {
+                let is_key_crew = matches!(
+                    cr.job.as_deref(),
+                    Some("Director" | "Series Director" | "Creator" | "Writer")
+                );
+                if is_key_crew && !cast.iter().any(|c| c.id == cr.id) {
+                    cast.push(CastMember {
+                        id: cr.id,
+                        name: cr.name,
+                        role: cr.job.unwrap_or_else(|| "Director".to_string()),
+                        image: cr
+                            .profile_path
+                            .map(|p| format!("w185/{}", p.trim_start_matches('/'))),
+                    });
+                }
+            }
+        }
         Ok(Details {
             tmdb_id: d.id,
             title: d.title.or(d.name).unwrap_or_default(),
@@ -241,6 +314,7 @@ impl TmdbClient {
             poster: d.poster_path,
             backdrop: d.backdrop_path,
             genres: d.genres.into_iter().map(|g| g.name).collect(),
+            cast,
         })
     }
 

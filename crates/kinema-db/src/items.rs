@@ -669,6 +669,14 @@ pub async fn mark_meta_tried(pool: &SqlitePool, id: i64) -> Result<(), DbError> 
     Ok(())
 }
 
+#[derive(Debug, Clone, Serialize, serde::Deserialize, Default, PartialEq, Eq)]
+pub struct CastMember {
+    pub id: i64,
+    pub name: String,
+    pub role: String,
+    pub image: Option<String>,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Meta {
     pub tmdb_id: Option<i64>,
@@ -680,10 +688,15 @@ pub struct Meta {
     pub poster: Option<String>,
     pub backdrop: Option<String>,
     pub genres: Vec<String>,
+    pub cast: Option<Vec<CastMember>>,
 }
 
 /// Fills metadata; `None` fields keep what the scanner found.
 pub async fn save_meta(pool: &SqlitePool, id: i64, m: &Meta) -> Result<(), DbError> {
+    let cast_json = m
+        .cast
+        .as_ref()
+        .and_then(|c| serde_json::to_string(c).ok());
     let mut tx = pool.begin().await?;
     sqlx::query(
         "UPDATE items SET
@@ -696,8 +709,9 @@ pub async fn save_meta(pool: &SqlitePool, id: i64, m: &Meta) -> Result<(), DbErr
            runtime_s = COALESCE(?8, runtime_s),
            poster = COALESCE(?9, poster),
            backdrop = COALESCE(?10, backdrop),
+           cast_json = COALESCE(?11, cast_json),
            meta_tried = 1,
-           updated_at = ?11
+           updated_at = ?12
          WHERE id = ?1",
     )
     .bind(id)
@@ -710,6 +724,7 @@ pub async fn save_meta(pool: &SqlitePool, id: i64, m: &Meta) -> Result<(), DbErr
     .bind(m.runtime_s)
     .bind(&m.poster)
     .bind(&m.backdrop)
+    .bind(cast_json)
     .bind(now())
     .execute(&mut *tx)
     .await?;
@@ -740,14 +755,14 @@ pub async fn clear_meta(pool: &SqlitePool, id: i64) -> Result<(), DbError> {
         .await?;
     sqlx::query(
         "UPDATE items SET tmdb_id = NULL, year = NULL, summary = NULL, rating = NULL,
-           runtime_s = NULL, poster = NULL, backdrop = NULL WHERE id = ?1",
+           runtime_s = NULL, poster = NULL, backdrop = NULL, cast_json = NULL WHERE id = ?1",
     )
     .bind(id)
     .execute(&mut *tx)
     .await?;
     sqlx::query(
         "UPDATE items SET meta_tried = 0, summary = NULL, rating = NULL, runtime_s = NULL,
-           poster = NULL, backdrop = NULL,
+           poster = NULL, backdrop = NULL, cast_json = NULL,
            title = CASE kind WHEN 'episode' THEN 'Episode ' || episode_no ELSE title END,
            sort_title = CASE kind WHEN 'episode' THEN 'episode ' || episode_no ELSE sort_title END
          WHERE parent_id = ?1 OR parent_id IN (SELECT id FROM items WHERE parent_id = ?1)",
@@ -757,6 +772,25 @@ pub async fn clear_meta(pool: &SqlitePool, id: i64) -> Result<(), DbError> {
     .await?;
     tx.commit().await?;
     Ok(())
+}
+
+/// Cast and crew for an item; episodes and seasons inherit from their parent show.
+pub async fn item_cast(pool: &SqlitePool, id: i64) -> Result<Vec<CastMember>, DbError> {
+    let row: Option<(Option<String>,)> = sqlx::query_as(
+        "SELECT COALESCE(i.cast_json, p.cast_json, g.cast_json)
+         FROM items i
+         LEFT JOIN items p ON p.id = i.parent_id
+         LEFT JOIN items g ON g.id = p.parent_id
+         WHERE i.id = ?1",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await?;
+
+    let Some((Some(json_str),)) = row else {
+        return Ok(Vec::new());
+    };
+    Ok(serde_json::from_str(&json_str).unwrap_or_default())
 }
 
 /// (id, season_no or episode_no) of an item's children.
