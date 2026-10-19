@@ -90,7 +90,7 @@ Browsers play only the first audio track of a file, so choosing another track sw
 
 ### Seek offset
 
-Stream copy can only start at a seek point (a keyframe, or a Matroska cue). The server asks ffprobe to perform the same seek ffmpeg will (including ffmpeg's 3/23 s back-off for B-frame video) and reports the first packet time as `start`. The player adds it to `currentTime`, so the seek bar and subtitles stay exact.
+Stream copy can only start at a seek point (a keyframe, or a Matroska cue). The server asks ffprobe to perform the same seek ffmpeg will (including ffmpeg's 3/23 s back-off for B-frame video) and reports the first packet time as `start`. The player adds it to `currentTime`, so the seek bar and subtitles stay exact. When video is copied but audio is re-encoded, ffmpeg runs with `-noaccurate_seek`: otherwise it trims the audio to the exact requested time while video starts at the earlier keyframe, and both begin at 0 out of sync.
 
 ### Subtitles
 
