@@ -127,6 +127,9 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   const mode = useRef<PlaybackPlan['mode']>('direct')
   const watchedSent = useRef(false)
   const planned = useRef(false)
+  /** Absolute time being sought to; timeupdates are ignored until it lands. */
+  const seekTarget = useRef<number | null>(null)
+  const loadSeq = useRef(0)
 
   const absTime = useCallback(() => {
     const v = videoRef.current
@@ -139,8 +142,14 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     async (audioIdx: number | null, at: number) => {
       setError(null)
       setWaiting(true)
+      // Show the target right away; the plan request can take a moment on big files.
+      setTime(at)
+      seekTarget.current = at
+      const seq = ++loadSeq.current
       try {
         const p = await api.plan(file.id, audioIdx, caps, at)
+        // A newer seek or track change started meanwhile: its answer wins.
+        if (seq !== loadSeq.current) return
         // Language settings pick the starting subtitle; later choices are the viewer's.
         if (!planned.current && p.subtitle != null) setSubId(p.subtitle)
         planned.current = true
@@ -157,8 +166,9 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
           pendingSeek.current = null
           setSrc(api.streamUrl(file.id, audioIdx, caps, at))
         }
-        setTime(at)
       } catch (e) {
+        if (seq !== loadSeq.current) return
+        seekTarget.current = null
         setError(e instanceof Error ? e.message : String(e))
       }
     },
@@ -177,6 +187,8 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
       if (!v) return
       const target = Math.max(0, duration ? Math.min(to, duration - 1) : to)
       if (mode.current === 'direct') {
+        seekTarget.current = target
+        setTime(target)
         v.currentTime = target
         return
       }
@@ -184,6 +196,8 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
       const local = target - offset.current
       for (let i = 0; i < v.buffered.length; i++) {
         if (local >= v.buffered.start(i) && local <= v.buffered.end(i)) {
+          seekTarget.current = target
+          setTime(target)
           v.currentTime = local
           return
         }
@@ -305,11 +319,18 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
         onClick={togglePlay}
         onDoubleClick={toggleFullscreen}
         onLoadedMetadata={(e) => {
+          // A new stream: remux/transcode seeks are done once it has loaded.
           if (pendingSeek.current) e.currentTarget.currentTime = pendingSeek.current
+          else seekTarget.current = null
           pendingSeek.current = null
           e.currentTarget.play().catch(() => {})
         }}
+        onSeeked={() => {
+          seekTarget.current = null
+        }}
         onTimeUpdate={() => {
+          // Until a seek lands, the old stream's clock must not pull the slider back.
+          if (seekTarget.current != null) return
           const now = absTime()
           setTime(now)
           if (!watchedSent.current && duration && now / duration > 0.92) {
@@ -334,6 +355,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
           if (detail.next_id) navigate(`/play/${detail.next_id}?t=0`, { replace: true })
         }}
         onError={() => {
+          seekTarget.current = null
           setWaiting(false)
           setError(t('player.error'))
         }}
@@ -419,12 +441,14 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
               style={{ ['--fill' as string]: fill }}
               aria-label={t('player.seek')}
               onChange={(e) => setScrub(Number(e.target.value))}
-              onPointerUp={() => {
-                if (scrub != null) seek(scrub)
+              onPointerUp={(e) => {
+                const target = Number(e.currentTarget.value)
+                seek(target)
                 setScrub(null)
               }}
-              onKeyUp={() => {
-                if (scrub != null) seek(scrub)
+              onKeyUp={(e) => {
+                const target = Number(e.currentTarget.value)
+                seek(target)
                 setScrub(null)
               }}
             />
