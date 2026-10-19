@@ -3,7 +3,6 @@ use axum::Router;
 use kinema_core::Config;
 use kinema_db::{init_pool, run_migrations};
 use std::collections::HashMap;
-use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::Semaphore;
@@ -39,7 +38,10 @@ async fn main() -> anyhow::Result<()> {
     let _ = rustls::crypto::ring::default_provider().install_default();
 
     // Load configuration
-    let config = Config::load().context("Failed to load configuration")?;
+    let mut config = Config::load().context("Failed to load configuration")?;
+    // Bound first, so discovery and the dashboard report the port actually in use.
+    let listener = bind(&config.server.host, config.server.port)?;
+    config.server.port = listener.local_addr()?.port();
     let config = Arc::new(config);
 
     // Ensure data directory exists
@@ -115,11 +117,20 @@ async fn main() -> anyhow::Result<()> {
     let candidates = [
         std::env::var("KINEMA_WEB_DIST").ok().map(PathBuf::from),
         Some(PathBuf::from("apps/web/dist")),
-        Some(manifest_dir.parent().unwrap_or(manifest_dir).join("apps/web/dist")),
+        Some(
+            manifest_dir
+                .parent()
+                .unwrap_or(manifest_dir)
+                .join("apps/web/dist"),
+        ),
         Some(PathBuf::from("../../apps/web/dist")),
         Some(PathBuf::from("../apps/web/dist")),
-        std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("web"))),
-        std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("../../apps/web/dist"))),
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("web"))),
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("../../apps/web/dist"))),
     ];
     let web_dist = candidates
         .into_iter()
@@ -135,21 +146,62 @@ async fn main() -> anyhow::Result<()> {
         warn!("No web UI build found (apps/web/dist). Web routes will return 404.");
     }
 
-    let addr: SocketAddr = format!("{}:{}", config.server.host, config.server.port)
-        .parse()
-        .context("Invalid server host or port")?;
-
+    let addr = listener.local_addr()?;
     if let Some((rustls, _)) = rustls {
         info!("Kinema server listening on https://{}", addr);
-        axum_server::bind_rustls(addr, rustls)
+        axum_server::from_tcp_rustls(listener, rustls)
             .serve(app.into_make_service())
             .await?;
     } else {
         warn!("TLS is off: traffic is unencrypted. Only do this behind a TLS-terminating proxy.");
         info!("Kinema server listening on http://{}", addr);
-        let listener = tokio::net::TcpListener::bind(&addr).await?;
-        axum::serve(listener, app).await?;
+        axum::serve(tokio::net::TcpListener::from_std(listener)?, app).await?;
     }
 
     Ok(())
+}
+
+/// How many ports after the configured one are tried when it is taken.
+const PORT_TRIES: u16 = 20;
+
+/// The configured port, or the next free one: another program on the port must not keep the
+/// server down. Apps find the real port through LAN discovery; the log and dashboard show it.
+fn bind(host: &str, port: u16) -> anyhow::Result<std::net::TcpListener> {
+    for p in port..=port.saturating_add(PORT_TRIES) {
+        match std::net::TcpListener::bind((host, p)) {
+            Ok(listener) => {
+                if p != port {
+                    warn!(
+                        "Port {port} is in use; using {p} instead. Set server.port in kinema.toml to choose another."
+                    );
+                }
+                listener.set_nonblocking(true)?;
+                return Ok(listener);
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => continue,
+            Err(e) => return Err(e).with_context(|| format!("Cannot listen on {host}:{p}")),
+        }
+    }
+    anyhow::bail!(
+        "Ports {port} to {} are all in use",
+        port.saturating_add(PORT_TRIES)
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::bind;
+
+    #[test]
+    fn taken_port_falls_back_to_the_next_free_one() {
+        let taken = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let port = taken.local_addr().unwrap().port();
+        let got = bind("127.0.0.1", port)
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
+        assert_ne!(got, port);
+        assert!(got > port && got <= port + super::PORT_TRIES);
+    }
 }
