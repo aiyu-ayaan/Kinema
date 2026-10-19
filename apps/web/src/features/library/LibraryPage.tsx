@@ -32,18 +32,45 @@ export function LibraryPage() {
     refetchInterval: library?.scanning ? 2500 : false,
   })
   const [sort, setSort] = useState<Sort>('title')
-  // ?type=movie|show: the sidebar's sub-entries of a library that holds both.
+  // ?type=movie|show: the sidebar's segregated entries of a library that holds both.
   const raw = useSearchParams()[0].get('type')
-  const type = raw === 'movie' || raw === 'show' ? raw : null
+  const mixed = Boolean(library && library.show_count > 0 && library.show_count < library.item_count)
+  const type =
+    raw === 'movie' || raw === 'show'
+      ? raw
+      : mixed
+        ? (library?.kind === 'show' ? 'show' : 'movie')
+        : null
   const sorted = useMemo(() => {
     const shown = (items ?? []).filter((i) => !type || (type === 'show' ? i.kind === 'show' : i.kind !== 'show'))
     return shown.sort(sorters[sort])
   }, [items, sort, type])
 
+  const title = useMemo(() => {
+    if (!library) return ''
+    if (!type) return library.name
+    const isMovieLib =
+      library.name.toLowerCase() === 'movies' ||
+      library.name.toLowerCase() === t('library.kind.movie').toLowerCase() ||
+      library.kind === 'movie'
+    const isShowLib =
+      library.name.toLowerCase() === 'tv shows' ||
+      library.name.toLowerCase() === t('library.kind.show').toLowerCase() ||
+      library.kind === 'show'
+
+    if (type === 'show') {
+      return isMovieLib ? t('library.kind.show') : `${library.name} · ${t('library.kind.show')}`
+    }
+    if (type === 'movie') {
+      return isShowLib ? t('library.kind.movie') : library.name
+    }
+    return library.name
+  }, [library, type])
+
   return (
     <div>
       <PageHeader
-        title={library ? (type ? `${library.name} · ${t(`library.kind.${type}`)}` : library.name) : ''}
+        title={title}
         description={
           <span className="flex items-center gap-2">
             {t(sorted.length === 1 ? 'library.count.one' : 'library.count', { n: sorted.length })}

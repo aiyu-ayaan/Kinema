@@ -42,31 +42,59 @@ const navCls = (active: boolean) =>
     active ? 'bg-primary-container text-on-primary-container' : 'text-muted hover:bg-raised hover:text-fg',
   )
 
-/** A library, plus Movies / TV Shows sub-entries when it holds both. */
+/** A library, segregated into top-level Movies and TV Shows entries when it holds both. */
 function LibraryNav({ library: l, onNavigate }: { library: Library; onNavigate?: () => void }) {
   const location = useLocation()
   const here = location.pathname === `/library/${l.id}`
   const type = new URLSearchParams(location.search).get('type')
-  const I = libraryIcon[l.kind]
   const mixed = l.show_count > 0 && l.show_count < l.item_count
-  const sub = (key: 'movie' | 'show', label: string, Icon: Icon) => (
-    <Link to={`/library/${l.id}?type=${key}`} onClick={onNavigate} aria-current={here && type === key ? 'page' : undefined} className={cn(navCls(here && type === key), 'h-8 ps-9 text-label')}>
-      <Icon size={16} weight={here && type === key ? 'fill' : 'regular'} aria-hidden />
+
+  const renderEntry = (key: 'movie' | 'show' | null, label: string, Icon: Icon, active: boolean) => (
+    <Link
+      key={key ?? 'all'}
+      to={key ? `/library/${l.id}?type=${key}` : `/library/${l.id}`}
+      onClick={onNavigate}
+      aria-current={active ? 'page' : undefined}
+      className={navCls(active)}
+    >
+      <Icon size={18} weight={active ? 'fill' : 'regular'} aria-hidden />
       <span className="truncate">{label}</span>
     </Link>
   )
+
+  if (!mixed) {
+    const I = libraryIcon[l.kind]
+    return renderEntry(null, l.name, I, here)
+  }
+
+  const isMovieLib =
+    l.name.toLowerCase() === 'movies' ||
+    l.name.toLowerCase() === t('library.kind.movie').toLowerCase() ||
+    l.kind === 'movie'
+  const isShowLib =
+    l.name.toLowerCase() === 'tv shows' ||
+    l.name.toLowerCase() === t('library.kind.show').toLowerCase() ||
+    l.kind === 'show'
+
+  const movieLabel = isMovieLib
+    ? l.name
+    : isShowLib
+      ? t('library.kind.movie')
+      : `${l.name} · ${t('library.kind.movie')}`
+
+  const showLabel = isShowLib
+    ? l.name
+    : isMovieLib
+      ? t('library.kind.show')
+      : `${l.name} · ${t('library.kind.show')}`
+
+  const movieActive = here && (type === 'movie' || (!type && l.kind !== 'show'))
+  const showActive = here && (type === 'show' || (!type && l.kind === 'show'))
+
   return (
     <>
-      <Link to={`/library/${l.id}`} onClick={onNavigate} aria-current={here && !type ? 'page' : undefined} className={navCls(here && !type)}>
-        <I size={18} weight={here && !type ? 'fill' : 'regular'} aria-hidden />
-        <span className="truncate">{l.name}</span>
-      </Link>
-      {mixed && (
-        <div className="flex flex-col gap-0.5">
-          {sub('movie', t('library.kind.movie'), libraryIcon.movie)}
-          {sub('show', t('library.kind.show'), libraryIcon.show)}
-        </div>
-      )}
+      {renderEntry('movie', movieLabel, libraryIcon.movie, movieActive)}
+      {renderEntry('show', showLabel, libraryIcon.show, showActive)}
     </>
   )
 }
