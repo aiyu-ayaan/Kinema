@@ -55,6 +55,22 @@ struct Page<T> {
 #[derive(Deserialize)]
 struct Hit {
     id: i64,
+    title: Option<String>,
+    name: Option<String>,
+    release_date: Option<String>,
+    first_air_date: Option<String>,
+    overview: Option<String>,
+    poster_path: Option<String>,
+}
+
+/// One search result, for the fix-match picker.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct Candidate {
+    pub tmdb_id: i64,
+    pub title: String,
+    pub year: Option<i64>,
+    pub overview: Option<String>,
+    pub poster: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -160,6 +176,46 @@ impl TmdbClient {
         }
         let page: Page<Hit> = self.get(&format!("/search/{kind}"), &query).await?;
         Ok(page.results.first().map(|h| h.id))
+    }
+
+    /// Up to 20 matches, best first. `kind` is "movie" or "show".
+    pub async fn candidates(
+        &self,
+        kind: &str,
+        query: &str,
+        year_hint: Option<i64>,
+    ) -> Result<Vec<Candidate>, MetaError> {
+        let (path, year_param) = if kind == "show" {
+            ("/search/tv", "first_air_date_year")
+        } else {
+            ("/search/movie", "year")
+        };
+        let mut q = vec![("query", query.to_string())];
+        if let Some(y) = year_hint {
+            q.push((year_param, y.to_string()));
+        }
+        let page: Page<Hit> = self.get(path, &q).await?;
+        Ok(page
+            .results
+            .into_iter()
+            .map(|h| Candidate {
+                tmdb_id: h.id,
+                title: h.title.or(h.name).unwrap_or_default(),
+                year: year(h.release_date.as_deref().or(h.first_air_date.as_deref())),
+                overview: non_empty(h.overview),
+                poster: h.poster_path,
+            })
+            .collect())
+    }
+
+    /// Details by TMDB id, for a match the user picked.
+    pub async fn by_id(&self, kind: &str, id: i64) -> Result<Details, MetaError> {
+        let path = if kind == "show" {
+            format!("/tv/{id}")
+        } else {
+            format!("/movie/{id}")
+        };
+        self.details(&path).await
     }
 
     async fn details(&self, path: &str) -> Result<Details, MetaError> {

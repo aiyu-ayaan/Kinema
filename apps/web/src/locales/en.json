@@ -89,6 +89,14 @@
   "item.audio": "Audio",
   "item.subtitles": "Subtitles",
 
+  "match.fix": "Fix match",
+  "match.titleMovie": "Match this movie",
+  "match.titleShow": "Match this show",
+  "match.query": "Title",
+  "match.year": "Year",
+  "match.search": "Search TMDB",
+  "match.none": "No results. Try a shorter title or remove the year.",
+
   "format.hoursMinutes": "{h}h {m}m",
   "format.minutes": "{m}m",
 

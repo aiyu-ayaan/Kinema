@@ -11,6 +11,7 @@ export interface Library {
   name: string
   kind: LibraryKind
   item_count: number
+  show_count: number
   roots: string[]
   scanning: boolean
 }
@@ -84,6 +85,15 @@ export interface PlaybackPlan {
   audio: number | null
   /** Where the stream really starts (a seek point before the requested time); the player's time offset. */
   start: number
+}
+
+export interface MatchCandidate {
+  tmdb_id: number
+  title: string
+  year: number | null
+  overview: string | null
+  /** TMDB path like "/abc.jpg" */
+  poster: string | null
 }
 
 export interface DirListing {

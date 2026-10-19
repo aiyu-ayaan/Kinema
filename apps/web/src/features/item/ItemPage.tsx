@@ -7,6 +7,8 @@ import { PosterGrid } from '@/components/media/PosterCard'
 import { Badge, Skeleton } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { api, imageUrl } from '@/lib/api'
+import { useIsAdmin } from '@/lib/auth'
+import { FixMatch } from './FixMatch'
 import { clock, fileSize, progressOf, runtime, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import type { ItemCard, ItemDetail } from '@/lib/types'
@@ -74,7 +76,7 @@ function PlayButtons({ item }: { item: ItemCard }) {
   const navigate = useNavigate()
   const progress = progressOf(item)
   return (
-    <div className="mt-6 flex flex-wrap gap-2">
+    <>
       <Button size="lg" variant="primary" icon={<Play size={18} weight="fill" />} onClick={() => navigate(`/play/${item.id}`)}>
         {progress != null ? t('item.resume', { time: clock(item.position_s ?? 0) }) : t('player.play')}
       </Button>
@@ -83,7 +85,7 @@ function PlayButtons({ item }: { item: ItemCard }) {
           {t('item.fromStart')}
         </Button>
       )}
-    </div>
+    </>
   )
 }
 
@@ -138,6 +140,7 @@ function TechInfo({ detail }: { detail: ItemDetail }) {
 
 export function ItemPage() {
   const id = Number(useParams().id)
+  const admin = useIsAdmin()
   const { data, isLoading } = useQuery({ queryKey: ['item', id], queryFn: () => api.item(id) })
   if (isLoading || !data) {
     return (
@@ -154,7 +157,12 @@ export function ItemPage() {
   const playable = item.kind === 'movie' || item.kind === 'episode' || item.kind === 'video'
   return (
     <div className="anim-enter">
-      <Hero detail={data}>{playable && data.files.length > 0 && <PlayButtons item={item} />}</Hero>
+      <Hero detail={data}>
+        <div className="mt-6 flex flex-wrap gap-2">
+          {playable && data.files.length > 0 && <PlayButtons item={item} />}
+          {admin && (item.kind === 'movie' || item.kind === 'show') && <FixMatch item={item} />}
+        </div>
+      </Hero>
       {item.kind === 'show' && (
         <section>
           <h2 className="mb-4 text-title font-semibold">{t('item.seasons')}</h2>

@@ -1,6 +1,7 @@
 import { storageKeys } from './flavor'
 import type {
   DirListing,
+  MatchCandidate,
   Home,
   ItemCard,
   ItemDetail,
@@ -109,6 +110,10 @@ export const api = {
   item: (id: number) => request<ItemDetail>('GET', `/items/${id}`),
   progress: (id: number, position_s: number, watched = false) =>
     request<void>('PUT', `/items/${id}/progress`, { position_s, watched }),
+
+  matchSearch: (id: number, q: string, year: number | null) =>
+    request<MatchCandidate[]>('GET', `/items/${id}/match?q=${encodeURIComponent(q)}${year ? `&year=${year}` : ''}`),
+  matchApply: (id: number, tmdb_id: number) => request<void>('POST', `/items/${id}/match`, { tmdb_id }),
 
   plan: (fileId: number, audio: number | null, caps: PlayCaps, start: number) =>
     request<PlaybackPlan>('GET', `/files/${fileId}/plan?${playQuery(audio, caps, start)}`),

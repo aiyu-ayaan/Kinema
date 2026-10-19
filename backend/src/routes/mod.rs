@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod items;
 pub mod libraries;
+pub mod matching;
 pub mod media;
 pub mod server;
 pub mod settings;
@@ -14,6 +15,7 @@ pub fn api_router() -> Router<AppState> {
         .nest("/auth", auth::router())
         .merge(libraries::router())
         .merge(items::router())
+        .merge(matching::router())
         .merge(media::router())
         .merge(settings::router())
 }
