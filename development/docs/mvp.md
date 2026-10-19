@@ -7,7 +7,9 @@ What the first working build does, how it is wired, and the shortcuts it takes. 
 - First-run setup: the first account becomes the administrator. Afterwards a sign-in screen.
 - Libraries: the admin adds any server folder as Movies, TV Shows or Other videos, from a folder browser or by typing a path. Several folders per library.
 - Scanning: walk on create and at startup, then filesystem events (no polling), debounced 10 s. Missing files are removed, unless a root is unreachable (an unmounted drive never wipes a library).
-- Identification: release-name parser (`kinema-scanner::parse`), show folder wins over the file name for episodes.
+- Identification: release-name parser (`kinema-scanner::parse`). Movies and TV Shows libraries both detect episodes (`S01E02`, `1x02`), so a series inside a movies folder groups into Show, Season, Episode. The show name is the longer of the top folder name and the name in the file, since either can be an abbreviation (`DCM` vs `Devil.May.Cry`); a trailing `S01` is dropped. Folders where 3 or more files read `<folder name> <number>` become a one-season show. Files filed by an older parser are moved on the next scan.
+- Fix match: admins search TMDB from a movie or show page and pick the right result. The old metadata is cleared; for a show, seasons and episodes are looked up again.
+- Mixed libraries: a library that holds movies and shows gets Movies and TV Shows sub-entries in the sidebar (`/library/{id}?type=movie|show`).
 - Probe: `ffprobe` once per file, 2 at a time, re-run only when size or mtime changes. Sidecar subtitles (`Movie.en.srt`, `.forced`, `.sdh`) are stored as extra subtitle streams.
 - Metadata: TMDB (v3 key or v4 token, set in Settings). Movies, shows, seasons and episodes get titles, summaries, ratings, genres and art. A lookup that finds nothing is not repeated; saving a new key retries every unmatched item.
 - Artwork: fetched from TMDB on first view, cached under `data/cache/images/<size>/`, served `immutable`.
@@ -111,4 +113,5 @@ The response body owns the ffmpeg child (`kill_on_drop`). When the browser seeks
 | LIKE search | Slow beyond tens of thousands of items | FTS5 `items_fts` |
 | Sidecar subtitles read only at probe time | A new `.srt` next to an unchanged video is not seen until the video changes | include sidecars in the walk |
 | Session cookie name is not flavor-specific | Dev and prod on the same host share the media cookie | per-flavor cookie name |
+| Watch state of a file moved from a "movie" to an episode is dropped | Progress on wrongly-filed episodes resets once | carry watch state across moves |
 | Single admin user | No profiles or library access control | M3 / M5 |
