@@ -53,10 +53,11 @@ class KinemaApi(val baseUrl: String, pin: String?, connectSeconds: Long = 6, pri
     fun url(path: String) = "$baseUrl/api$path"
 
     /** The response body as text; a failed status becomes an [ApiException] with the server's message. */
-    private suspend fun send(method: String, path: String, body: JsonObject? = null): String = withContext(Dispatchers.IO) {
+    private suspend fun send(method: String, path: String, body: JsonObject? = null, readSeconds: Long? = null): String = withContext(Dispatchers.IO) {
         val payload = (body?.toString() ?: if (method == "GET") null else "{}")?.toRequestBody(JSON)
+        val http = readSeconds?.let { client.newBuilder().readTimeout(it, TimeUnit.SECONDS).build() } ?: client
         try {
-            client.newCall(Request.Builder().url(url(path)).method(method, payload).build()).execute().use { res ->
+            http.newCall(Request.Builder().url(url(path)).method(method, payload).build()).execute().use { res ->
                 val text = res.body?.string().orEmpty()
                 if (!res.isSuccessful) {
                     val error = runCatching { json.parseToJsonElement(text).jsonObject["error"]?.jsonObject }.getOrNull()
@@ -118,8 +119,8 @@ class KinemaApi(val baseUrl: String, pin: String?, connectSeconds: Long = 6, pri
 
     fun streamUrl(fileId: Long, audio: Int?, caps: PlayCaps, start: Double) = url("/stream/$fileId?${playQuery(audio, caps, start)}")
 
-    /** WebVTT text of a text subtitle stream. */
-    suspend fun subtitle(streamId: Long) = send("GET", "/subtitles/$streamId")
+    /** WebVTT text of a text subtitle stream. The first request extracts it from the whole file, which can take minutes. */
+    suspend fun subtitle(streamId: Long) = send("GET", "/subtitles/$streamId", readSeconds = 300)
 
     /** `images/w500/abc.jpg` keys from the server, as an absolute URL. */
     fun imageUrl(key: String?) = key?.let { url("/images/$it") }

@@ -207,6 +207,8 @@ private fun Player(detail: ItemDetail, startAt: Double) {
     }
 
     var plan by remember { mutableStateOf<PlaybackPlan?>(null) }
+    // A decoder that exists can still fail a stream (HEVC Main 10 on a Main-only decoder): then ask for H.264.
+    var caps by remember { mutableStateOf(deviceCaps) }
     // null until the first plan: the server picks the track from its language settings.
     var audio by remember { mutableStateOf<Int?>(null) }
     var subId by remember { mutableStateOf<Long?>(null) }
@@ -229,6 +231,9 @@ private fun Player(detail: ItemDetail, startAt: Double) {
 
     fun absTime() = offset + player.currentPosition / 1000.0
 
+    // While a new stream loads, the player still reports the old one: skips build on the pending target instead.
+    fun now() = if (buffering) time else absTime()
+
     fun report(watched: Boolean = false, notify: Boolean = false) {
         val pos = absTime()
         if (pos > 0) repository.saveProgress(item.id, pos, watched, notify)
@@ -240,7 +245,7 @@ private fun Player(detail: ItemDetail, startAt: Double) {
         time = at
         val seq = ++loadSeq
         scope.launch {
-            repository.request { it.plan(file.id, audioIdx, deviceCaps, at) }
+            repository.request { it.plan(file.id, audioIdx, caps, at) }
                 .onSuccess { p ->
                     // A newer seek or track change started meanwhile: its answer wins.
                     if (seq != loadSeq) return@onSuccess
@@ -250,11 +255,11 @@ private fun Player(detail: ItemDetail, startAt: Double) {
                     audio = p.audio
                     if (p.mode == "direct") {
                         offset = 0.0
-                        player.setMediaItem(MediaItem.fromUri(api.streamUrl(file.id, audioIdx, deviceCaps, 0.0)), (at * 1000).toLong())
+                        player.setMediaItem(MediaItem.fromUri(api.streamUrl(file.id, audioIdx, caps, 0.0)), (at * 1000).toLong())
                     } else {
                         // ffmpeg gets the requested time; p.start is where its output really begins.
                         offset = p.start
-                        player.setMediaItem(MediaItem.fromUri(api.streamUrl(file.id, audioIdx, deviceCaps, at)))
+                        player.setMediaItem(MediaItem.fromUri(api.streamUrl(file.id, audioIdx, caps, at)))
                     }
                     player.prepare()
                     player.play()
@@ -282,6 +287,12 @@ private fun Player(detail: ItemDetail, startAt: Double) {
                 }
             }
             override fun onPlayerError(e: PlaybackException) {
+                val decoder = e.errorCode in PlaybackException.ERROR_CODE_DECODER_INIT_FAILED..PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED
+                if (decoder && (caps.hevc || caps.av1)) {
+                    caps = PlayCaps(hevc = false, av1 = false)
+                    load(audio, now())
+                    return
+                }
                 buffering = false
                 error = playbackError
             }
@@ -326,7 +337,7 @@ private fun Player(detail: ItemDetail, startAt: Double) {
             onDoubleTap = { forward ->
                 if (forward == null) { if (player.isPlaying) player.pause() else player.play() }
                 else {
-                    seek(absTime() + if (forward) 10 else -10)
+                    seek(now() + if (forward) 10 else -10)
                     seekHint = forward to ((seekHint?.second ?: 0) + 1)
                 }
                 poke++
@@ -355,11 +366,11 @@ private fun Player(detail: ItemDetail, startAt: Double) {
             Box(Modifier.fillMaxSize()) {
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.75f), 0.3f to Color.Transparent, 0.6f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.85f))))
                 TopBar(detail, plan, onBack = nav.back, onTracks = if (audios.size > 1 || subs.isNotEmpty()) ({ tracks = true }) else null, subtitlesOn = subId != null, fill = fill, onFill = { fill = !fill; poke++ })
-                CenterControls(
+                if (error == null) CenterControls(
                     playing = playing,
                     onPlay = { if (player.isPlaying) player.pause() else player.play(); poke++ },
-                    onBack10 = { seek(absTime() - 10); poke++ },
-                    onForward10 = { seek(absTime() + 10); poke++ },
+                    onBack10 = { seek(now() - 10); poke++ },
+                    onForward10 = { seek(now() + 10); poke++ },
                     modifier = Modifier.align(Alignment.Center),
                 )
                 BottomBar(
@@ -377,7 +388,7 @@ private fun Player(detail: ItemDetail, startAt: Double) {
     if (tracks) {
         TrackSheet(audios, subs, audio, subId, onDismiss = { tracks = false; poke++ }, onAudio = { idx ->
             tracks = false
-            if (idx != audio) { audio = idx; load(idx, absTime()) }
+            if (idx != audio) { audio = idx; load(idx, now()) }
         }, onSubtitle = { subId = it; tracks = false })
     }
 }
