@@ -1,8 +1,8 @@
 {
   "name": "kinema-root",
   "license": "MIT",
-  "version": "0.1.0",
-  "build": 1,
+  "version": "0.0.1-alpha.1",
+  "build": 2,
   "private": true,
   "description": "Kinema - Personal media server in the spirit of Plex",
   "scripts": {
