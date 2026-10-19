@@ -13,6 +13,14 @@
 ![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20Android%20%7C%20Web-informational)
 ![Encrypted](https://img.shields.io/badge/HTTPS-by%20default-success?logo=letsencrypt&logoColor=white)
 
+```bash
+# Home Server (Linux x86_64 / aarch64) - standalone bundle with backend, web UI, bundled FFmpeg 8.1 & systemd service
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-server.sh | sudo sh
+
+# Desktop App (Linux x86_64) - AppImage, application menu launcher with icon & 'kinema' command
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-desktop.sh | sh
+```
+
 Kinema is a fast, self-hosted personal media server written in Rust, in the spirit of Plex Media Server. It scans local storage, organizes movies and TV shows with rich artwork and metadata from TMDB, and streams seamlessly across web browsers, desktop apps, and mobile devices.
 
 Priorities: **near-zero idle CPU**, support for any media container and codec, a small dependency-light binary, **direct-play first**, and rock-solid privacy.
