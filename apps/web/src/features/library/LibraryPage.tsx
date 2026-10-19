@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowsClockwise, FolderOpen } from '@phosphor-icons/react'
 import { PosterGrid } from '@/components/media/PosterCard'
@@ -32,15 +32,21 @@ export function LibraryPage() {
     refetchInterval: library?.scanning ? 2500 : false,
   })
   const [sort, setSort] = useState<Sort>('title')
-  const sorted = useMemo(() => (items ? [...items].sort(sorters[sort]) : []), [items, sort])
+  // ?type=movie|show: the sidebar's sub-entries of a library that holds both.
+  const raw = useSearchParams()[0].get('type')
+  const type = raw === 'movie' || raw === 'show' ? raw : null
+  const sorted = useMemo(() => {
+    const shown = (items ?? []).filter((i) => !type || (type === 'show' ? i.kind === 'show' : i.kind !== 'show'))
+    return shown.sort(sorters[sort])
+  }, [items, sort, type])
 
   return (
     <div>
       <PageHeader
-        title={library?.name ?? ''}
+        title={library ? (type ? `${library.name} · ${t(`library.kind.${type}`)}` : library.name) : ''}
         description={
           <span className="flex items-center gap-2">
-            {t(items?.length === 1 ? 'library.count.one' : 'library.count', { n: items?.length ?? 0 })}
+            {t(sorted.length === 1 ? 'library.count.one' : 'library.count', { n: sorted.length })}
             {library?.scanning && <Badge tone="primary">{t('library.scanning')}</Badge>}
           </span>
         }

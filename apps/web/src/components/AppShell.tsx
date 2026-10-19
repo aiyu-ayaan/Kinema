@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { GearSix, House, List, MagnifyingGlass, Moon, SignOut, Sun, X, type Icon } from '@phosphor-icons/react'
 import { libraryIcon } from './media/libraryIcon'
 import { Button } from './ui/Button'
@@ -9,6 +9,7 @@ import { isDev } from '@/lib/flavor'
 import { t } from '@/lib/i18n'
 import { useLibraries } from '@/lib/queries'
 import { setTheme, useTheme } from '@/lib/theme'
+import type { Library } from '@/lib/types'
 
 function NavItem({ to, icon: I, label, end, onClick }: { to: string; icon: Icon; label: string; end?: boolean; onClick?: () => void }) {
   return (
@@ -33,6 +34,41 @@ function NavItem({ to, icon: I, label, end, onClick }: { to: string; icon: Icon;
   )
 }
 
+const navCls = (active: boolean) =>
+  cn(
+    'flex h-9 items-center gap-3 rounded-md px-3 text-body font-medium transition-colors duration-fast',
+    active ? 'bg-primary-container text-on-primary-container' : 'text-muted hover:bg-raised hover:text-fg',
+  )
+
+/** A library, plus Movies / TV Shows sub-entries when it holds both. */
+function LibraryNav({ library: l, onNavigate }: { library: Library; onNavigate?: () => void }) {
+  const location = useLocation()
+  const here = location.pathname === `/library/${l.id}`
+  const type = new URLSearchParams(location.search).get('type')
+  const I = libraryIcon[l.kind]
+  const mixed = l.show_count > 0 && l.show_count < l.item_count
+  const sub = (key: 'movie' | 'show', label: string, Icon: Icon) => (
+    <Link to={`/library/${l.id}?type=${key}`} onClick={onNavigate} aria-current={here && type === key ? 'page' : undefined} className={cn(navCls(here && type === key), 'h-8 ps-9 text-label')}>
+      <Icon size={16} weight={here && type === key ? 'fill' : 'regular'} aria-hidden />
+      <span className="truncate">{label}</span>
+    </Link>
+  )
+  return (
+    <>
+      <Link to={`/library/${l.id}`} onClick={onNavigate} aria-current={here && !type ? 'page' : undefined} className={navCls(here && !type)}>
+        <I size={18} weight={here && !type ? 'fill' : 'regular'} aria-hidden />
+        <span className="truncate">{l.name}</span>
+      </Link>
+      {mixed && (
+        <div className="flex flex-col gap-0.5">
+          {sub('movie', t('library.kind.movie'), libraryIcon.movie)}
+          {sub('show', t('library.kind.show'), libraryIcon.show)}
+        </div>
+      )}
+    </>
+  )
+}
+
 function Brand() {
   return (
     <div className="flex h-16 items-center gap-2.5 px-5">
@@ -53,7 +89,7 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
         <p className="mt-4 px-3 pb-1 text-caption font-semibold uppercase tracking-wider text-subtle">{t('nav.libraries')}</p>
       )}
       {libraries?.map((l) => (
-        <NavItem key={l.id} to={`/library/${l.id}`} icon={libraryIcon[l.kind]} label={l.name} onClick={onNavigate} />
+        <LibraryNav key={l.id} library={l} onNavigate={onNavigate} />
       ))}
       {admin && (
         <div className="mt-auto pt-4">
