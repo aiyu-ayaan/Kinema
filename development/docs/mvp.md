@@ -13,7 +13,7 @@ What the first working build does, how it is wired, and the shortcuts it takes. 
 - Probe: `ffprobe` once per file, 2 at a time, re-run only when size or mtime changes. Sidecar subtitles (`Movie.en.srt`, `.forced`, `.sdh`) are stored as extra subtitle streams.
 - Metadata: TMDB (v3 key or v4 token, set in Settings). Movies, shows, seasons and episodes get titles, summaries, ratings, genres and art. A lookup that finds nothing is not repeated; saving a new key retries every unmatched item.
 - Artwork: fetched from TMDB on first view, cached under `data/cache/images/<size>/`, served `immutable`.
-- Thumbnails: items without TMDB art show a video frame from `GET /api/items/{id}/thumb` (a show uses its first episode). One ffmpeg grab per file version at 15 % of the runtime (keyframe-only decode, full-decode retry), 640 px JPEG in `data/cache/thumbs/{file}-{mtime}.jpg`, 2 at a time. A failed grab leaves a `.fail` marker so it is never retried for that file version.
+- Thumbnails: items without TMDB art show a video frame from `GET /api/items/{id}/thumb` (a show uses its first episode). Frames are made by a background job (`backend/src/thumbs.rs`) that runs after every scan, one ffmpeg at a time at low priority: one grab per file version at the configured position (keyframe-only decode, full-decode retry), 640 px JPEG in `data/cache/thumbs/{file}-{mtime}.jpg`. The endpoint only serves the cache and never runs ffmpeg; a miss returns 404 and nudges the job. A failed grab leaves a `.fail` marker. Libraries → Regenerate thumbnails deletes a library's frames and makes them again.
 - Home: hero carousel (continue watching, then newest titles), Continue Watching, and per library Recently Added Movies, New Episodes and Recently Added Shows rows.
 - Browse: home (Continue Watching, Recently Added per library), library grid with sort, show, season and episode pages, title search.
 - Playback: direct play, remux or transcode chosen per file and browser. Audio track switch, subtitle switch, resume, progress every 10 s, watched at 92 %, next episode on end.
@@ -99,6 +99,36 @@ Text tracks (embedded or sidecar) are converted to WebVTT once and cached in `da
 ### Process lifetime
 
 The response body owns the ffmpeg child (`kill_on_drop`). When the browser seeks, closes the tab or navigates away, the request drops and ffmpeg stops, so nothing encodes for nobody.
+
+## Settings
+
+Admin-only, at `/settings/<section>`, grouped like a server control panel. Every option is read by the code it names; there are no placeholder switches.
+
+| Section | Options | Used by |
+|---|---|---|
+| Dashboard | titles, storage, hours, active conversions, background tasks, thumbnail progress per library, ffmpeg paths | `GET /api/server/status` |
+| General | server name | sign-in screen, browser title, `/server/info` |
+| Library | watch for changes, generate thumbnails, frame position | `scan::watch`, `thumbs.rs` |
+| Metadata | TMDB key, metadata language | `TmdbClient::language` |
+| Languages | preferred audio, subtitle mode (off / always / when audio is foreign), preferred subtitle | `plan` picks the start tracks |
+| Transcoder | simultaneous conversions, x264 preset, quality (CRF), max height | `stream` (503 when full), `playback::Encode` |
+| Network | listen address, LAN URL (read-only; set in `kinema.toml`) | status |
+| Scheduled Tasks | rescan every N hours | `scan::scheduled_rescans` |
+| Libraries | add, scan, match missing, regenerate thumbnails, remove | library routes |
+| Troubleshooting | clear thumbnail, subtitle, artwork caches | `/server/cache/{kind}/clear` |
+
+Values live as one JSON row (`settings.key = 'server'`), cached in `AppState`, and are clamped to known values on save (`ServerSettings::sanitized`).
+
+```mermaid
+flowchart LR
+  UI["Settings UI"] -->|PUT /settings/server| API["settings route"]
+  API -->|sanitized| DB[(settings table)]
+  API --> Cache["AppState.settings (RwLock)"]
+  Cache --> Scan["scan / watch / scheduled rescans"]
+  Cache --> Thumbs["thumbnail job"]
+  Cache --> Stream["plan + stream (tracks, transcode limits)"]
+  Cache --> Tmdb["TMDB client language"]
+```
 
 ## Auth
 

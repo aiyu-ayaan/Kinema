@@ -22,14 +22,20 @@ This is Kinema's own API. It is not Plex-compatible.
 | GET | `/search?q=` | Title search |
 | GET | `/items/{id}` | Item, genres, files with streams, children, prev/next sibling |
 | PUT | `/items/{id}/progress` | `{position_s, watched?}` |
-| GET | `/files/{id}/plan?audio=&start=&hevc=&av1=` | `{mode: direct\|remux\|transcode, duration_s, audio, start}` |
+| GET | `/files/{id}/plan?audio=&start=&hevc=&av1=` | `{mode: direct\|remux\|transcode, duration_s, audio, start, subtitle}`; audio and subtitle follow the Languages settings |
 | GET | `/stream/{id}?audio=&start=&hevc=&av1=` | Direct (Range) or fMP4 pipe, per the plan |
 | GET | `/subtitles/{stream_id}` | Text subtitle as WebVTT, cached |
 | GET | `/images/{size}/{name}` | TMDB art, cached |
-| GET | `/items/{id}/thumb` | Video frame JPEG for items without art, cached per file version |
+| GET | `/items/{id}/thumb` | Video frame JPEG from the background thumbnail cache; 404 until made |
+| POST | `/libraries/{id}/thumbnails` | Admin: delete and regenerate a library's thumbnails |
+| POST | `/libraries/{id}/match` | Admin: look up unmatched titles again |
+| GET | `/server/status` | Admin: dashboard data |
+| POST | `/server/cache/{thumbnails\|subtitles\|images}/clear` | Admin: clear a cache |
 | GET | `/items/{id}/match?q=&year=` | Admin: TMDB candidates for a movie or show |
 | POST | `/items/{id}/match` | Admin: `{tmdb_id}`, replace the item's metadata with that result |
-| GET/PUT | `/settings` | Admin: `{tmdb_configured, ffmpeg_found}` / `{tmdb_api_key}` (verified before saving) |
+| GET | `/settings` | Admin: `{server, tmdb_configured, ffmpeg_found, options}` |
+| PUT | `/settings/server` | Admin: save server options (clamped to allowed values) |
+| PUT | `/settings/tmdb` | Admin: `{tmdb_api_key}`, verified before saving |
 
 The tables below are the full target API.
 
