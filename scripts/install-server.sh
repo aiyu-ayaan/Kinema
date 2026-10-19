@@ -20,7 +20,7 @@ APP=/opt/kinema
 DATA=/var/lib/kinema
 UNIT=/etc/systemd/system/kinema.service
 
-CHANNEL=stable
+CHANNEL=auto
 VERSION=""
 FROM_FILE=""
 PORT=3000
@@ -39,7 +39,7 @@ while [ $# -gt 0 ]; do
     *) die "unknown option: $1" ;;
   esac
 done
-case "$CHANNEL" in stable | beta | alpha) ;; *) die "--channel must be stable, beta or alpha" ;; esac
+case "$CHANNEL" in auto | stable | beta | alpha) ;; *) die "--channel must be auto, stable, beta or alpha" ;; esac
 case "$PORT" in '' | *[!0-9]*) die "--port must be a number" ;; esac
 [ "$(id -u)" -eq 0 ] || die "run this with sudo: it installs a system service."
 HAS_SYSTEMD=0
@@ -85,16 +85,40 @@ else
   # a sort. The key orders by number, then alpha < beta < stable, then the pre-release number.
   # A channel takes its own builds and every steadier one.
   newest="$(printf '%s\n' "$releases" | grep -oE "https://[^\"]*/kinema-server-[0-9][^\"/]*-linux-$ARCH\.tar\.gz" | sort -u |
-    awk -v channel="$CHANNEL" -v want="$VERSION" -v arch="$ARCH" '{
-      v = $0; sub(/.*\/kinema-server-/, "", v); sub("-linux-" arch "\\.tar\\.gz$", "", v)
-      if (v !~ /^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta)\.[0-9]+)?$/) next
-      split(v, p, /[.-]/)
-      stage = 2; n = 99999
-      if (p[4] == "alpha") { stage = 0; n = p[5] } else if (p[4] == "beta") { stage = 1; n = p[5] }
-      if (want != "" ? v != want : (stage == 0 && channel != "alpha") || (stage == 1 && channel == "stable")) next
-      printf "%08d.%08d.%08d.%d.%08d %s %s\n", p[1], p[2], p[3], stage, n, v, $0
-    }' | sort | tail -n 1)"
-  [ -n "$newest" ] || die "no $ARCH server build found for ${VERSION:-the $CHANNEL channel}. Try --channel alpha, or see the releases page."
+    awk -v channel="$CHANNEL" -v want="$VERSION" -v arch="$ARCH" '
+      {
+        v = $0; sub(/.*\/kinema-server-/, "", v); sub("-linux-" arch "\\.tar\\.gz$", "", v)
+        if (v !~ /^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta)\.[0-9]+)?$/) next
+        split(v, p, /[.-]/)
+        stage = 2; n = 99999
+        if (p[4] == "alpha") { stage = 0; n = p[5] } else if (p[4] == "beta") { stage = 1; n = p[5] }
+        if (want != "") {
+          if (v == want) printf "%08d.%08d.%08d.%d.%08d %s %s\n", p[1], p[2], p[3], stage, n, v, $0
+          next
+        }
+        lines[NR] = sprintf("%08d.%08d.%08d.%d.%08d %s %s", p[1], p[2], p[3], stage, n, v, $0)
+        stages[NR] = stage
+        if (stage > max_stage_seen) max_stage_seen = stage
+      }
+      END {
+        if (want != "") exit
+        target_stage = max_stage_seen
+        for (i in lines) {
+          st = stages[i]
+          if (channel == "alpha") {
+            print lines[i]
+          } else if (channel == "beta") {
+            if (st >= 1) print lines[i]
+          } else if (channel == "stable") {
+            if (st == 2) print lines[i]
+          } else {
+            # auto: pick highest available stage (stable, then beta, then alpha)
+            if (st == target_stage) print lines[i]
+          }
+        }
+      }
+    ' | sort | tail -n 1)"
+  [ -n "$newest" ] || die "no $ARCH server build found${VERSION:+ for $VERSION}. See the releases page."
   label="$(printf '%s' "$newest" | cut -d' ' -f2)"
   echo "Downloading Kinema $label..."
   fetch_to "$(printf '%s' "$newest" | cut -d' ' -f3)" "$WORK/kinema.tar.gz" || die "the download failed. Nothing was changed."
