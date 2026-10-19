@@ -86,10 +86,77 @@ pub fn plan(
     }
 }
 
+async fn probe_lines(bins: &MediaBinaries, args: &[String], path: &Path) -> String {
+    Command::new(&bins.ffprobe)
+        .args(["-v", "error"])
+        .args(args)
+        .arg(path)
+        .kill_on_drop(true)
+        .output()
+        .await
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default()
+}
+
+/// Where `ffmpeg -ss t` with stream copy really starts, in source seconds. Copy can
+/// only cut at a seek point (keyframe or Matroska cue), so the stream begins before
+/// `t`; the player uses this as its time offset to stay in sync with subtitles.
+/// Asks ffprobe to do the same seek and reads the first packets, so it costs milliseconds.
+pub async fn seek_landing(bins: &MediaBinaries, path: &Path, t: f64, streams: &[i64]) -> f64 {
+    if t <= 0.0 {
+        return 0.0;
+    }
+    // ffmpeg's demuxer seeks 3/23 s early when the video has B-frames (fftools/ffmpeg_demux.c).
+    let header = probe_lines(
+        bins,
+        &[
+            "-select_streams".into(),
+            "v:0".into(),
+            "-show_entries".into(),
+            "stream=has_b_frames".into(),
+            "-of".into(),
+            "csv=p=0".into(),
+        ],
+        path,
+    )
+    .await;
+    let b_frames = header
+        .trim()
+        .trim_end_matches(',')
+        .parse::<i64>()
+        .unwrap_or(0)
+        > 0;
+    let seek = if b_frames { t - 3.0 / 23.0 } else { t };
+    let packets = probe_lines(
+        bins,
+        &[
+            "-read_intervals".into(),
+            format!("{:.6}%+#24", seek.max(0.0)),
+            "-show_entries".into(),
+            "packet=stream_index,pts_time".into(),
+            "-of".into(),
+            "csv=p=0".into(),
+        ],
+        path,
+    )
+    .await;
+    landing_from_packets(&packets, streams).unwrap_or(t)
+}
+
+/// First timestamp among the mapped streams: `avoid_negative_ts make_zero` turns it into 0.
+fn landing_from_packets(csv: &str, streams: &[i64]) -> Option<f64> {
+    csv.lines()
+        .filter_map(|l| {
+            let mut f = l.trim().trim_end_matches(',').split(',');
+            let idx: i64 = f.next()?.parse().ok()?;
+            let pts: f64 = f.next()?.parse().ok()?;
+            streams.contains(&idx).then_some(pts)
+        })
+        .reduce(f64::min)
+}
+
 /// ffmpeg writing fragmented MP4 to stdout, starting at `start_s`. Seeking means
 /// a new request with a new start; the process dies when the client disconnects.
-/// shortcut: input seek with stream copy lands on the keyframe before `start_s`, so
-/// the player can be up to one GOP early; move to HLS with keyframe index (M4) for exact seeks.
 pub fn stream_command(
     bins: &MediaBinaries,
     path: &Path,
@@ -102,7 +169,7 @@ pub fn stream_command(
     let mut cmd = Command::new(&bins.ffmpeg);
     cmd.args(["-hide_banner", "-loglevel", "error", "-nostdin"]);
     if start_s > 0.0 {
-        cmd.arg("-ss").arg(format!("{start_s:.3}"));
+        cmd.arg("-ss").arg(format!("{start_s:.6}"));
     }
     cmd.arg("-i").arg(path);
     if let Some(v) = video {
@@ -176,6 +243,14 @@ mod tests {
         codec: Some("dts"),
         profile: None,
     };
+
+    #[test]
+    fn landing_ignores_unmapped_streams() {
+        let csv = "0,6.000000\n1,5.921000\n2,5.100000\n0,6.041000\n";
+        assert_eq!(landing_from_packets(csv, &[0, 1]), Some(5.921));
+        assert_eq!(landing_from_packets(csv, &[0]), Some(6.0));
+        assert_eq!(landing_from_packets("", &[0]), None);
+    }
 
     #[test]
     fn decisions() {

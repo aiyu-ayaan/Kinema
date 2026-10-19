@@ -101,6 +101,8 @@ struct PlanResponse {
     mode: &'static str,
     duration_s: Option<f64>,
     audio: Option<i64>,
+    /// Where the stream for the requested start really begins; the player's time offset.
+    start: f64,
 }
 
 async fn plan(
@@ -110,10 +112,29 @@ async fn plan(
     Query(q): Query<PlayQuery>,
 ) -> ApiResult<Json<PlanResponse>> {
     let c = choose(&state, id, &q).await?;
+    let start = match (c.plan, &state.bins) {
+        (Plan::Direct, _) => 0.0,
+        (
+            Plan::Stream {
+                copy_video: true, ..
+            },
+            Some(bins),
+        ) => {
+            let mapped: Vec<i64> = [c.video, c.audio]
+                .into_iter()
+                .flatten()
+                .map(|i| c.streams[i].idx)
+                .collect();
+            playback::seek_landing(bins, std::path::Path::new(&c.file.path), q.start, &mapped).await
+        }
+        // Re-encoding decodes up to `start` and cuts there exactly.
+        _ => q.start.max(0.0),
+    };
     Ok(Json(PlanResponse {
         mode: c.plan.name(),
         duration_s: c.file.duration_s,
         audio: c.audio.map(|i| c.streams[i].idx),
+        start,
     }))
 }
 
