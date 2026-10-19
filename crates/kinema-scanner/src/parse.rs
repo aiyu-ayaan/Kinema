@@ -181,25 +181,90 @@ pub fn season_folder(name: &str) -> Option<i64> {
     rest.trim_start_matches([' ', '.', '_']).parse().ok()
 }
 
-/// Episode from a file name. `show_folder` is the top folder under the library root
-/// and wins over the name in the file, which is often abbreviated.
+/// Drops a trailing season tag: folder names like "Queen.of.Tears.S01.2024" or
+/// "Reacher Season 2" name the show, not the season.
+fn without_season(title: &str) -> String {
+    let w: Vec<&str> = title.split(' ').collect();
+    let cut = w
+        .iter()
+        .position(|x| {
+            let l = x.to_lowercase();
+            l == "season"
+                || (l.len() >= 2
+                    && l.len() <= 3
+                    && l.starts_with('s')
+                    && l[1..].chars().all(|c| c.is_ascii_digit()))
+        })
+        .filter(|&i| i > 0)
+        .unwrap_or(w.len());
+    w[..cut].join(" ")
+}
+
+/// Episode from a file name. `show_folder` is the top folder under the library root.
+/// Folder and file names are both hand-made: either may be an abbreviation ("DCM",
+/// "bb") of the other, so the longer one names the show.
 pub fn parse_episode(file_stem: &str, show_folder: Option<&str>) -> Option<EpisodeName> {
     let w = words(file_stem);
     let pos = w.iter().position(|x| episode_marker(x).is_some())?;
     let (season, episode) = episode_marker(&w[pos])?;
     let from_file = parse_movie(&tidy(&w[..pos]));
-    let (show, year) = match show_folder.map(parse_movie) {
-        Some(m) if !m.title.is_empty() => (m.title, m.year),
-        _ => (from_file.title, from_file.year),
+    let from_file = MovieName {
+        title: if pos == 0 {
+            String::new()
+        } else {
+            without_season(&from_file.title)
+        },
+        year: from_file.year,
     };
-    if show.is_empty() {
+    let from_folder = show_folder
+        .map(parse_movie)
+        .map(|m| MovieName {
+            title: without_season(&m.title),
+            year: m.year,
+        })
+        .unwrap_or(MovieName {
+            title: String::new(),
+            year: None,
+        });
+    let (best, other) = if from_folder.title.chars().count() > from_file.title.chars().count() {
+        (from_folder, from_file)
+    } else {
+        (from_file, from_folder)
+    };
+    if best.title.is_empty() {
         return None;
     }
     Some(EpisodeName {
-        show,
-        year,
+        show: best.title,
+        year: best.year.or(other.year),
         season,
         episode,
+    })
+}
+
+/// "Professional Single 09 (cast) Title" inside folder "Professional Single": the
+/// number after the folder's name. Only a hint: the scanner applies it when several
+/// files in one folder follow the pattern, so "John Wick/John Wick 2.mkv" stays a movie.
+pub fn numbered_episode(file_stem: &str, folder: &str) -> Option<EpisodeName> {
+    let file = words(&tidy(&words(file_stem)));
+    let show = parse_movie(folder);
+    let name = words(&without_season(&show.title));
+    if name.is_empty() || file.len() <= name.len() {
+        return None;
+    }
+    let same = file
+        .iter()
+        .zip(&name)
+        .all(|(a, b)| a.eq_ignore_ascii_case(b));
+    let n = &file[name.len()];
+    if !(same && (1..=3).contains(&n.len()) && n.chars().all(|c| c.is_ascii_digit())) {
+        return None;
+    }
+    Some(EpisodeName {
+        show: name.join(" "),
+        year: show.year,
+        season: 1,
+        episode: n.parse().ok()?,
     })
 }
 
@@ -266,8 +331,58 @@ mod tests {
         );
         let e = parse_episode("The Office 2x05 Halloween", None).unwrap();
         assert_eq!((e.show.as_str(), e.season, e.episode), ("The Office", 2, 5));
+        let e = parse_episode("Devil.May.Cry.S01E06.The.First.Circle.1080p", Some("DCM")).unwrap();
+        assert_eq!(e.show, "Devil May Cry");
+        let e = parse_episode(
+            "Queen.of.Tears.S01E06.2024.1080p",
+            Some("Queen.of.Tears.S01.2024.1080p.x264.WEBDL"),
+        )
+        .unwrap();
+        assert_eq!((e.show.as_str(), e.year), ("Queen of Tears", Some(2024)));
+        let e = parse_episode(
+            "Alice in Borderland (2020) S01E03 1080p 10bit",
+            Some("Alice in Borderland"),
+        )
+        .unwrap();
+        assert_eq!(
+            (e.show.as_str(), e.year, e.episode),
+            ("Alice in Borderland", Some(2020), 3)
+        );
+        let e = parse_episode(
+            "Spider.Noir.B&W.2026.S01E02.Tread.Lightly",
+            Some("Spider Noir"),
+        )
+        .unwrap();
+        assert_eq!((e.show.as_str(), e.year), ("Spider Noir B&W", Some(2026)));
+        let e = parse_episode(
+            "Its_Okay_to_Not_Be_Okay_S01E15_720p",
+            Some("It's ohk to be ok"),
+        )
+        .unwrap();
+        assert_eq!(e.show, "Its Okay to Not Be Okay");
+        let e = parse_episode("S02E01", Some("Reacher")).unwrap();
+        assert_eq!((e.show.as_str(), e.season), ("Reacher", 2));
         assert!(parse_episode("Inception 2010", None).is_none());
         assert!(parse_episode("Movie 1920x1080", None).is_none());
+    }
+
+    #[test]
+    fn numbered() {
+        assert_eq!(
+            numbered_episode(
+                "[ENG SUB] Professional Single 09 (Aaron Deng, Ireine Song) The Best",
+                "Professional Single"
+            )
+            .map(|e| (e.show, e.season, e.episode)),
+            Some(("Professional Single".to_string(), 1, 9))
+        );
+        assert_eq!(
+            numbered_episode("John Wick 2", "John Wick").map(|e| e.episode),
+            Some(2)
+        );
+        assert!(numbered_episode("Other Show 01", "Professional Single").is_none());
+        assert!(numbered_episode("Professional Single", "Professional Single").is_none());
+        assert!(numbered_episode("Professional Single 2024", "Professional Single").is_none());
     }
 
     #[test]

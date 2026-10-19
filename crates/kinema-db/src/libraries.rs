@@ -8,6 +8,8 @@ pub struct Library {
     pub name: String,
     pub kind: String,
     pub item_count: i64,
+    /// Top-level shows; the rest of `item_count` are movies and videos.
+    pub show_count: i64,
     #[sqlx(skip)]
     pub roots: Vec<String>,
 }
@@ -15,7 +17,8 @@ pub struct Library {
 pub async fn list(pool: &SqlitePool) -> Result<Vec<Library>, DbError> {
     let mut libs: Vec<Library> = sqlx::query_as(
         "SELECT l.id, l.name, l.kind,
-           (SELECT COUNT(*) FROM items i WHERE i.library_id = l.id AND i.parent_id IS NULL) AS item_count
+           (SELECT COUNT(*) FROM items i WHERE i.library_id = l.id AND i.parent_id IS NULL) AS item_count,
+           (SELECT COUNT(*) FROM items i WHERE i.library_id = l.id AND i.parent_id IS NULL AND i.kind = 'show') AS show_count
          FROM libraries l ORDER BY l.name COLLATE NOCASE",
     )
     .fetch_all(pool)

@@ -367,6 +367,23 @@ pub async fn mark_probe_failed(pool: &SqlitePool, file_id: i64) -> Result<(), Db
     Ok(())
 }
 
+pub async fn kind_of(pool: &SqlitePool, item_id: i64) -> Result<Option<String>, DbError> {
+    Ok(sqlx::query_scalar("SELECT kind FROM items WHERE id = ?1")
+        .bind(item_id)
+        .fetch_optional(pool)
+        .await?)
+}
+
+/// Re-files a file under another item; the old item is pruned by `delete_files`.
+pub async fn move_file(pool: &SqlitePool, file_id: i64, item_id: i64) -> Result<(), DbError> {
+    sqlx::query("UPDATE files SET item_id = ?2 WHERE id = ?1")
+        .bind(file_id)
+        .bind(item_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
 /// Removes files gone from disk, then items left without files or children.
 pub async fn delete_files(pool: &SqlitePool, ids: &[i64]) -> Result<(), DbError> {
     let mut tx = pool.begin().await?;
@@ -627,6 +644,35 @@ pub async fn save_meta(pool: &SqlitePool, id: i64, m: &Meta) -> Result<(), DbErr
         .execute(&mut *tx)
         .await?;
     }
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Forgets an item's metadata before a manual re-match, so nothing from the wrong
+/// match survives. For a show, seasons and episodes are reset and looked up again.
+pub async fn clear_meta(pool: &SqlitePool, id: i64) -> Result<(), DbError> {
+    let mut tx = pool.begin().await?;
+    sqlx::query("DELETE FROM item_genres WHERE item_id = ?1")
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(
+        "UPDATE items SET tmdb_id = NULL, year = NULL, summary = NULL, rating = NULL,
+           runtime_s = NULL, poster = NULL, backdrop = NULL WHERE id = ?1",
+    )
+    .bind(id)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "UPDATE items SET meta_tried = 0, summary = NULL, rating = NULL, runtime_s = NULL,
+           poster = NULL, backdrop = NULL,
+           title = CASE kind WHEN 'episode' THEN 'Episode ' || episode_no ELSE title END,
+           sort_title = CASE kind WHEN 'episode' THEN 'episode ' || episode_no ELSE sort_title END
+         WHERE parent_id = ?1 OR parent_id IN (SELECT id FROM items WHERE parent_id = ?1)",
+    )
+    .bind(id)
+    .execute(&mut *tx)
+    .await?;
     tx.commit().await?;
     Ok(())
 }

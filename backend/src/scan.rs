@@ -133,9 +133,11 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
     })
     .await?;
 
+    let series_dirs = numbered_series_dirs(&found);
     let mut seen = HashSet::new();
     let mut to_probe = Vec::new();
     let mut added = 0usize;
+    let mut moved = 0usize;
     for (root, f) in &found {
         let path = f.path.to_string_lossy().into_owned();
         seen.insert(path.clone());
@@ -146,6 +148,16 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
                 if existing.probe_status == "pending" {
                     to_probe.push((existing.id, f.path.clone()));
                 }
+                // Filed as a movie by an older parser: move it under its show.
+                if let (Some(ep), Some(item_id)) = (
+                    episode_of(&lib.kind, root, &f.path, &series_dirs),
+                    existing.item_id,
+                ) && items::kind_of(&state.db, item_id).await?.as_deref() != Some("episode")
+                {
+                    let episode = create_episode(state, library_id, &ep).await?;
+                    items::move_file(&state.db, existing.id, episode).await?;
+                    moved += 1;
+                }
             }
             Some(existing) => {
                 items::reset_file(&state.db, existing.id, f.size as i64, f.mtime, &fingerprint)
@@ -153,7 +165,8 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
                 to_probe.push((existing.id, f.path.clone()));
             }
             None => {
-                let item_id = create_item(state, library_id, &lib.kind, root, &f.path).await?;
+                let item_id =
+                    create_item(state, library_id, &lib.kind, root, &f.path, &series_dirs).await?;
                 let id = items::insert_file(
                     &state.db,
                     item_id,
@@ -177,11 +190,11 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
         .filter(|(_, p)| !seen.contains(p))
         .map(|(id, _)| id)
         .collect();
-    if roots_ok && !gone.is_empty() {
+    if roots_ok && (!gone.is_empty() || moved > 0) {
         items::delete_files(&state.db, &gone).await?;
     }
     info!(
-        "library {} scanned: {} files, {added} new, {} removed, {} to probe",
+        "library {} scanned: {} files, {added} new, {moved} regrouped, {} removed, {} to probe",
         lib.name,
         found.len(),
         if roots_ok { gone.len() } else { 0 },
@@ -195,91 +208,128 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn file_stem(path: &Path) -> String {
+    path.file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+/// Folders where at least 3 files are named "<folder name> <number>": a series
+/// without SxxEyy tags. Fewer could be a film and its sequel.
+fn numbered_series_dirs(found: &[(PathBuf, FoundFile)]) -> HashSet<PathBuf> {
+    let mut counts: std::collections::HashMap<&Path, usize> = std::collections::HashMap::new();
+    for (root, f) in found {
+        if let Some(dir) = f.path.parent().filter(|d| d != root)
+            && let Some(name) = dir.file_name()
+            && parse::numbered_episode(&file_stem(&f.path), &name.to_string_lossy()).is_some()
+        {
+            *counts.entry(dir).or_default() += 1;
+        }
+    }
+    counts
+        .into_iter()
+        .filter(|(_, n)| *n >= 3)
+        .map(|(d, _)| d.to_path_buf())
+        .collect()
+}
+
+/// Episode numbers in the name. Movie libraries detect them too, so a series dropped
+/// into a movies folder still groups into Show, Season, Episode.
+fn episode_of(
+    kind: &str,
+    root: &Path,
+    path: &Path,
+    series_dirs: &HashSet<PathBuf>,
+) -> Option<parse::EpisodeName> {
+    if kind != "movie" && kind != "show" {
+        return None;
+    }
+    let rel = path.strip_prefix(root).unwrap_or(path);
+    let parts: Vec<String> = rel
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy().into_owned())
+        .collect();
+    let show_folder = (parts.len() >= 2).then(|| parts[0].as_str());
+    parse::parse_episode(&file_stem(path), show_folder).or_else(|| {
+        let dir = path.parent().filter(|d| series_dirs.contains(*d))?;
+        parse::numbered_episode(&file_stem(path), &dir.file_name()?.to_string_lossy())
+    })
+}
+
+async fn create_episode(
+    state: &AppState,
+    library_id: i64,
+    ep: &parse::EpisodeName,
+) -> anyhow::Result<i64> {
+    let db = &state.db;
+    let show = items::find_or_create(
+        db,
+        library_id,
+        NewItem::Show {
+            title: &ep.show,
+            year: ep.year,
+        },
+    )
+    .await?;
+    let season = items::find_or_create(
+        db,
+        library_id,
+        NewItem::Season {
+            show_id: show,
+            season: ep.season,
+        },
+    )
+    .await?;
+    let title = format!("Episode {}", ep.episode);
+    Ok(items::find_or_create(
+        db,
+        library_id,
+        NewItem::Episode {
+            season_id: season,
+            episode: ep.episode,
+            title: &title,
+        },
+    )
+    .await?)
+}
+
 async fn create_item(
     state: &AppState,
     library_id: i64,
     kind: &str,
     root: &Path,
     path: &Path,
+    series_dirs: &HashSet<PathBuf>,
 ) -> anyhow::Result<i64> {
-    let stem = path
-        .file_stem()
-        .map(|s| s.to_string_lossy().into_owned())
-        .unwrap_or_default();
+    if let Some(ep) = episode_of(kind, root, path, series_dirs) {
+        return create_episode(state, library_id, &ep).await;
+    }
     let db = &state.db;
-    let id = match kind {
-        "movie" => {
-            let mut m = parse::parse_movie(&stem);
-            // "Inception (2010)/inception-1080p.mkv": the folder carries the real name.
-            if m.year.is_none()
-                && let Some(parent) = path.parent().filter(|p| *p != root)
-            {
-                let folder =
-                    parse::parse_movie(&parent.file_name().unwrap_or_default().to_string_lossy());
-                if folder.year.is_some() {
-                    m = folder;
-                }
-            }
-            items::find_or_create(
-                db,
-                library_id,
-                NewItem::Movie {
-                    title: &m.title,
-                    year: m.year,
-                },
-            )
-            .await?
-        }
-        "show" => {
-            let rel = path.strip_prefix(root).unwrap_or(path);
-            let parts: Vec<String> = rel
-                .components()
-                .map(|c| c.as_os_str().to_string_lossy().into_owned())
-                .collect();
-            let show_folder = (parts.len() >= 2).then(|| parts[0].as_str());
-            match parse::parse_episode(&stem, show_folder) {
-                Some(ep) => {
-                    let show = items::find_or_create(
-                        db,
-                        library_id,
-                        NewItem::Show {
-                            title: &ep.show,
-                            year: ep.year,
-                        },
-                    )
-                    .await?;
-                    let season = items::find_or_create(
-                        db,
-                        library_id,
-                        NewItem::Season {
-                            show_id: show,
-                            season: ep.season,
-                        },
-                    )
-                    .await?;
-                    let title = format!("Episode {}", ep.episode);
-                    items::find_or_create(
-                        db,
-                        library_id,
-                        NewItem::Episode {
-                            season_id: season,
-                            episode: ep.episode,
-                            title: &title,
-                        },
-                    )
-                    .await?
-                }
-                // No episode number: still listed, as a plain video.
-                None => {
-                    let title = parse::video_title(path);
-                    items::find_or_create(db, library_id, NewItem::Video { title: &title }).await?
-                }
+    let id = if kind == "movie" {
+        let mut m = parse::parse_movie(&file_stem(path));
+        // "Inception (2010)/inception-1080p.mkv": the folder carries the real name.
+        if m.year.is_none()
+            && let Some(parent) = path.parent().filter(|p| *p != root)
+        {
+            let folder =
+                parse::parse_movie(&parent.file_name().unwrap_or_default().to_string_lossy());
+            if folder.year.is_some() {
+                m = folder;
             }
         }
-        _ => {
-            let title = parse::video_title(path);
-            items::find_or_create(db, library_id, NewItem::Video { title: &title }).await?
-        }
+        items::find_or_create(
+            db,
+            library_id,
+            NewItem::Movie {
+                title: &m.title,
+                year: m.year,
+            },
+        )
+        .await?
+    } else {
+        // No episode number, or an "other videos" library: listed as a plain video.
+        let title = parse::video_title(path);
+        items::find_or_create(db, library_id, NewItem::Video { title: &title }).await?
     };
     Ok(id)
 }
