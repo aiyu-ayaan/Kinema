@@ -5,7 +5,8 @@
   "version": "0.1.0",
   "private": true,
   "description": "Kinema personal media server, desktop app",
-  "author": "Kinema Team",
+  "author": "Kinema Team <ayaan35200@gmail.com>",
+  "homepage": "https://github.com/aiyu-ayaan/Kinema",
   "license": "MIT",
   "main": "src/main.js",
   "scripts": {
