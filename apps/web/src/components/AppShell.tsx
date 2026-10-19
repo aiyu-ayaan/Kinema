@@ -87,7 +87,7 @@ function LibraryNav({ library: l, onNavigate }: { library: Library; onNavigate?:
             to={`/item/${show.id}`}
             onClick={onNavigate}
             aria-current={active ? 'page' : undefined}
-            className={navCls(active)}
+            className={cn(navCls(active), !isGenericShowLib && 'ms-5')}
             title={show.title}
           >
             <ShowIcon size={18} weight={active ? 'fill' : 'regular'} aria-hidden className="shrink-0" />
