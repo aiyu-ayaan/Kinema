@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Every user-facing string of the app. English is the default; translations go in values-<lang>/strings.xml. -->
+<resources>
+    <!-- Shared actions -->
+    <string name="action_back">Back</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_details">Details</string>
+    <string name="action_play">Play</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_retry">Try again</string>
+    <string name="action_save">Save</string>
+
+    <!-- Errors -->
+    <string name="error_title">Something went wrong</string>
+    <string name="error_generic">That didn’t work. Try again.</string>
+    <string name="error_offline">Can’t reach the server. Check that it is running and that this phone is on the same network, or set a public address.</string>
+    <string name="error_untrusted">The server’s certificate is not the one you approved. Connect again to review it.</string>
+
+    <!-- Connect -->
+    <string name="connect_title">Kinema</string>
+    <string name="connect_subtitle">Your movies and shows, from your own server.</string>
+    <string name="connect_found">On this network</string>
+    <string name="connect_rescan">Search again</string>
+    <string name="connect_scanning">Looking for servers…</string>
+    <string name="connect_none">No server answered. Make sure Kinema is running and this phone is on the same Wi-Fi, or enter its address below.</string>
+    <string name="connect_this_computer">This computer · %1$s</string>
+    <string name="connect_manual">Enter an address</string>
+    <string name="connect_address">Server address</string>
+    <string name="connect_address_hint">Shown in Kinema on the web under Settings › Network</string>
+    <string name="connect_invalid">Enter an address like 192.168.1.10:3000 or media.example.com.</string>
+    <string name="connect_action">Connect</string>
+    <string name="connect_change_server">Use another server</string>
+
+    <string name="trust_title">Trust this server?</string>
+    <string name="trust_body">%1$s made its own security certificate. Check that this code matches the one in Kinema on the web under Settings › Network before you trust it.</string>
+    <string name="trust_accept">Trust</string>
+
+    <string name="unreachable_title">Server not reachable</string>
+    <string name="unreachable_body">Kinema at %1$s didn’t answer at its home or public address.</string>
+
+    <string name="forget_title">Use another server?</string>
+    <string name="forget_body">This phone forgets the server, its addresses and its certificate. Your watch history stays on the server.</string>
+    <string name="forget_action">Forget server</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">Who’s watching?</string>
+    <string name="profiles_locked">Locked</string>
+    <string name="profiles_setup_title">Finish setup first</string>
+    <string name="profiles_setup_body">Open %1$s in a browser to create the first account and add your media. Then come back here.</string>
+    <string name="unlock_password">Password</string>
+    <string name="unlock_pin">PIN</string>
+    <string name="unlock_show">Show</string>
+    <string name="unlock_hide">Hide</string>
+    <string name="unlock_action">Sign in</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">Home</string>
+    <string name="tab_library">Library</string>
+    <string name="tab_search">Search</string>
+    <string name="tab_settings">Settings</string>
+
+    <!-- Home -->
+    <string name="home_continue">Continue watching</string>
+    <string name="home_shelf_movies">Recently added movies</string>
+    <string name="home_shelf_shows">Recently added shows</string>
+    <string name="home_shelf_episodes">New episodes</string>
+    <string name="home_hero_continue">Continue watching</string>
+    <string name="home_hero_new">New</string>
+    <string name="home_empty_title">Nothing here yet</string>
+    <string name="home_empty_body">Titles appear here once the server’s administrator adds a library in Kinema on the web.</string>
+
+    <!-- Library and search -->
+    <string name="library_none_title">No libraries</string>
+    <string name="library_none_body">The server has no libraries you can see yet.</string>
+    <string name="library_empty_title">This library is empty</string>
+    <string name="library_empty_body">New files show up here after the server scans them.</string>
+    <string name="search_hint">Movies, shows, episodes</string>
+    <string name="search_clear">Clear</string>
+    <string name="search_idle_title">Find something to watch</string>
+    <string name="search_idle_body">Search by title across every library.</string>
+    <string name="search_none_title">No results</string>
+    <string name="search_none_body">Nothing matches “%1$s”.</string>
+
+    <!-- Title page -->
+    <string name="item_watched">Watched</string>
+    <string name="item_mark_watched">Mark as watched</string>
+    <string name="item_mark_unwatched">Mark as unwatched</string>
+    <string name="item_from_start">Play from the start</string>
+    <string name="item_play_episode">Play S%1$d · E%2$d</string>
+    <string name="item_episode_short">S%1$d · E%2$d</string>
+    <string name="item_episode_number">Episode %1$d</string>
+    <string name="item_left">%1$s left</string>
+    <string name="item_seasons">Seasons</string>
+    <string name="item_episodes">Episodes</string>
+    <string name="item_cast">Cast</string>
+    <string name="item_previous">Previous</string>
+    <string name="item_next">Next</string>
+    <string name="item_file">File</string>
+    <plurals name="item_seasons">
+        <item quantity="one">%d season</item>
+        <item quantity="other">%d seasons</item>
+    </plurals>
+    <plurals name="item_episodes">
+        <item quantity="one">%d episode</item>
+        <item quantity="other">%d episodes</item>
+    </plurals>
+    <plurals name="item_audio_tracks">
+        <item quantity="one">%d audio track</item>
+        <item quantity="other">%d audio tracks</item>
+    </plurals>
+    <plurals name="item_subtitle_tracks">
+        <item quantity="one">%d subtitle</item>
+        <item quantity="other">%d subtitles</item>
+    </plurals>
+    <string name="format_hours_minutes">%1$dh %2$dm</string>
+    <string name="format_minutes">%1$dm</string>
+
+    <!-- Player -->
+    <string name="player_pause">Pause</string>
+    <string name="player_back10">Back 10 seconds</string>
+    <string name="player_forward10">Forward 10 seconds</string>
+    <string name="player_seconds">%1$d s</string>
+    <string name="player_next">Next episode</string>
+    <string name="player_tracks">Audio and subtitles</string>
+    <string name="player_audio">Audio</string>
+    <string name="player_subtitles">Subtitles</string>
+    <string name="player_subtitles_off">Off</string>
+    <string name="player_subtitle_image">Picture subtitles can’t be shown yet</string>
+    <string name="player_fill">Fill the screen</string>
+    <string name="player_fit">Fit to screen</string>
+    <string name="player_mode_direct">Direct play</string>
+    <string name="player_mode_remux">Direct stream</string>
+    <string name="player_mode_transcode">Converting</string>
+    <string name="player_error_title">Can’t play this</string>
+    <string name="player_error">The video stopped. Check the connection and try again.</string>
+    <string name="player_no_file">This title has no playable file.</string>
+    <string name="track_mono">Mono</string>
+    <string name="track_stereo">Stereo</string>
+    <string name="track_numbered">Track %1$d</string>
+
+    <!-- Settings -->
+    <string name="settings_switch_profile">Switch</string>
+    <string name="settings_connection">Connection</string>
+    <string name="settings_route_local">At home</string>
+    <string name="settings_route_public">Away · public address</string>
+    <string name="settings_route_hint">Kinema uses the home address when it answers and moves to the public one when you leave.</string>
+    <string name="settings_local_url">Home address</string>
+    <string name="settings_public_url">Public address</string>
+    <string name="settings_public_hint">A reverse proxy or tunnel that reaches the server from anywhere</string>
+    <string name="settings_public_from_server">Using the server’s: %1$s</string>
+    <string name="settings_public_test">Test</string>
+    <string name="settings_public_ok">The server answers at this address</string>
+    <string name="settings_public_unreachable">No answer at this address from here</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_dynamic">Wallpaper colors</string>
+    <string name="settings_dynamic_hint">Tint the app with colors from your wallpaper</string>
+    <string name="settings_server">Server</string>
+    <string name="settings_cert_pinned">Private certificate, approved on this phone</string>
+    <string name="settings_cert_public">Certificate signed by a public authority</string>
+    <string name="settings_version">Kinema for Android %1$s</string>
+</resources>

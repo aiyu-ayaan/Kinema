@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The web favicon's play mark, centred in the adaptive icon's 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="@color/ic_launcher_mark"
+        android:pathData="M44,36.5C44,34.6 46.1,33.4 47.7,34.4L74.1,51.4C75.6,52.4 75.6,54.6 74.1,55.6L47.7,72.6C46.1,73.6 44,72.4 44,70.5Z" />
+</vector>
