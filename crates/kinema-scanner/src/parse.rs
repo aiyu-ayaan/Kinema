@@ -18,15 +18,53 @@ pub struct EpisodeName {
 
 /// Words that mark the end of a title in release names.
 const STOP_WORDS: &[&str] = &[
-    "2160p", "1080p", "1080i", "720p", "576p", "480p", "4k", "uhd", "bluray", "blu-ray", "bdrip",
-    "brrip", "webrip", "web-dl", "webdl", "web", "hdtv", "dvdrip", "dvd", "remux", "x264", "x265",
-    "h264", "h265", "hevc", "avc", "xvid", "hdr", "hdr10", "dv", "10bit", "proper", "repack",
-    "extended", "unrated", "remastered", "imax", "aac", "ac3", "dts", "atmos", "multi",
+    "2160p",
+    "1080p",
+    "1080i",
+    "720p",
+    "576p",
+    "480p",
+    "4k",
+    "uhd",
+    "bluray",
+    "blu-ray",
+    "bdrip",
+    "brrip",
+    "webrip",
+    "web-dl",
+    "webdl",
+    "web",
+    "hdtv",
+    "dvdrip",
+    "dvd",
+    "remux",
+    "x264",
+    "x265",
+    "h264",
+    "h265",
+    "hevc",
+    "avc",
+    "xvid",
+    "hdr",
+    "hdr10",
+    "dv",
+    "10bit",
+    "proper",
+    "repack",
+    "extended",
+    "unrated",
+    "remastered",
+    "imax",
+    "aac",
+    "ac3",
+    "dts",
+    "atmos",
+    "multi",
 ];
 
 /// Splits on separators; dots and underscores count as spaces in release names.
 fn words(s: &str) -> Vec<String> {
-    s.split(|c: char| c == '.' || c == '_' || c == ' ')
+    s.split(['.', '_', ' '])
         .filter(|w| !w.is_empty())
         .map(str::to_string)
         .collect()
@@ -84,7 +122,11 @@ pub fn parse_movie(name: &str) -> MovieName {
     };
     let title = tidy(&w[..end]);
     MovieName {
-        title: if title.is_empty() { name.to_string() } else { title },
+        title: if title.is_empty() {
+            name.to_string()
+        } else {
+            title
+        },
         year: year_pos.and_then(|i| year_of(&w[i])),
     }
 }
@@ -104,20 +146,22 @@ fn episode_marker(word: &str) -> Option<(i64, i64)> {
         let at_word_start = start == 0 || !b[start - 1].is_ascii_alphanumeric();
         if b[start] == b's' && at_word_start {
             let (end, season) = digits(start + 1);
-            if end < b.len() && b[end] == b'e' && (1..=2).contains(&(end - start - 1)) {
-                if let (Some(s), (_, Some(e))) = (season, digits(end + 1)) {
-                    return Some((s, e));
-                }
+            if end < b.len()
+                && b[end] == b'e'
+                && (1..=2).contains(&(end - start - 1))
+                && let (Some(s), (_, Some(e))) = (season, digits(end + 1))
+            {
+                return Some((s, e));
             }
         }
         if b[start].is_ascii_digit() && at_word_start {
             let (end, season) = digits(start);
             if end < b.len() && b[end] == b'x' && (1..=2).contains(&(end - start)) {
                 let (eend, ep) = digits(end + 1);
-                if eend - end - 1 >= 2 {
-                    if let (Some(s), Some(e)) = (season, ep) {
-                        return Some((s, e));
-                    }
+                if eend - end > 2
+                    && let (Some(s), Some(e)) = (season, ep)
+                {
+                    return Some((s, e));
                 }
             }
         }

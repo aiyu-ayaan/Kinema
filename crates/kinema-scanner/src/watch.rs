@@ -11,10 +11,10 @@ pub fn watch_library(
     tx: UnboundedSender<i64>,
 ) -> Result<RecommendedWatcher, ScannerError> {
     let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
-        if let Ok(event) = res {
-            if !event.kind.is_access() {
-                let _ = tx.send(library_id);
-            }
+        if let Ok(event) = res
+            && !event.kind.is_access()
+        {
+            let _ = tx.send(library_id);
         }
     })?;
     for root in roots {

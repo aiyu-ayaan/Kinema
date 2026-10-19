@@ -4,10 +4,12 @@ use sqlx::SqlitePool;
 pub const TMDB_API_KEY: &str = "tmdb_api_key";
 
 pub async fn get(pool: &SqlitePool, key: &str) -> Result<Option<String>, DbError> {
-    Ok(sqlx::query_scalar("SELECT value FROM settings WHERE key = ?1")
-        .bind(key)
-        .fetch_optional(pool)
-        .await?)
+    Ok(
+        sqlx::query_scalar("SELECT value FROM settings WHERE key = ?1")
+            .bind(key)
+            .fetch_optional(pool)
+            .await?,
+    )
 }
 
 /// Empty value deletes the key.

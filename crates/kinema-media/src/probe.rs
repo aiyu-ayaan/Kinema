@@ -59,8 +59,15 @@ struct RawStream {
 /// Runs ffprobe once per file; callers cache the result by size + mtime.
 pub async fn probe(bins: &MediaBinaries, path: &Path) -> Result<Probe, MediaError> {
     let mut cmd = std::process::Command::new(&bins.ffprobe);
-    cmd.args(["-v", "error", "-print_format", "json", "-show_format", "-show_streams"])
-        .arg(path);
+    cmd.args([
+        "-v",
+        "error",
+        "-print_format",
+        "json",
+        "-show_format",
+        "-show_streams",
+    ])
+    .arg(path);
     kinema_core::platform::configure_low_priority_process(&mut cmd);
     let out = tokio::process::Command::from(cmd)
         .kill_on_drop(true)

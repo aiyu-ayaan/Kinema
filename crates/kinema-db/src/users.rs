@@ -54,13 +54,15 @@ pub async fn create_session(
     ttl_s: i64,
 ) -> Result<(), DbError> {
     let t = now();
-    sqlx::query("INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)")
-        .bind(token_hash)
-        .bind(user_id)
-        .bind(t)
-        .bind(t + ttl_s)
-        .execute(pool)
-        .await?;
+    sqlx::query(
+        "INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)",
+    )
+    .bind(token_hash)
+    .bind(user_id)
+    .bind(t)
+    .bind(t + ttl_s)
+    .execute(pool)
+    .await?;
     Ok(())
 }
 

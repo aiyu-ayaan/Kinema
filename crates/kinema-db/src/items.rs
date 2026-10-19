@@ -26,7 +26,8 @@ pub struct ItemCard {
     pub added_at: i64,
 }
 
-const CARD_SELECT: &str = "SELECT i.id, i.library_id, i.parent_id, i.kind, i.title, i.year, i.season_no, i.episode_no,
+const CARD_SELECT: &str =
+    "SELECT i.id, i.library_id, i.parent_id, i.kind, i.title, i.year, i.season_no, i.episode_no,
   i.summary, i.rating,
   COALESCE(i.poster, p.poster, g.poster) AS poster,
   COALESCE(i.backdrop, p.backdrop, g.backdrop) AS backdrop,
@@ -131,7 +132,10 @@ pub async fn search(
     );
     let pattern = format!(
         "%{}%",
-        query.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_")
+        query
+            .replace('\\', "\\\\")
+            .replace('%', "\\%")
+            .replace('_', "\\_")
     );
     Ok(sqlx::query_as(&sql)
         .bind(user_id)
@@ -391,11 +395,26 @@ pub async fn delete_files(pool: &SqlitePool, ids: &[i64]) -> Result<(), DbError>
 /// What the scanner learned from a path.
 #[derive(Debug, Clone, Copy)]
 pub enum NewItem<'a> {
-    Movie { title: &'a str, year: Option<i64> },
-    Show { title: &'a str, year: Option<i64> },
-    Season { show_id: i64, season: i64 },
-    Episode { season_id: i64, episode: i64, title: &'a str },
-    Video { title: &'a str },
+    Movie {
+        title: &'a str,
+        year: Option<i64>,
+    },
+    Show {
+        title: &'a str,
+        year: Option<i64>,
+    },
+    Season {
+        show_id: i64,
+        season: i64,
+    },
+    Episode {
+        season_id: i64,
+        episode: i64,
+        title: &'a str,
+    },
+    Video {
+        title: &'a str,
+    },
 }
 
 /// Finds the matching item or creates it. Movies with the same title and year

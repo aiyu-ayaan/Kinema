@@ -65,12 +65,10 @@ pub async fn create(
 /// Files point at items with ON DELETE SET NULL, so delete them explicitly first.
 pub async fn delete(pool: &SqlitePool, id: i64) -> Result<(), DbError> {
     let mut tx = pool.begin().await?;
-    sqlx::query(
-        "DELETE FROM files WHERE item_id IN (SELECT id FROM items WHERE library_id = ?1)",
-    )
-    .bind(id)
-    .execute(&mut *tx)
-    .await?;
+    sqlx::query("DELETE FROM files WHERE item_id IN (SELECT id FROM items WHERE library_id = ?1)")
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
     sqlx::query("DELETE FROM libraries WHERE id = ?1")
         .bind(id)
         .execute(&mut *tx)

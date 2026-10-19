@@ -183,7 +183,10 @@ mod tests {
         let mp4 = Path::new("a.mp4");
         let mkv = Path::new("a.mkv");
         assert_eq!(plan(mp4, Some(H264), Some(AAC), true, caps), Plan::Direct);
-        assert_eq!(plan(mp4, Some(H264), Some(AAC), false, caps).name(), "remux");
+        assert_eq!(
+            plan(mp4, Some(H264), Some(AAC), false, caps).name(),
+            "remux"
+        );
         assert_eq!(plan(mkv, Some(H264), Some(AAC), true, caps).name(), "remux");
         assert_eq!(
             plan(mkv, Some(H264), Some(DTS), true, caps),
@@ -196,7 +199,10 @@ mod tests {
             codec: Some("hevc"),
             ..H264
         };
-        assert_eq!(plan(mkv, Some(hevc), Some(AAC), true, caps).name(), "transcode");
+        assert_eq!(
+            plan(mkv, Some(hevc), Some(AAC), true, caps).name(),
+            "transcode"
+        );
         let caps = ClientCaps {
             hevc: true,
             av1: false,
@@ -206,6 +212,9 @@ mod tests {
             profile: Some("High 10"),
             ..H264
         };
-        assert_eq!(plan(mp4, Some(hi10), Some(AAC), true, caps).name(), "transcode");
+        assert_eq!(
+            plan(mp4, Some(hi10), Some(AAC), true, caps).name(),
+            "transcode"
+        );
     }
 }
