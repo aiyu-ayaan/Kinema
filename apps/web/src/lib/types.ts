@@ -101,6 +101,8 @@ export interface ItemDetail {
   cast: CastMember[]
   prev_id: number | null
   next_id: number | null
+  /** Show or season: the episode "Play" starts on. */
+  next_up: ItemCard | null
 }
 
 export interface Home {

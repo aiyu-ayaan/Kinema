@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowCounterClockwise, CheckCircle, Play, Star, User } from '@phosphor-icons/react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowCounterClockwise, Check, CheckCircle, LinkSimple, Play, Star, User } from '@phosphor-icons/react'
 import { Artwork } from '@/components/media/Artwork'
 import { PosterGrid } from '@/components/media/PosterCard'
 import { Badge, Skeleton } from '@/components/ui/Card'
@@ -75,13 +75,20 @@ function Hero({ detail, children }: { detail: ItemDetail; children?: ReactNode }
   )
 }
 
-function PlayButtons({ item }: { item: ItemCard }) {
+/** `episode`: started from a show or season page, so the label names the episode. */
+function PlayButtons({ item, episode }: { item: ItemCard; episode?: boolean }) {
   const navigate = useNavigate()
   const progress = progressOf(item)
+  const ep = subtitleOf(item) ?? ''
+  const label = episode
+    ? t(progress != null ? 'item.resumeEpisode' : 'item.playEpisode', { ep })
+    : progress != null
+      ? t('item.resume', { time: clock(item.position_s ?? 0) })
+      : t('player.play')
   return (
     <>
       <Button size="lg" variant="primary" icon={<Play size={18} weight="fill" />} onClick={() => navigate(`/play/${item.id}`)}>
-        {progress != null ? t('item.resume', { time: clock(item.position_s ?? 0) }) : t('player.play')}
+        {label}
       </Button>
       {progress != null && (
         <Button size="lg" icon={<ArrowCounterClockwise size={18} />} onClick={() => navigate(`/play/${item.id}?t=0`)}>
@@ -89,6 +96,51 @@ function PlayButtons({ item }: { item: ItemCard }) {
         </Button>
       )}
     </>
+  )
+}
+
+/** Marks the item, or every episode of a show or season, watched or not. */
+function WatchedButton({ id, watched }: { id: number; watched: boolean }) {
+  const qc = useQueryClient()
+  const set = useMutation({
+    mutationFn: () => api.setWatched(id, !watched),
+    onSuccess: () => {
+      for (const key of ['item', 'library', 'home']) qc.invalidateQueries({ queryKey: [key] })
+    },
+  })
+  const label = t(watched ? 'item.markUnwatched' : 'item.markWatched')
+  return (
+    <Button
+      size="lg"
+      loading={set.isPending}
+      onClick={() => set.mutate()}
+      aria-label={label}
+      title={label}
+      aria-pressed={watched}
+      icon={watched ? <CheckCircle size={20} weight="fill" className="text-primary" /> : <Check size={20} />}
+    />
+  )
+}
+
+function CopyLinkButton() {
+  const [copied, setCopied] = useState(false)
+  const label = t(copied ? 'item.linkCopied' : 'item.copyLink')
+  return (
+    <Button
+      size="lg"
+      aria-label={label}
+      title={label}
+      icon={copied ? <Check size={20} /> : <LinkSimple size={20} />}
+      onClick={() =>
+        navigator.clipboard
+          ?.writeText(window.location.href)
+          .then(() => {
+            setCopied(true)
+            window.setTimeout(() => setCopied(false), 2000)
+          })
+          .catch(() => {})
+      }
+    />
   )
 }
 
@@ -217,11 +269,16 @@ export function ItemPage() {
   }
   const { item, children, cast } = data
   const playable = item.kind === 'movie' || item.kind === 'episode' || item.kind === 'video'
+  const canPlay = playable && data.files.length > 0
+  const nextUp = data.next_up
   return (
     <div className="anim-enter space-y-8">
       <Hero detail={data}>
         <div className="mt-6 flex flex-wrap gap-2">
-          {playable && data.files.length > 0 && <PlayButtons item={item} />}
+          {canPlay && <PlayButtons item={item} />}
+          {nextUp && <PlayButtons item={nextUp} episode />}
+          {(canPlay || nextUp) && <WatchedButton id={item.id} watched={canPlay ? item.watched : !!nextUp?.watched} />}
+          <CopyLinkButton />
           {admin && (item.kind === 'movie' || item.kind === 'show') && <FixMatch item={item} />}
         </div>
       </Hero>

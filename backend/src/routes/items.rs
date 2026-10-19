@@ -17,6 +17,7 @@ pub fn router() -> Router<AppState> {
         .route("/search", get(search))
         .route("/items/:id", get(detail))
         .route("/items/:id/progress", put(progress))
+        .route("/items/:id/watched", put(watched))
 }
 
 #[derive(Serialize)]
@@ -107,6 +108,8 @@ struct Detail {
     /// Previous and next sibling, for episode navigation and autoplay.
     prev_id: Option<i64>,
     next_id: Option<i64>,
+    /// The episode "Play" starts on a show or season page.
+    next_up: Option<ItemCard>,
 }
 
 async fn detail(
@@ -134,6 +137,10 @@ async fn detail(
             next_id = siblings.get(pos + 1).map(|s| s.id);
         }
     }
+    let next_up = match item.kind.as_str() {
+        "show" | "season" => items::next_up(db, user.id, id).await?,
+        _ => None,
+    };
     let cast = items::item_cast(db, id).await?;
     Ok(Json(Detail {
         genres: items::genres(db, id).await?,
@@ -143,6 +150,7 @@ async fn detail(
         cast,
         prev_id,
         next_id,
+        next_up,
     }))
 }
 
@@ -161,5 +169,21 @@ async fn progress(
 ) -> ApiResult<StatusCode> {
     access::check_item(&state, &user, id).await?;
     items::set_progress(&state.db, user.id, id, p.position_s.max(0.0), p.watched).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Deserialize)]
+struct Watched {
+    watched: bool,
+}
+
+async fn watched(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<i64>,
+    Json(w): Json<Watched>,
+) -> ApiResult<StatusCode> {
+    access::check_item(&state, &user, id).await?;
+    items::set_watched_tree(&state.db, user.id, id, w.watched).await?;
     Ok(StatusCode::NO_CONTENT)
 }

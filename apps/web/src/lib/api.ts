@@ -119,6 +119,7 @@ export const api = {
   item: (id: number) => request<ItemDetail>('GET', `/items/${id}`),
   progress: (id: number, position_s: number, watched = false) =>
     request<void>('PUT', `/items/${id}/progress`, { position_s, watched }),
+  setWatched: (id: number, watched: boolean) => request<void>('PUT', `/items/${id}/watched`, { watched }),
 
   matchSearch: (id: number, q: string, year: number | null) =>
     request<MatchCandidate[]>('GET', `/items/${id}/match?q=${encodeURIComponent(q)}${year ? `&year=${year}` : ''}`),

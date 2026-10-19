@@ -867,3 +867,50 @@ pub async fn set_progress(
     .await?;
     Ok(())
 }
+
+/// Where "Play" on a show or season starts: the first unwatched episode, or the
+/// first episode once all are watched (then its `watched` is true).
+pub async fn next_up(
+    pool: &SqlitePool,
+    user_id: i64,
+    item_id: i64,
+) -> Result<Option<ItemCard>, DbError> {
+    let sql = format!(
+        "{CARD_SELECT} WHERE i.kind = 'episode'
+           AND (i.parent_id = ?2 OR i.parent_id IN (SELECT id FROM items WHERE parent_id = ?2))
+           AND EXISTS (SELECT 1 FROM files f WHERE f.item_id = i.id)
+         ORDER BY COALESCE(w.watched, 0), p.season_no = 0, p.season_no, i.episode_no
+         LIMIT 1"
+    );
+    Ok(sqlx::query_as(&sql)
+        .bind(user_id)
+        .bind(item_id)
+        .fetch_optional(pool)
+        .await?)
+}
+
+/// Marks an item and every playable item under it (a show's episodes) watched or not.
+pub async fn set_watched_tree(
+    pool: &SqlitePool,
+    user_id: i64,
+    item_id: i64,
+    watched: bool,
+) -> Result<(), DbError> {
+    sqlx::query(
+        "INSERT INTO watch_state (user_id, item_id, position_s, watched, play_count, last_played_at)
+         SELECT ?1, i.id, 0, ?3, ?3, ?4 FROM items i
+         WHERE (i.id = ?2 OR i.parent_id = ?2 OR i.parent_id IN (SELECT id FROM items WHERE parent_id = ?2))
+           AND EXISTS (SELECT 1 FROM files f WHERE f.item_id = i.id)
+         ON CONFLICT(user_id, item_id) DO UPDATE SET
+           position_s = 0,
+           play_count = play_count + (excluded.watched AND NOT watch_state.watched),
+           watched = excluded.watched",
+    )
+    .bind(user_id)
+    .bind(item_id)
+    .bind(watched)
+    .bind(now())
+    .execute(pool)
+    .await?;
+    Ok(())
+}
