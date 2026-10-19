@@ -6,7 +6,8 @@
   "description": "Kinema - Personal media server in the spirit of Plex",
   "scripts": {
     "dev": "concurrently -k -p \"[{name}]\" -n \"backend,web\" -c \"cyan,magenta\" \"pnpm run dev:backend\" \"pnpm run dev:web\"",
-    "dev:backend": "cargo run --manifest-path backend/Cargo.toml",
+    "dev:backend": "node scripts/dev-backend.mjs",
+    "start:backend": "cargo run --manifest-path backend/Cargo.toml",
     "dev:web": "pnpm --filter @kinema/web dev",
     "build": "pnpm run build:web && pnpm run build:backend",
     "build:web": "pnpm --filter @kinema/web build",

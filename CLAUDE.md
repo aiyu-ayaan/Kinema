@@ -72,8 +72,9 @@ Do not decompile, disassemble, copy or paraphrase Plex's proprietary code or ass
 Same as Domus. Run from the repo root with pnpm.
 
 ```
-pnpm dev            # backend + web together
-pnpm dev:backend    # cargo run --manifest-path backend/Cargo.toml
+pnpm dev            # backend + web together; open http://localhost:5173 (Vite HMR, /api proxied)
+pnpm dev:backend    # scripts/dev-backend.mjs: cargo run, restarts on .rs/.toml/.sql/.json changes
+pnpm start:backend  # cargo run once, no watching
 pnpm dev:web        # pnpm --filter @kinema/web dev
 pnpm build          # web build, then cargo build --release
 pnpm build:web
