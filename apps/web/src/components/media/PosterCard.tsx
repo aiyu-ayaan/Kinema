@@ -19,13 +19,18 @@ function ProgressBar({ value }: { value: number }) {
 export function PosterCard({ item, wide }: { item: ItemCard; wide?: boolean }) {
   const progress = progressOf(item)
   const playable = item.kind === 'movie' || item.kind === 'episode' || item.kind === 'video'
-  // Continue Watching jumps straight back into the player.
-  const to = wide && playable ? `/play/${item.id}` : `/item/${item.id}`
+  const playTo = `/play/${item.id}`
+  const detailTo = `/item/${item.id}`
   const title = item.kind === 'episode' && wide ? (item.show_title ?? item.title) : item.title
   const sub = item.kind === 'episode' && wide ? `${subtitleOf(item)} · ${item.title}` : subtitleOf(item)
   return (
-    <Link to={to} className="group block min-w-0 rounded-lg focus-visible:outline-offset-4" title={item.title}>
-      <div className="relative">
+    <div className="group block min-w-0" title={item.title}>
+      {/* Video / Poster part: clicking plays video if playable, or opens details if container (show/season) */}
+      <Link
+        to={playable ? playTo : detailTo}
+        className="relative block overflow-hidden rounded-lg focus-visible:outline-offset-4"
+        aria-label={playable ? t('player.play') : title}
+      >
         <Artwork
           image={wide ? (item.backdrop ?? item.poster) : item.poster}
           frame={frameUrl(item.id)}
@@ -35,7 +40,7 @@ export function PosterCard({ item, wide }: { item: ItemCard; wide?: boolean }) {
         />
         {playable && (
           <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 opacity-0 transition-all duration-base group-hover:bg-black/35 group-hover:opacity-100">
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-on-primary shadow-overlay">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-on-primary shadow-overlay transition-transform duration-base group-hover:scale-110">
               <Play size={20} weight="fill" aria-label={t('player.play')} />
             </span>
           </div>
@@ -44,10 +49,13 @@ export function PosterCard({ item, wide }: { item: ItemCard; wide?: boolean }) {
           <CheckCircle size={22} weight="fill" className="absolute end-2 top-2 rounded-full bg-black/40 text-primary" aria-label={t('item.watched')} />
         )}
         {progress != null && <ProgressBar value={progress} />}
-      </div>
-      <p className="mt-2 truncate text-label font-medium text-fg">{title}</p>
-      {sub && <p className="truncate text-caption text-muted">{sub}</p>}
-    </Link>
+      </Link>
+      {/* Details / Text part: clicking opens the details screen */}
+      <Link to={detailTo} className="mt-2 block min-w-0 group/text focus-visible:outline-offset-2">
+        <p className="truncate text-label font-medium text-fg transition-colors group-hover/text:text-primary">{title}</p>
+        {sub && <p className="truncate text-caption text-muted">{sub}</p>}
+      </Link>
+    </div>
   )
 }
 

@@ -93,41 +93,38 @@ function PlayButtons({ item }: { item: ItemCard }) {
 }
 
 function EpisodeCard({ ep }: { ep: ItemCard }) {
-  const navigate = useNavigate()
   const progress = progressOf(ep)
   return (
-    <Link to={`/item/${ep.id}`} className="group flex min-w-0 flex-col rounded-lg focus-visible:outline-offset-4">
-      <div className="relative">
-        <Artwork image={ep.backdrop} frame={frameUrl(ep.id)} title={ep.title} aspect="wide" className="ring-1 ring-inset ring-white/5" />
+    <div className="group flex min-w-0 flex-col rounded-lg">
+      <Link
+        to={`/play/${ep.id}`}
+        className="relative block overflow-hidden rounded-lg focus-visible:outline-offset-4"
+        title={t('player.play')}
+      >
+        <Artwork image={ep.backdrop} frame={frameUrl(ep.id)} title={ep.title} aspect="wide" className="ring-1 ring-inset ring-white/5 transition-transform duration-base ease-std group-hover:scale-[1.02]" />
         <span className="absolute start-2 top-2 rounded bg-black/70 px-1.5 py-0.5 text-caption font-semibold tabular text-white">
           {t('item.episodeShort', { s: ep.season_no ?? 0, e: ep.episode_no ?? 0 })}
         </span>
         {ep.watched && <CheckCircle size={22} weight="fill" className="absolute end-2 top-2 rounded-full bg-black/40 text-primary" aria-label={t('item.watched')} />}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault()
-            navigate(`/play/${ep.id}`)
-          }}
-          aria-label={t('player.play')}
-          className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-lg bg-black/0 opacity-0 transition-all duration-base group-hover:bg-black/40 group-hover:opacity-100 focus-visible:opacity-100"
-        >
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-on-primary shadow-overlay">
+        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 opacity-0 transition-all duration-base group-hover:bg-black/40 group-hover:opacity-100">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-on-primary shadow-overlay transition-transform duration-base group-hover:scale-110">
             <Play size={22} weight="fill" aria-hidden />
           </span>
-        </button>
+        </div>
         {progress != null && (
           <div className="pointer-events-none absolute inset-x-2 bottom-2 h-1 overflow-hidden rounded-full bg-black/50">
             <div className="h-full bg-primary" style={{ width: `${progress * 100}%` }} />
           </div>
         )}
-      </div>
-      <div className="mt-2 flex items-baseline justify-between gap-2">
-        <p className="min-w-0 truncate text-body font-semibold">{ep.title}</p>
-        <span className="shrink-0 text-caption tabular text-subtle">{runtime(ep.duration_s)}</span>
-      </div>
-      {ep.summary && <p className="mt-0.5 line-clamp-2 text-label text-muted">{ep.summary}</p>}
-    </Link>
+      </Link>
+      <Link to={`/item/${ep.id}`} className="mt-2 block min-w-0 group/text focus-visible:outline-offset-2">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="min-w-0 truncate text-body font-semibold text-fg transition-colors group-hover/text:text-primary">{ep.title}</p>
+          <span className="shrink-0 text-caption tabular text-subtle">{runtime(ep.duration_s)}</span>
+        </div>
+        {ep.summary && <p className="mt-0.5 line-clamp-2 text-label text-muted">{ep.summary}</p>}
+      </Link>
+    </div>
   )
 }
 
