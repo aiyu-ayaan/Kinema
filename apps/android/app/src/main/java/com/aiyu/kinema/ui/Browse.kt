@@ -96,6 +96,16 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material.icons.rounded.Tv
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.res.pluralStringResource
 import com.aiyu.kinema.R
 import com.aiyu.kinema.core.Home
 import com.aiyu.kinema.core.ItemCard
@@ -158,11 +168,11 @@ fun MainScreen() {
     val back = rememberPredictiveBack(tab != 0) { tab = 0 }
     Box(Modifier.fillMaxSize().predictiveBackEffect { back.value }) {
         // Tapping Library while already on it opens the library switcher.
-        var switcher by rememberSaveable { mutableIntStateOf(0) }
-        FloatingNavScaffold(tabs, tab, { if (it == 1 && tab == 1) switcher++ else tab = it }) { current ->
+        var switcher by rememberSaveable { mutableStateOf(false) }
+        FloatingNavScaffold(tabs, tab, { if (it == 1 && tab == 1) switcher = true else tab = it }) { current ->
             when (current) {
                 0 -> HomeTab()
-                1 -> LibraryTab(switcher)
+                1 -> LibraryTab(switcher) { switcher = false }
                 2 -> SearchTab()
                 else -> SettingsTab()
             }
@@ -325,7 +335,7 @@ private fun TabHeader(title: String) {
 }
 
 @Composable
-private fun LibraryTab(switcher: Int) {
+private fun LibraryTab(switcher: Boolean, onSwitcherDismiss: () -> Unit) {
     val libraries = rememberLoad { it.libraries() }
     Column(Modifier.fillMaxSize()) {
         TabHeader(stringResource(R.string.tab_library))
@@ -338,11 +348,10 @@ private fun LibraryTab(switcher: Int) {
             val open = rememberOpen()
             val shows = rememberLoad(libs) { api -> libs.filter { it.showCount > 0 }.associate { l -> l.id to api.libraryItems(l.id).filter { it.kind == "show" } } }
             val lib = libs.firstOrNull { it.id == selected } ?: libs.first()
-            var sheet by rememberSaveable { mutableStateOf(false) }
-            var seen by rememberSaveable { mutableIntStateOf(switcher) }
-            if (switcher != seen) { seen = switcher; sheet = true }
-            if (sheet) {
-                LibrarySheet(libs, shows.state.value.let { (it as? Load.Ok)?.value.orEmpty() }, lib.id, { selected = it }, open) { sheet = false }
+            // Kept here, not in the sheet, so a collapsed library stays collapsed the next time it opens.
+            var collapsed by rememberSaveable { mutableStateOf(emptyList<Long>()) }
+            if (switcher) {
+                LibrarySheet(libs, shows.state.value.let { (it as? Load.Ok)?.value.orEmpty() }, lib.id, collapsed, { collapsed = it }, { selected = it }, open, onSwitcherDismiss)
             }
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(libs, key = { it.id }) { l ->
@@ -379,36 +388,65 @@ private fun LibraryTab(switcher: Int) {
     }
 }
 
-/** Library switcher: each library collapses to hide the shows under it, like the web sidebar. */
+/** Library switcher: a library collapses to hide the shows under it, like the web sidebar. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LibrarySheet(libs: List<Library>, shows: Map<Long, List<ItemCard>>, current: Long, onPick: (Long) -> Unit, onShow: (ItemCard) -> Unit, onDismiss: () -> Unit) {
-    var collapsed by rememberSaveable { mutableStateOf(emptyList<Long>()) }
-    ModalBottomSheet(onDismiss) {
-        LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+private fun LibrarySheet(libs: List<Library>, shows: Map<Long, List<ItemCard>>, current: Long, collapsed: List<Long>, onCollapsed: (List<Long>) -> Unit, onPick: (Long) -> Unit, onShow: (ItemCard) -> Unit, onDismiss: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    ModalBottomSheet(onDismiss, containerColor = colors.surfaceContainerLow) {
+        Text(
+            stringResource(R.string.library_switcher_title),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+        )
+        LazyColumn(contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             libs.forEach { l ->
                 val children = shows[l.id].orEmpty()
-                val open = l.id !in collapsed
+                val expanded = l.id !in collapsed
                 item(key = "lib${l.id}") {
+                    val chevron by animateFloatAsState(if (expanded) 180f else 0f, MaterialTheme.motionScheme.defaultSpatialSpec(), label = "chevron")
                     ListItem(
-                        headlineContent = { Text(l.name) },
+                        headlineContent = { Text(l.name, style = MaterialTheme.typography.titleMedium) },
+                        supportingContent = if (children.isEmpty()) null else {
+                            { Text(pluralStringResource(R.plurals.library_show_count, children.size, children.size)) }
+                        },
                         leadingContent = { Icon(Icons.Rounded.VideoLibrary, null) },
                         trailingContent = if (children.isEmpty()) null else {
                             {
-                                IconButton({ collapsed = if (open) collapsed + l.id else collapsed - l.id }) {
-                                    Icon(if (open) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null)
+                                IconButton({ onCollapsed(if (expanded) collapsed + l.id else collapsed - l.id) }) {
+                                    Icon(
+                                        Icons.Rounded.ExpandMore,
+                                        stringResource(if (expanded) R.string.library_collapse else R.string.library_expand),
+                                        Modifier.rotate(chevron),
+                                    )
                                 }
                             }
                         },
-                        colors = ListItemDefaults.colors(containerColor = if (l.id == current) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent),
-                        modifier = Modifier.clickable { onPick(l.id); onDismiss() },
+                        colors = ListItemDefaults.colors(
+                            containerColor = if (l.id == current) colors.secondaryContainer else Color.Transparent,
+                            headlineColor = if (l.id == current) colors.onSecondaryContainer else colors.onSurface,
+                            leadingIconColor = if (l.id == current) colors.onSecondaryContainer else colors.onSurfaceVariant,
+                        ),
+                        modifier = Modifier.clip(MaterialTheme.shapes.extraLarge).clickable { onPick(l.id); onDismiss() },
                     )
                 }
-                if (open) items(children, key = { "show${it.id}" }) { show ->
-                    ListItem(
-                        headlineContent = { Text(show.title, maxLines = 1) },
-                        modifier = Modifier.padding(start = 40.dp).clickable { onShow(show); onDismiss() },
-                    )
+                if (children.isNotEmpty()) item(key = "shows${l.id}") {
+                    AnimatedVisibility(expanded, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                        // The rail ties the shows to the library above them.
+                        Row(Modifier.padding(start = 30.dp, top = 2.dp).height(IntrinsicSize.Min)) {
+                            Box(Modifier.width(2.dp).fillMaxHeight().clip(CircleShape).background(colors.outlineVariant))
+                            Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                children.forEach { show ->
+                                    ListItem(
+                                        headlineContent = { Text(show.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                        leadingContent = { Icon(Icons.Rounded.Tv, null, Modifier.size(20.dp)) },
+                                        colors = ListItemDefaults.colors(containerColor = Color.Transparent, leadingIconColor = colors.onSurfaceVariant),
+                                        modifier = Modifier.clip(MaterialTheme.shapes.large).clickable { onShow(show); onDismiss() },
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
