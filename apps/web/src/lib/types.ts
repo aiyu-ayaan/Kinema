@@ -1,7 +1,27 @@
+export type AvatarColor = 'ember' | 'ocean' | 'forest' | 'plum' | 'sun' | 'rose' | 'slate' | 'teal'
+
 export interface User {
   id: number
   name: string
   is_admin: boolean
+  avatar: AvatarColor | null
+  has_password: boolean
+  has_pin: boolean
+}
+
+/** A profile as the admin edits it. Empty `library_ids` means every library. */
+export interface ManagedUser extends User {
+  library_ids: number[]
+}
+
+export interface ProfileInput {
+  name: string
+  is_admin: boolean
+  avatar: AvatarColor
+  /** undefined keeps the current one, '' removes it */
+  password?: string
+  pin?: string
+  library_ids: number[]
 }
 
 export type LibraryKind = 'movie' | 'show' | 'other'

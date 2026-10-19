@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { GearSix, House, List, MagnifyingGlass, Moon, SignOut, Sun, X, type Icon } from '@phosphor-icons/react'
+import { GearSix, House, List, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
+import { Avatar } from './ui/Avatar'
+import { SettingsNav } from '@/features/settings/SettingsNav'
 import { libraryIcon } from './media/libraryIcon'
 import { Button } from './ui/Button'
 import { useAuth, useIsAdmin } from '@/lib/auth'
@@ -137,12 +139,11 @@ function UserMenu() {
         icon={dark ? <Sun size={18} /> : <Moon size={18} />}
       />
       <span className="hidden h-8 items-center gap-2 rounded-full border border-border bg-raised ps-1 pe-3 text-label font-medium sm:flex">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-container text-caption font-semibold uppercase text-on-primary-container">
-          {user?.name.slice(0, 1)}
-        </span>
+        {user && <Avatar name={user.name} color={user.avatar} size={24} />}
         {user?.name}
       </span>
-      <Button variant="ghost" onClick={signOut} aria-label={t('auth.signOut')} title={t('auth.signOut')} icon={<SignOut size={18} />} />
+      {/* Signing out returns to the profile picker, which is how profiles switch. */}
+      <Button variant="ghost" onClick={signOut} aria-label={t('auth.switchProfile')} title={t('auth.switchProfile')} icon={<UserSwitch size={18} />} />
     </div>
   )
 }
@@ -152,11 +153,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [drawer, setDrawer] = useState(false)
   const location = useLocation()
   useEffect(() => setDrawer(false), [location.pathname])
+  // Settings takes over the sidebar, so the page itself is all content.
+  const inSettings = location.pathname.startsWith('/settings')
   return (
     <div className="flex min-h-dvh">
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-e border-border bg-panel md:flex">
         <Brand />
-        <Nav />
+        {inSettings ? <SettingsNav /> : <Nav />}
       </aside>
       {drawer && (
         <div className="fixed inset-0 z-sheet md:hidden" role="dialog" aria-modal>
@@ -166,7 +169,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Brand />
               <Button variant="ghost" onClick={() => setDrawer(false)} aria-label={t('common.close')} icon={<X size={18} />} />
             </div>
-            <Nav onNavigate={() => setDrawer(false)} />
+            {inSettings ? <SettingsNav onNavigate={() => setDrawer(false)} /> : <Nav onNavigate={() => setDrawer(false)} />}
           </aside>
         </div>
       )}
