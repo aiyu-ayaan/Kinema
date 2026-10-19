@@ -377,6 +377,21 @@ function createWindow() {
     }
   })
 
+  win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    if (errorCode !== -3 && validatedURL && !validatedURL.startsWith('devtools://')) {
+      console.warn('Page failed to load:', errorCode, errorDescription, validatedURL)
+      showConnect(t('connect.cannotLoad', { url: validatedURL }))
+    }
+  })
+
+  if (isDev) {
+    win.webContents.on('before-input-event', (_event, input) => {
+      if (input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i')) {
+        win.webContents.toggleDevTools()
+      }
+    })
+  }
+
   start()
 }
 

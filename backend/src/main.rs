@@ -4,7 +4,7 @@ use kinema_core::Config;
 use kinema_db::{init_pool, run_migrations};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::Semaphore;
 use tower_http::services::{ServeDir, ServeFile};
@@ -111,12 +111,28 @@ async fn main() -> anyhow::Result<()> {
         .with_state(state);
 
     // Serve the web UI; unknown paths get index.html so client routes survive a reload.
-    let web_dist = Path::new("apps/web/dist");
-    if web_dist.exists() {
-        info!("Serving static files from {}", web_dist.display());
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let candidates = [
+        std::env::var("KINEMA_WEB_DIST").ok().map(PathBuf::from),
+        Some(PathBuf::from("apps/web/dist")),
+        Some(manifest_dir.parent().unwrap_or(manifest_dir).join("apps/web/dist")),
+        Some(PathBuf::from("../../apps/web/dist")),
+        Some(PathBuf::from("../apps/web/dist")),
+        std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("web"))),
+        std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("../../apps/web/dist"))),
+    ];
+    let web_dist = candidates
+        .into_iter()
+        .flatten()
+        .find(|p| p.join("index.html").exists());
+
+    if let Some(dist) = web_dist {
+        info!("Serving static files from {}", dist.display());
         app = app.fallback_service(
-            ServeDir::new(web_dist).fallback(ServeFile::new(web_dist.join("index.html"))),
+            ServeDir::new(&dist).fallback(ServeFile::new(dist.join("index.html"))),
         );
+    } else {
+        warn!("No web UI build found (apps/web/dist). Web routes will return 404.");
     }
 
     let addr: SocketAddr = format!("{}:{}", config.server.host, config.server.port)
