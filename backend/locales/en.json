@@ -9,6 +9,7 @@
   "library.invalid_kind": "Choose Movies, TV Shows or Other videos.",
   "library.path_required": "Add at least one folder.",
   "library.path_invalid": "One of the folders does not exist or cannot be read.",
+  "library.path_too_broad": "Pick the folder that holds your videos, not a whole drive or a system folder.",
   "fs.not_found": "That folder does not exist or cannot be read.",
   "settings.tmdb_invalid": "TMDB rejected this key. Check it and try again.",
   "media.ffmpeg_missing": "ffmpeg was not found, so this file cannot be converted for the browser.",

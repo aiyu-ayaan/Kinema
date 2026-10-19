@@ -67,6 +67,9 @@ async fn create(
             .ok()
             .filter(|d| d.is_dir())
             .ok_or_else(|| ApiError::bad_request("library.path_invalid"))?;
+        if !kinema_core::platform::is_allowed_library_root(&dir) {
+            return Err(ApiError::bad_request("library.path_too_broad"));
+        }
         roots.push(dir.to_string_lossy().into_owned());
     }
     let id = libraries::create(&state.db, name, &body.kind, &roots).await?;

@@ -25,7 +25,7 @@ function FolderPicker({ onPick }: { onPick: (path: string) => void }) {
         <p className="min-w-0 flex-1 truncate font-mono text-caption text-muted" title={data?.path}>
           {data?.path || t('settings.folder.roots')}
         </p>
-        <Button size="sm" variant="primary" disabled={!data?.path} onClick={() => data?.path && onPick(data.path)}>
+        <Button size="sm" variant="primary" disabled={!data?.path || !data.parent} onClick={() => data?.path && onPick(data.path)}>
           {t('settings.folder.use')}
         </Button>
       </div>

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[cfg(unix)]
 mod unix;
@@ -40,6 +40,27 @@ pub fn default_data_dir() -> PathBuf {
     PathBuf::from("data")
 }
 
+/// Kernel and runtime pseudo-filesystems: never media, and walking them can hang
+/// (`/proc` has self-referencing links and files that block on read).
+pub fn is_virtual_fs(path: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        ["/proc", "/sys", "/dev", "/run"]
+            .iter()
+            .any(|p| path.starts_with(p))
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+        false
+    }
+}
+
+/// A folder that can be a library root: not a whole drive and not a pseudo-filesystem.
+pub fn is_allowed_library_root(path: &Path) -> bool {
+    path.parent().is_some() && !is_virtual_fs(path)
+}
+
 /// Top-level folders for a folder picker: "/" on Unix, drive letters on Windows.
 pub fn filesystem_roots() -> Vec<PathBuf> {
     #[cfg(windows)]
@@ -52,5 +73,18 @@ pub fn filesystem_roots() -> Vec<PathBuf> {
     #[cfg(not(windows))]
     {
         vec![PathBuf::from("/")]
+    }
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn library_roots() {
+        assert!(!is_allowed_library_root(Path::new("/")));
+        assert!(!is_allowed_library_root(Path::new("/proc/tty")));
+        assert!(is_allowed_library_root(Path::new("/mnt/Void/Movies")));
+        assert!(is_allowed_library_root(Path::new("/home/a/proc")));
     }
 }

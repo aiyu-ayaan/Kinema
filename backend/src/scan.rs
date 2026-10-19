@@ -78,7 +78,11 @@ pub async fn debounce_changes(state: AppState, mut rx: UnboundedReceiver<i64>) {
 
 /// (Re)starts the filesystem watcher for a library.
 pub fn watch(state: &AppState, library_id: i64, roots: &[String]) {
-    let roots: Vec<PathBuf> = roots.iter().map(PathBuf::from).collect();
+    let roots: Vec<PathBuf> = roots
+        .iter()
+        .map(PathBuf::from)
+        .filter(|r| kinema_core::platform::is_allowed_library_root(r))
+        .collect();
     match kinema_scanner::watch::watch_library(library_id, &roots, state.changes.clone()) {
         Ok(w) => {
             if let Ok(mut watchers) = state.watchers.lock() {
@@ -99,7 +103,23 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
     let Some(lib) = libraries::get(&state.db, library_id).await? else {
         return Ok(());
     };
-    let roots: Vec<PathBuf> = lib.roots.iter().map(PathBuf::from).collect();
+    // Libraries saved before root validation may still list "/" or /proc.
+    let roots: Vec<PathBuf> = lib
+        .roots
+        .iter()
+        .map(PathBuf::from)
+        .filter(|r| {
+            let ok = kinema_core::platform::is_allowed_library_root(r);
+            if !ok {
+                warn!(
+                    "library {}: skipping folder {} (whole drive or system folder)",
+                    lib.name,
+                    r.display()
+                );
+            }
+            ok
+        })
+        .collect();
     let walk_roots = roots.clone();
     let found: Vec<(PathBuf, FoundFile)> = tokio::task::spawn_blocking(move || {
         walk_roots

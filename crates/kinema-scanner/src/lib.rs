@@ -37,7 +37,11 @@ pub fn walk_videos(root: &Path) -> Vec<FoundFile> {
     WalkDir::new(root)
         .follow_links(true)
         .into_iter()
-        .filter_entry(|e| e.depth() == 0 || !e.file_name().to_string_lossy().starts_with('.'))
+        .filter_entry(|e| {
+            e.depth() == 0
+                || (!e.file_name().to_string_lossy().starts_with('.')
+                    && !kinema_core::platform::is_virtual_fs(e.path()))
+        })
         .filter_map(Result::ok)
         .filter(|e| e.file_type().is_file() && is_video(e.path()))
         .filter_map(|e| {
