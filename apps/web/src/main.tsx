@@ -14,7 +14,8 @@ applyStoredTheme()
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
+      // Progress made on another device (the Android app) shows up when this tab comes back.
+      refetchOnWindowFocus: true,
       staleTime: 1000 * 30,
       retry: 1,
     },

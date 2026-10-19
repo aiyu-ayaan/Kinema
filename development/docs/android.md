@@ -89,6 +89,27 @@ Same contract as the web player (`apps/web/src/features/player/PlayerPage.tsx`):
 4. Progress every 10 s and on leaving; watched at 92 %; the end opens the next episode.
 5. Landscape, immersive, screen kept on while open; restored on close.
 
+## Sync with the web app
+
+Nothing playback-related is stored on the phone; the server keeps it per profile, so every client sees the same state.
+
+```mermaid
+sequenceDiagram
+  participant A as Android player
+  participant S as Server (per profile)
+  participant W as Web app
+  A->>S: PUT /items/{id}/progress every 10 s, on leave, watched at 92 %
+  A->>S: PUT /items/{id}/track-choice when audio or subtitles change
+  W->>S: GET /home, /items/{id} (refetch on tab focus)
+  W->>S: GET /files/{id}/plan → audio + subtitle from the saved pick
+  W->>S: PUT /items/{id}/track-choice when changed on the web
+  A->>S: reload on app resume; plan applies the pick
+```
+
+- Resume position, watched state and continue watching: `watch_state`, shared by every device of the profile.
+- Audio and subtitle pick: `track_choice`, kept on the movie or on the show (all its episodes), applied by `/plan` before the show's admin choice and the server's Languages settings.
+- The app reloads lists when it returns to the foreground; the web app refetches when its tab regains focus.
+
 ## Strings
 
 Every user-facing string is in `app/src/main/res/values/strings.xml` (English). A translation is a `values-<lang>/strings.xml`.

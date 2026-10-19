@@ -966,3 +966,55 @@ pub async fn set_series_tracks(
     .await?;
     Ok(())
 }
+
+// ---- a profile's own track choice ----
+
+/// The movie itself, or the show an episode belongs to: where a profile's choice is kept.
+const TRACK_ROOT: &str = "CASE WHEN i.kind = 'episode' AND g.kind = 'show' THEN g.id ELSE i.id END";
+
+/// The profile's choice for the title a file belongs to; default when none.
+pub async fn file_track_choice(
+    pool: &SqlitePool,
+    user_id: i64,
+    file_id: i64,
+) -> Result<SeriesTracks, DbError> {
+    let sql = format!(
+        "SELECT t.audio, t.subtitle FROM files f
+         JOIN items i ON i.id = f.item_id
+         LEFT JOIN items p ON p.id = i.parent_id
+         LEFT JOIN items g ON g.id = p.parent_id
+         JOIN track_choice t ON t.user_id = ?2 AND t.item_id = {TRACK_ROOT}
+         WHERE f.id = ?1"
+    );
+    Ok(sqlx::query_as(&sql)
+        .bind(file_id)
+        .bind(user_id)
+        .fetch_optional(pool)
+        .await?
+        .unwrap_or_default())
+}
+
+/// Saves the profile's choice made while playing [item_id], on its movie or show.
+pub async fn set_track_choice(
+    pool: &SqlitePool,
+    user_id: i64,
+    item_id: i64,
+    tracks: SeriesTracks,
+) -> Result<(), DbError> {
+    let sql = format!(
+        "INSERT INTO track_choice (user_id, item_id, audio, subtitle)
+         SELECT ?1, {TRACK_ROOT}, ?3, ?4 FROM items i
+         LEFT JOIN items p ON p.id = i.parent_id
+         LEFT JOIN items g ON g.id = p.parent_id
+         WHERE i.id = ?2
+         ON CONFLICT(user_id, item_id) DO UPDATE SET audio = excluded.audio, subtitle = excluded.subtitle"
+    );
+    sqlx::query(&sql)
+        .bind(user_id)
+        .bind(item_id)
+        .bind(tracks.audio)
+        .bind(tracks.subtitle)
+        .execute(pool)
+        .await?;
+    Ok(())
+}

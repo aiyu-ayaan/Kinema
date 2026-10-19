@@ -385,11 +385,18 @@ private fun Player(detail: ItemDetail, startAt: Double) {
         }
     }
 
+    // A pick is saved for this profile, so the web app and other phones start the title the same way.
+    fun saveTracks(audioIdx: Int?, subtitle: Long?) {
+        val a = audios.indexOfFirst { it.idx == audioIdx }.takeIf { it >= 0 }
+        val s = if (subtitle == null) -1 else subs.indexOfFirst { it.id == subtitle }.takeIf { it >= 0 }
+        scope.launch { repository.request { it.setTrackChoice(item.id, a, s) } }
+    }
+
     if (tracks) {
         TrackSheet(audios, subs, audio, subId, onDismiss = { tracks = false; poke++ }, onAudio = { idx ->
             tracks = false
-            if (idx != audio) { audio = idx; load(idx, now()) }
-        }, onSubtitle = { subId = it; tracks = false })
+            if (idx != audio) { audio = idx; saveTracks(idx, subId); load(idx, now()) }
+        }, onSubtitle = { subId = it; tracks = false; saveTracks(audio, it) })
     }
 }
 

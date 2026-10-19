@@ -19,6 +19,7 @@ pub fn router() -> Router<AppState> {
         .route("/items/:id/progress", put(progress))
         .route("/items/:id/watched", put(watched))
         .route("/items/:id/tracks", put(set_tracks))
+        .route("/items/:id/track-choice", put(set_track_choice))
 }
 
 #[derive(Serialize)]
@@ -231,5 +232,21 @@ async fn set_tracks(
         subtitle: b.subtitle.filter(|&n| n >= -1),
     };
     items::set_series_tracks(&state.db, id, tracks).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// The viewer picked an audio or subtitle track: remember it for this profile on every device.
+async fn set_track_choice(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<i64>,
+    Json(b): Json<TracksBody>,
+) -> ApiResult<StatusCode> {
+    access::check_item(&state, &user, id).await?;
+    let tracks = items::SeriesTracks {
+        audio: b.audio.filter(|&n| n >= 0),
+        subtitle: b.subtitle.filter(|&n| n >= -1),
+    };
+    items::set_track_choice(&state.db, user.id, id, tracks).await?;
     Ok(StatusCode::NO_CONTENT)
 }

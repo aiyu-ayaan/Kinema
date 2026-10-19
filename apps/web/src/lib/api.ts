@@ -120,6 +120,9 @@ export const api = {
   progress: (id: number, position_s: number, watched = false) =>
     request<void>('PUT', `/items/${id}/progress`, { position_s, watched }),
   setWatched: (id: number, watched: boolean) => request<void>('PUT', `/items/${id}/watched`, { watched }),
+  /** This profile's own audio / subtitle pick (positions; subtitle -1 is off), shared with its other devices. */
+  setTrackChoice: (id: number, audio: number | null, subtitle: number | null) =>
+    request<void>('PUT', `/items/${id}/track-choice`, { audio, subtitle }),
   setSeriesTracks: (id: number, audio: number | null, subtitle: number | null) =>
     request<void>('PUT', `/items/${id}/tracks`, { audio, subtitle }),
 

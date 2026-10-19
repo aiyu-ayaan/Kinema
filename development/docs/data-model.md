@@ -99,6 +99,16 @@ CREATE TABLE watch_state (
 );
 CREATE INDEX watch_recent ON watch_state(user_id, last_played_at DESC);
 
+-- A profile's own audio / subtitle pick, saved by any player (web, Android) and
+-- applied by /files/{id}/plan on every device. Kept on the movie, or on the show for
+-- all its episodes. Positions among the streams; subtitle -1 is off.
+CREATE TABLE track_choice (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  audio INTEGER, subtitle INTEGER,
+  PRIMARY KEY (user_id, item_id)
+);
+
 CREATE TABLE playlists (
   id INTEGER PRIMARY KEY,
   owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

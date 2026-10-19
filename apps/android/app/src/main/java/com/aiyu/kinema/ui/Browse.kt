@@ -86,6 +86,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.aiyu.kinema.R
 import com.aiyu.kinema.core.Home
 import com.aiyu.kinema.core.ItemCard
@@ -111,6 +113,10 @@ fun <T> rememberLoad(vararg keys: Any?, block: suspend (KinemaApi) -> T): Loader
     var run by remember { mutableIntStateOf(0) }
     val refreshing = remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { repository.changes.collect { run++ } }
+    // Back in the app: what was watched on the web or another phone meanwhile shows up.
+    var paused by remember { mutableStateOf(false) }
+    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { paused = true }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { if (paused) { paused = false; run++ } }
     val state = produceState<Load<T>>(Load.Loading, api, run, *keys) {
         refreshing.value = true
         val result = repository.request(block)

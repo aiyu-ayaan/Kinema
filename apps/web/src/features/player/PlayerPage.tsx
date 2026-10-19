@@ -315,6 +315,14 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     return () => document.removeEventListener('fullscreenchange', onChange)
   }, [])
 
+  // The pick is saved for this profile, so the Android app and other browsers start this title the same way.
+  const saveTracks = (audioIdx: number | null, sub: number | null) => {
+    const a = audios.findIndex((s) => s.idx === audioIdx)
+    const pos = subs.findIndex((st) => st.id === sub)
+    const s = sub == null ? -1 : pos >= 0 ? pos : null
+    api.setTrackChoice(item.id, a >= 0 ? a : null, s).catch(() => {})
+  }
+
   const shown = scrub ?? time
   const fill = duration ? `${(shown / duration) * 100}%` : '0%'
   const title = item.kind === 'episode' ? (item.show_title ?? item.title) : item.title
@@ -430,11 +438,13 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
               setMenu(false)
               if (idx === audio) return
               setAudio(idx)
+              saveTracks(idx, subId)
               load(idx, absTime())
             }}
             onSub={(id) => {
               setSubId(id)
               setMenu(false)
+              saveTracks(audio, id)
             }}
           />
         </div>

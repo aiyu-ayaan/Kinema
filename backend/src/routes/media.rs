@@ -60,7 +60,7 @@ fn track(s: &Stream) -> Track<'_> {
     }
 }
 
-async fn choose(state: &AppState, file_id: i64, q: &PlayQuery) -> ApiResult<Chosen> {
+async fn choose(state: &AppState, user_id: i64, file_id: i64, q: &PlayQuery) -> ApiResult<Chosen> {
     let file = items::file(&state.db, file_id)
         .await?
         .ok_or_else(ApiError::not_found)?;
@@ -73,7 +73,13 @@ async fn choose(state: &AppState, file_id: i64, q: &PlayQuery) -> ApiResult<Chos
         .map(|(i, _)| i)
         .collect();
     let preferred = state.settings().preferred_audio_language;
-    let series = items::file_series_tracks(&state.db, file_id).await?;
+    // The profile's own choice (made in any player) wins over the show's admin choice.
+    let mine = items::file_track_choice(&state.db, user_id, file_id).await?;
+    let show = items::file_series_tracks(&state.db, file_id).await?;
+    let series = items::SeriesTracks {
+        audio: mine.audio.or(show.audio),
+        subtitle: mine.subtitle.or(show.subtitle),
+    };
     let audio = q
         .audio
         .and_then(|idx| audios.iter().copied().find(|&i| streams[i].idx == idx))
@@ -173,7 +179,7 @@ async fn plan(
     Query(q): Query<PlayQuery>,
 ) -> ApiResult<Json<PlanResponse>> {
     access::check_file(&state, &user, id).await?;
-    let c = choose(&state, id, &q).await?;
+    let c = choose(&state, user.id, id, &q).await?;
     let start = match (c.plan, &state.bins) {
         (Plan::Direct, _) => 0.0,
         (
@@ -209,7 +215,7 @@ async fn stream(
     req: Request,
 ) -> ApiResult<Response> {
     access::check_file(&state, &user, id).await?;
-    let c = choose(&state, id, &q).await?;
+    let c = choose(&state, user.id, id, &q).await?;
     let path = PathBuf::from(&c.file.path);
     let Plan::Stream {
         copy_video,

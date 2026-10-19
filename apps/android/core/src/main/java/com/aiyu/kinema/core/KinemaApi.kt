@@ -114,6 +114,14 @@ class KinemaApi(val baseUrl: String, pin: String?, connectSeconds: Long = 6, pri
         send("PUT", "/items/$id/watched", buildJsonObject { put("watched", watched) })
     }
 
+    /**
+     * Remembers this profile's audio and subtitle pick for the title (a show for all its episodes), on every device.
+     * Positions among the file's audio / subtitle streams; subtitle -1 is off.
+     */
+    suspend fun setTrackChoice(itemId: Long, audio: Int?, subtitle: Int?) {
+        send("PUT", "/items/$itemId/track-choice", buildJsonObject { put("audio", audio); put("subtitle", subtitle) })
+    }
+
     suspend fun plan(fileId: Long, audio: Int?, caps: PlayCaps, start: Double) =
         call("GET", "/files/$fileId/plan?${playQuery(audio, caps, start)}", PlaybackPlan.serializer())
 
