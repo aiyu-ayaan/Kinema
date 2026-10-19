@@ -10,9 +10,12 @@ This is Kinema's own API. It is not Plex-compatible.
 |---|---|---|
 | GET | `/auth/status` | `{needs_setup}`: true until the first account exists |
 | POST | `/auth/setup` | `{name, password}`: create the administrator (first run only), returns `{token, user}` and sets the cookie |
-| POST | `/auth/login` | `{name, password}` returns `{token, user}` and sets `kinema_session` |
+| POST | `/auth/login` | `{user_id \| name, password? \| pin?}` returns `{token, user}` and sets `kinema_session`; 429 after 5 failures |
 | POST | `/auth/logout` | Invalidate session, clear cookie |
 | GET | `/auth/me` | Current user |
+| GET | `/auth/profiles` | Public profile picker: names, avatars, lock kind |
+| GET/POST | `/users` | Admin: list / create profile `{name, avatar, is_admin, password?, pin?, library_ids}` |
+| PATCH/DELETE | `/users/{id}` | Admin: edit (omitted lock keeps it, `""` removes it) / delete |
 | GET/POST | `/libraries` | List / admin create `{name, kind: movie\|show\|other, paths}` |
 | DELETE | `/libraries/{id}` | Admin: remove (files on disk untouched) |
 | POST | `/libraries/{id}/scan` | Admin: rescan |

@@ -102,7 +102,7 @@ The response body owns the ffmpeg child (`kill_on_drop`). When the browser seeks
 
 ## Settings
 
-Admin-only, at `/settings/<section>`, grouped like a server control panel. Every option is read by the code it names; there are no placeholder switches.
+Admin-only, at `/settings/<section>`, grouped like a server control panel. While Settings is open the app sidebar shows the sections instead of the libraries, with Back to home on top, and the page uses the full content width. Every option is read by the code it names; there are no placeholder switches.
 
 | Section | Options | Used by |
 |---|---|---|
@@ -115,6 +115,7 @@ Admin-only, at `/settings/<section>`, grouped like a server control panel. Every
 | Network | listen address, LAN URL (read-only; set in `kinema.toml`) | status |
 | Scheduled Tasks | rescan every N hours | `scan::scheduled_rescans` |
 | Libraries | add, scan, match missing, regenerate thumbnails, remove | library routes |
+| Users | family profiles: colour, admin role, PIN, password, library access | `/api/users`, `access.rs` |
 | Troubleshooting | clear thumbnail, subtitle, artwork caches | `/server/cache/{kind}/clear` |
 
 Values live as one JSON row (`settings.key = 'server'`), cached in `AppState`, and are clamped to known values on save (`ServerSettings::sanitized`).
@@ -146,4 +147,4 @@ flowchart LR
 | Sidecar subtitles read only at probe time | A new `.srt` next to an unchanged video is not seen until the video changes | include sidecars in the walk |
 | Session cookie name is not flavor-specific | Dev and prod on the same host share the media cookie | per-flavor cookie name |
 | Watch state of a file moved from a "movie" to an episode is dropped | Progress on wrongly-filed episodes resets once | carry watch state across moves |
-| Single admin user | No profiles or library access control | M3 / M5 |
+| Settings are server-wide | Family profiles share language and transcoder choices | per-profile preferences |

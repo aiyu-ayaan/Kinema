@@ -1,5 +1,32 @@
 # Users, Profiles and Sharing
 
+## Implemented (MVP)
+
+- Sign-in is a "Who's watching?" picker: `GET /api/auth/profiles` (public) returns names, avatar colours and which lock each profile has. `POST /api/auth/login {user_id, password? | pin?}`.
+- Locks: administrators always have a password (8+ chars). Other profiles have an optional 4–8 digit PIN, or none (one tap). Both hashed with argon2id.
+- Lockout: 5 wrong tries lock a profile for 60 s (`AppState.login_failures`), so a 4-digit PIN cannot be brute-forced quickly.
+- Settings → Manage → Users (`/api/users`, admin): add, edit (name, colour, admin role, PIN, password, libraries), delete. Guards: at least one admin, no self-demote or self-delete; changing a profile's lock signs it out everywhere.
+- Library access (`user_library_access`): empty = every library; otherwise only those. Enforced server side in `backend/src/access.rs` on library lists, home, search, item detail, progress, plan, stream, subtitles and thumbnails; anything outside answers 404.
+- Watch state is per profile (`watch_state.user_id`). Language and transcoder settings are still server-wide.
+- Not yet: LAN-only restriction for unlocked profiles, content-rating limits, per-profile language preferences, playlists.
+
+```mermaid
+sequenceDiagram
+  participant P as Picker
+  participant S as Server
+  P->>S: GET /api/auth/profiles
+  S-->>P: [{id, name, avatar, has_password, has_pin}]
+  alt no lock
+    P->>S: POST /auth/login {user_id}
+  else PIN or password
+    P->>S: POST /auth/login {user_id, pin | password}
+    Note over S: 5 failures in a row: 429 for 60 s
+  end
+  S-->>P: {token, user} + kinema_session cookie
+  P->>S: API calls (Bearer); media (cookie)
+  Note over S: access.rs filters by user_library_access
+```
+
 ## Accounts
 
 - First run creates an admin through a setup screen.

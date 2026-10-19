@@ -19,7 +19,8 @@
 - [x] Home, library grid, detail pages, search, light/dark theme (Domus-style kit, Ember palette)
 - [x] Player: direct play / remux / transcode, exact seek offset, audio switch, WebVTT subtitles, resume, next episode
 - [ ] Safari playback of remuxed streams (needs HLS, M4)
-- [ ] More users and profiles (M3)
+- [x] Family profiles: picker, PIN, lockout, per-profile library access
+- [ ] Per-profile language preferences; LAN-only unlocked profiles
 - [x] Fix-match UI for wrong TMDB matches
 - [x] Episodes inside Movies libraries grouped as shows; Movies / TV Shows sidebar sub-entries
 - [ ] Sidecar subtitles picked up without a video change
