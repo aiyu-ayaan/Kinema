@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -223,13 +224,16 @@ private fun HomeTab() {
 private fun Hero(features: List<Pair<ItemCard, FeatureReason>>) {
     val pager = rememberPagerState { features.size }
     val reduced = rememberReducedMotion()
+    val isDragged by pager.interactionSource.collectIsDraggedAsState()
     var touched by remember { mutableStateOf(false) }
-    LaunchedEffect(pager.isScrollInProgress) { if (pager.isScrollInProgress) touched = true }
-    LaunchedEffect(touched, reduced) {
+    LaunchedEffect(isDragged) { if (isDragged) touched = true }
+    LaunchedEffect(touched, reduced, features.size) {
         if (touched || reduced || features.size < 2) return@LaunchedEffect
         while (true) {
             delay(7_000)
-            pager.animateScrollToPage((pager.currentPage + 1) % features.size)
+            if (!pager.isScrollInProgress) {
+                pager.animateScrollToPage((pager.currentPage + 1) % features.size)
+            }
         }
     }
     Box(Modifier.fillMaxWidth().aspectRatio(0.78f).heightIn(max = 620.dp)) {
@@ -321,16 +325,24 @@ private fun LibraryTab() {
                 return@Loaded
             }
             var selected by rememberSaveable { mutableStateOf(libs.first().id) }
+            val open = rememberOpen()
+            val shows = rememberLoad(libs) { api -> libs.filter { it.showCount > 0 }.associate { l -> l.id to api.libraryItems(l.id).filter { it.kind == "show" } } }
             val lib = libs.firstOrNull { it.id == selected } ?: libs.first()
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(libs, key = { it.id }) { l ->
-                    FilterChip(
-                        selected = l.id == lib.id,
-                        onClick = { selected = l.id },
-                        label = { Text(l.name) },
-                        leadingIcon = if (l.id == lib.id) { { Icon(Icons.Rounded.VideoLibrary, null, Modifier.size(FilterChipDefaults.IconSize)) } } else null,
-                        shape = CircleShape,
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = l.id == lib.id,
+                            onClick = { selected = l.id },
+                            label = { Text(l.name) },
+                            leadingIcon = if (l.id == lib.id) { { Icon(Icons.Rounded.VideoLibrary, null, Modifier.size(FilterChipDefaults.IconSize)) } } else null,
+                            shape = CircleShape,
+                        )
+                        // Shows open their own page, as in the web sidebar.
+                        (shows.state.value as? Load.Ok)?.value?.get(l.id).orEmpty().forEach { show ->
+                            FilterChip(selected = false, onClick = { open(show) }, label = { Text(show.title) }, shape = CircleShape)
+                        }
+                    }
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -339,7 +351,12 @@ private fun LibraryTab() {
             AnimatedContent(lib.id, label = "library", transitionSpec = { fadeIn(motion.defaultEffectsSpec()).togetherWith(fadeOut(motion.fastEffectsSpec())) }) {
                 Loaded(items) { list ->
                     if (list.isEmpty()) MessageState(Icons.Rounded.Movie, stringResource(R.string.library_empty_title), stringResource(R.string.library_empty_body))
-                    else PullToRefreshBox(items.refreshing.value, items.reload) { PosterGrid(list, wide = lib.kind == "other") }
+                    else {
+                        // Like the web sidebar: a mixed library lists its movies, its shows hang below it as chips.
+                        val mixed = lib.showCount > 0 && lib.showCount < lib.itemCount
+                        val shown = if (mixed) list.filter { it.kind != "show" } else list
+                        PullToRefreshBox(items.refreshing.value, items.reload) { PosterGrid(shown, wide = lib.kind == "other") }
+                    }
                 }
             }
         }
