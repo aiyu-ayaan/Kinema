@@ -4,6 +4,32 @@ Base path `/api`. JSON bodies. Auth: `Authorization: Bearer <session token>` or 
 
 This is Kinema's own API. It is not Plex-compatible.
 
+## Implemented in the MVP
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/auth/status` | `{needs_setup}`: true until the first account exists |
+| POST | `/auth/setup` | `{name, password}`: create the administrator (first run only), returns `{token, user}` and sets the cookie |
+| POST | `/auth/login` | `{name, password}` returns `{token, user}` and sets `kinema_session` |
+| POST | `/auth/logout` | Invalidate session, clear cookie |
+| GET | `/auth/me` | Current user |
+| GET/POST | `/libraries` | List / admin create `{name, kind: movie\|show\|other, paths}` |
+| DELETE | `/libraries/{id}` | Admin: remove (files on disk untouched) |
+| POST | `/libraries/{id}/scan` | Admin: rescan |
+| GET | `/libraries/{id}/items` | Top-level items with watch state |
+| GET | `/fs?path=` | Admin: folders on the server, for the folder picker |
+| GET | `/home` | Continue Watching and Recently Added per library |
+| GET | `/search?q=` | Title search |
+| GET | `/items/{id}` | Item, genres, files with streams, children, prev/next sibling |
+| PUT | `/items/{id}/progress` | `{position_s, watched?}` |
+| GET | `/files/{id}/plan?audio=&start=&hevc=&av1=` | `{mode: direct\|remux\|transcode, duration_s, audio, start}` |
+| GET | `/stream/{id}?audio=&start=&hevc=&av1=` | Direct (Range) or fMP4 pipe, per the plan |
+| GET | `/subtitles/{stream_id}` | Text subtitle as WebVTT, cached |
+| GET | `/images/{size}/{name}` | TMDB art, cached |
+| GET/PUT | `/settings` | Admin: `{tmdb_configured, ffmpeg_found}` / `{tmdb_api_key}` (verified before saving) |
+
+The tables below are the full target API.
+
 ## Auth and profiles
 
 | Method | Path | Purpose |

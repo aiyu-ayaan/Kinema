@@ -17,3 +17,4 @@
 | [security.md](security.md) | Threat model and hardening |
 | [legal-clean-room.md](legal-clean-room.md) | Clean-room policy about Plex |
 | [roadmap.md](roadmap.md) | Milestones |
+| [mvp.md](mvp.md) | What the first build does, its diagrams and shortcuts |

@@ -20,6 +20,8 @@ Fingerprint: `size` + xxh3 of first 64 KiB + last 64 KiB. Cheap on spinning disk
 
 ## 3. Playback decision
 
+MVP: implemented in `kinema-media::playback` with progressive fragmented MP4 instead of HLS; see `mvp.md` for the rules, the seek offset and the shortcuts.
+
 Client sends supported containers, video codecs (with profile/level), audio codecs, max bitrate, max resolution.
 
 | Condition | Mode | CPU cost |

@@ -1,53 +1,51 @@
 # Kinema Design System — MASTER
 
-Single source of truth for the web and client UI.
-Kinema adopts a cinematic, content-first dark interface with gold/amber media accents (`#E5A00D`) reminiscent of premium cinema and streaming experiences.
+Single source of truth for the web and client UI. Structure follows Domus (`../domus`): Material 3 tonal tokens as RGB triplets, light and dark schemes, the same component kit (Button, Field, Card, Modal, Badge, EmptyState, Notice).
+
+Kinema's seed is **Ember** `#E8553A`: a warm cinema red-orange. It keeps artwork as the hero, reads well on dark surfaces, and stays clearly apart from other media servers' brand colours (no amber/gold, no Netflix red).
 
 Implementation:
-- Tokens in `apps/web/src/index.css`
-- Tailwind configuration in `apps/web/tailwind.config.js`
-- Design tokens documented here
+- Tokens in `apps/web/src/index.css` (`:root` dark, `[data-theme='light']`, and `prefers-color-scheme`)
+- Tailwind mapping in `apps/web/tailwind.config.js`
+- Theme choice in `kinema.theme` / `kinema.dev.theme` (`apps/web/src/lib/theme.ts`)
 
 ## Principles
 
-1. **Content First**: Artwork, backdrops, and posters are the heroes. The UI chrome is dark and unobtrusive.
-2. **Cinematic Accents**: Warm amber/gold primary accent for progress bars, active selections, and interactive states.
-3. **Responsive Media Grids**: 2:3 aspect ratio poster cards with lazy loading, subtle hover zoom, and watch progress bars.
-4. **Fluid Transitions**: Fast, predictable transitions for menus, modals, and playback controls.
+1. **Content first**: posters, backdrops and video carry the colour. Chrome is warm-neutral and quiet.
+2. **One accent**: `primary` marks play buttons, progress, the active nav item and the seek bar. Nothing else competes.
+3. **Player is always dark**: black surface, white controls, primary seek fill, regardless of theme.
+4. **Readable over art**: hero text sits on a `bg` gradient; subtitles use `.text-over-media` shadow plus a translucent plate.
 
-## Color Tokens
+## Color tokens
 
-| Token | Dark (Default) | Use |
-|---|---|---|
-| `bg` | `#0F1115` | Main application background |
-| `panel` | `#16191F` | Sidebars, modals, cards |
-| `raised` | `#1E222A` | Search input, hover states, elevated controls |
-| `border` | `#2A2F3A` | Hairline dividers and borders |
-| `border-strong` | `#3E4554` | Focused inputs, active borders |
-| `fg` | `#F3F4F6` | Primary high-contrast text |
-| `muted` | `#9CA3AF` | Secondary labels, metadata (year, runtime) |
-| `subtle` | `#6B7280` | Overlines, inactive icons, placeholders |
-| `primary` | `#E5A00D` | Play buttons, active tabs, progress bars |
-| `on-primary` | `#000000` | Text/icons on primary button |
-| `primary-container` | `#30250C` | Subtle primary highlights |
-| `on-primary-container` | `#FDE68A` | Text on primary containers |
-| `warn` | `#EAB308` | Warnings and notices |
-| `danger` | `#EF4444` | Errors, destructive actions |
-| `info` | `#3B82F6` | Informational badges |
+| Token | Dark | Light | Use |
+|---|---|---|---|
+| `bg` | `#1A110F` | `#FFF8F6` | Page background |
+| `panel` | `#231917` | `#FFFFFF` | Sidebar, cards, dialogs |
+| `raised` | `#322825` | `#FCEAE6` | Inputs, hover, skeletons |
+| `border` | `#534340` | `#D8C2BE` | Hairlines |
+| `border-strong` | `#A08C88` | `#85736F` | Focused inputs |
+| `fg` | `#F1DFDB` | `#231917` | Primary text |
+| `muted` | `#D8C2BE` | `#534340` | Secondary text |
+| `subtle` | `#A08C88` | `#85736F` | Captions, placeholders |
+| `primary` | `#FFB4A3` | `#A23F26` | Play, progress, active |
+| `on-primary` | `#5F1505` | `#FFFFFF` | Text on primary |
+| `primary-container` | `#802A15` | `#FFDAD2` | Active nav, selected cards |
+| `on-primary-container` | `#FFDAD2` | `#3D0700` | Text on container |
+| `info` (tertiary) | `#DDC48C` | `#6D5E2F` | Ratings, folders, DEV pill |
+| `warn` | `#F59E0B` | `#B45309` | Warnings |
+| `danger` | `#FFB4AB` | `#BA1A1A` | Errors, destructive |
+
+Items without artwork get a deterministic two-stop gradient from the title hash, so a grid of unmatched files still reads as distinct cards.
 
 ## Typography
 
-- Font family: `Inter Variable`, fallback `system-ui, -apple-system, sans-serif`.
-- Sizes:
-  - Caption: `12px` (line height 16px)
-  - Label: `13px` (line height 18px)
-  - Body: `14px` (line height 20px)
-  - Title: `16px` (line height 22px)
-  - Section Header: `20px` (line height 28px)
-  - Hero / Heading: `28px` (line height 34px)
+Inter Variable. Scale (Tailwind `text-*`): `caption` 12/16, `label` 13/18, `body` 14/20, `title` 16/22, `page` 20/28, `hero` 32/38.
 
-## Components & Layout
+## Layout
 
-- **Sidebar**: 240px wide, sticky left navigation.
-- **Top Bar**: 64px high, translucent blur with search and profile controls.
-- **Poster Cards**: 2:3 aspect ratio, rounded corners (8px), watched checkmarks, and bottom progress indicator.
+- Sidebar 240 px, sticky; becomes a drawer under `md`.
+- Top bar 64 px, translucent `.chrome` blur, search + theme + user.
+- Poster cards 2:3, radius 10 px, hover scale 1.02 with a play disc; progress bar at the bottom; watched check top-right.
+- Wide cards 16:9 for Continue Watching, episodes and "Other videos" libraries.
+- Radius: 6 px controls, 10 px cards. Motion: 120–200 ms, `cubic-bezier(0.2, 0, 0, 1)`, reduced-motion respected.

@@ -61,6 +61,10 @@ Player: <video src=/api/stream/{id}>  or  hls.js -> /api/hls/{session}/master.m3
 
 Query keys follow `['libraries']`, `['items', libraryId, filters]`, `['home']`. Progress is sent every 10 s with `PUT /api/items/{id}/progress`. Posters use `/api/images/{key}?w=400` with `loading="lazy"`.
 
+## MVP screens
+
+Sign-in / first-run setup, Home, Library grid, Item (movie, show, season, episode), Search, Settings (admin: libraries, folder picker, TMDB key), Player (route-split chunk). Strings live in `src/locales/en.json` and go through `t()` in `src/lib/i18n.ts`. UI kit mirrors Domus: `components/ui/{Button,Field,Card,Modal}`.
+
 ## Flavors
 
 As in Domus, dev and prod instances must not interfere.

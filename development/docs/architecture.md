@@ -44,6 +44,8 @@ Priority order: user-triggered > newly added > refresh.
 
 ## Streaming path
 
+MVP (built): `GET /api/files/{id}/plan` picks the mode; remux and transcode pipe fragmented MP4 from ffmpeg straight into the response, with no session or segment files. See `mvp.md`. The HLS design below is the M4 target.
+
 1. Client asks `POST /api/playback/decide` with its capabilities.
 2. Server picks direct play, remux or transcode.
 3. Direct play: `GET /api/stream/{id}` serves the file with `Range` support, using `tokio::fs` and `tokio_util::io::ReaderStream`.
@@ -64,7 +66,8 @@ Priority order: user-triggered > newly added > refresh.
 ```
 data/
   kinema.db
-  cache/images/       resized posters, keyed by hash
+  cache/images/       TMDB art as fetched, keyed by size + TMDB path (MVP)
+  cache/subtitles/    WebVTT per file + mtime + stream (MVP)
   cache/thumbs/       frame grabs and sprites
   cache/hls/          live transcode sessions, purged on start
   logs/

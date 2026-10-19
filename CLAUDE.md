@@ -12,7 +12,7 @@ Platform rule: OS-specific code (process priority, child-process kill, paths, au
 
 ## Status
 
-Pre-code. Only design docs exist. See `development/docs/roadmap.md` for the build order. Full docs index: `development/docs/README.md`.
+MVP built: admin setup and sign-in, libraries with folder picker, scanner + watcher, TMDB metadata, browse UI and a player with direct play / remux / transcode and audio and subtitle switching. What it does and its shortcuts: `development/docs/mvp.md`. Build order: `development/docs/roadmap.md`. Full docs index: `development/docs/README.md`.
 
 ## Stack
 
@@ -104,3 +104,7 @@ Dev and prod flavors, as in Domus: dev isolates localStorage keys (`kinema.dev.t
 - You are allow to update the claude.md file or any other file releated to ai brain.
 - Always use `codegraph` to scan the code.
 - For architecture changes, always add or update an architecture diagram in docs.
+
+## String
+
+- For web/desktop or backend the i18n string so that in future it will easily got migrated to any launguage. For now, we will use English as the default language. All string should be in seperate files. 
