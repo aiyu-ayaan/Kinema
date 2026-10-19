@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { api, frameUrl, imageUrl } from '@/lib/api'
 import { useIsAdmin } from '@/lib/auth'
 import { FixMatch } from './FixMatch'
+import { SeriesTracks } from './SeriesTracks'
 import { clock, fileSize, progressOf, runtime, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import type { CastMember, ItemCard, ItemDetail } from '@/lib/types'
@@ -279,6 +280,7 @@ export function ItemPage() {
           {nextUp && <PlayButtons item={nextUp} episode />}
           {(canPlay || nextUp) && <WatchedButton id={item.id} watched={canPlay ? item.watched : !!nextUp?.watched} />}
           <CopyLinkButton />
+          {admin && data.tracks && <SeriesTracks showId={item.id} tracks={data.tracks} />}
           {admin && (item.kind === 'movie' || item.kind === 'show') && <FixMatch item={item} />}
         </div>
       </Hero>

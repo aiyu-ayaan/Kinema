@@ -8,7 +8,7 @@ What the first working build does, how it is wired, and the shortcuts it takes. 
 - Libraries: the admin adds any server folder as Movies, TV Shows or Other videos, from a folder browser or by typing a path. Several folders per library.
 - Scanning: walk on create and at startup, then filesystem events (no polling), debounced 10 s. Missing files are removed, unless a root is unreachable (an unmounted drive never wipes a library).
 - Identification: release-name parser (`kinema-scanner::parse`). Movies and TV Shows libraries both detect episodes (`S01E02`, `1x02`), so a series inside a movies folder groups into Show, Season, Episode. The show name is the longer of the top folder name and the name in the file, since either can be an abbreviation (`DCM` vs `Devil.May.Cry`); a trailing `S01` is dropped. Folders where 3 or more files read `<folder name> <number>` become a one-season show. Files filed by an older parser are moved on the next scan.
-- Item actions: movie, episode, show and season pages share one action row. Play (a show or season plays its first unwatched episode, `next_up` in `GET /items/:id`), mark watched or unwatched (`PUT /items/:id/watched`, applies to every episode under a show or season), copy link, and Fix match for admins.
+- Item actions: movie, episode, show and season pages share one action row. Play (a show or season plays its first unwatched episode, `next_up` in `GET /items/:id`), mark watched or unwatched (`PUT /items/:id/watched`, applies to every episode under a show or season), copy link, and for admins Fix match and, on a show, Audio & subtitles: one audio and subtitle track for every episode, picked from the first episode's tracks and stored as track positions (episodes of one release share the layout).
 - Fix match: admins search TMDB from a movie or show page and pick the right result. The old metadata is cleared; for a show, seasons and episodes are looked up again.
 - Mixed libraries: a library that holds movies and shows gets Movies and TV Shows sub-entries in the sidebar (`/library/{id}?type=movie|show`).
 - Probe: `ffprobe` once per file, 2 at a time, re-run only when size or mtime changes. Sidecar subtitles (`Movie.en.srt`, `.forced`, `.sdh`) are stored as extra subtitle streams.
@@ -111,7 +111,7 @@ Admin-only, at `/settings/<section>`, grouped like a server control panel. While
 | General | server name | sign-in screen, browser title, `/server/info` |
 | Library | watch for changes, generate thumbnails, frame position | `scan::watch`, `thumbs.rs` |
 | Metadata | TMDB key, metadata language | `TmdbClient::language` |
-| Languages | preferred audio, subtitle mode (off / always / when audio is foreign), preferred subtitle | `plan` picks the start tracks |
+| Languages | preferred audio, subtitle mode (off / always / when audio is foreign), preferred subtitle | `plan` picks the start tracks; a show's own choice (Audio & subtitles on the show page, admin) wins |
 | Transcoder | simultaneous conversions, x264 preset, quality (CRF), max height | `stream` (503 when full), `playback::Encode` |
 | Network | listen address, LAN URL (read-only; set in `kinema.toml`) | status |
 | Scheduled Tasks | rescan every N hours | `scan::scheduled_rescans` |

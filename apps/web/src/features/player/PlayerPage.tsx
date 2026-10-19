@@ -18,12 +18,10 @@ import {
 } from '@phosphor-icons/react'
 import { api, type PlayCaps } from '@/lib/api'
 import { cn } from '@/lib/cn'
-import { clock, subtitleOf, trackLabel } from '@/lib/format'
+import { clock, isTextSub, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import type { ItemDetail, PlaybackPlan, Stream } from '@/lib/types'
 import { parseVtt, type Cue } from '@/lib/vtt'
-
-const TEXT_SUBS = ['subrip', 'srt', 'ass', 'ssa', 'webvtt', 'vtt', 'mov_text', 'text']
 
 /** What the browser decodes beyond the baseline; the server picks direct play, remux or transcode from it. */
 function detectCaps(): PlayCaps {
@@ -84,7 +82,7 @@ function TrackMenu({
         <ul className="max-h-64 overflow-y-auto">
           {option(t('player.subtitlesOff'), sub == null, () => onSub(null))}
           {subs.map((s, i) => {
-            const text = TEXT_SUBS.includes(s.codec ?? '')
+            const text = isTextSub(s)
             return option(trackLabel(s, i + 1), s.id === sub, () => onSub(s.id), !text, text ? undefined : t('player.subtitleImage'))
           })}
         </ul>

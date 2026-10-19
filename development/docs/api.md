@@ -23,9 +23,11 @@ This is Kinema's own API. It is not Plex-compatible.
 | GET | `/fs?path=` | Admin: folders on the server, for the folder picker |
 | GET | `/home` | `{continue_watching, shelves: [{library, kind: movies\|shows\|episodes, items}]}` |
 | GET | `/search?q=` | Title search |
-| GET | `/items/{id}` | Item, genres, files with streams, children, prev/next sibling |
+| GET | `/items/{id}` | Item, genres, files with streams, children, prev/next sibling; show/season `next_up`; show `tracks: {audio, subtitle, streams}` (first episode's streams) |
 | PUT | `/items/{id}/progress` | `{position_s, watched?}` |
-| GET | `/files/{id}/plan?audio=&start=&hevc=&av1=` | `{mode: direct\|remux\|transcode, duration_s, audio, start, subtitle}`; audio and subtitle follow the Languages settings |
+| PUT | `/items/{id}/watched` | `{watched}`, for the item and every episode under it |
+| PUT | `/items/{id}/tracks` | Admin, show only: `{audio, subtitle}` as positions among an episode's audio / subtitle streams; `null` follows the Languages settings, subtitle `-1` is off |
+| GET | `/files/{id}/plan?audio=&start=&hevc=&av1=` | `{mode: direct\|remux\|transcode, duration_s, audio, start, subtitle}`; audio and subtitle follow the show's track choice, then the Languages settings |
 | GET | `/stream/{id}?audio=&start=&hevc=&av1=` | Direct (Range) or fMP4 pipe, per the plan |
 | GET | `/subtitles/{stream_id}` | Text subtitle as WebVTT, cached |
 | GET | `/images/{size}/{name}` | TMDB art, cached |

@@ -103,6 +103,18 @@ export interface ItemDetail {
   next_id: number | null
   /** Show or season: the episode "Play" starts on. */
   next_up: ItemCard | null
+  /** Show only. */
+  tracks: SeriesTracks | null
+}
+
+/** A show's track choice: positions among the first episode's audio and subtitle streams. */
+export interface SeriesTracks {
+  /** null: server language settings */
+  audio: number | null
+  /** null: server language settings, -1: off */
+  subtitle: number | null
+  /** The first episode's streams. */
+  streams: Stream[]
 }
 
 export interface Home {
