@@ -680,6 +680,7 @@ pub struct CastMember {
 #[derive(Debug, Clone, Default)]
 pub struct Meta {
     pub tmdb_id: Option<i64>,
+    pub tvmaze_id: Option<i64>,
     pub title: Option<String>,
     pub year: Option<i64>,
     pub summary: Option<String>,
@@ -693,10 +694,7 @@ pub struct Meta {
 
 /// Fills metadata; `None` fields keep what the scanner found.
 pub async fn save_meta(pool: &SqlitePool, id: i64, m: &Meta) -> Result<(), DbError> {
-    let cast_json = m
-        .cast
-        .as_ref()
-        .and_then(|c| serde_json::to_string(c).ok());
+    let cast_json = m.cast.as_ref().and_then(|c| serde_json::to_string(c).ok());
     let mut tx = pool.begin().await?;
     sqlx::query(
         "UPDATE items SET
@@ -710,6 +708,7 @@ pub async fn save_meta(pool: &SqlitePool, id: i64, m: &Meta) -> Result<(), DbErr
            poster = COALESCE(?9, poster),
            backdrop = COALESCE(?10, backdrop),
            cast_json = COALESCE(?11, cast_json),
+           tvmaze_id = COALESCE(?13, tvmaze_id),
            meta_tried = 1,
            updated_at = ?12
          WHERE id = ?1",
@@ -726,6 +725,7 @@ pub async fn save_meta(pool: &SqlitePool, id: i64, m: &Meta) -> Result<(), DbErr
     .bind(&m.backdrop)
     .bind(cast_json)
     .bind(now())
+    .bind(m.tvmaze_id)
     .execute(&mut *tx)
     .await?;
     for g in &m.genres {
@@ -754,7 +754,7 @@ pub async fn clear_meta(pool: &SqlitePool, id: i64) -> Result<(), DbError> {
         .execute(&mut *tx)
         .await?;
     sqlx::query(
-        "UPDATE items SET tmdb_id = NULL, year = NULL, summary = NULL, rating = NULL,
+        "UPDATE items SET tmdb_id = NULL, tvmaze_id = NULL, year = NULL, summary = NULL, rating = NULL,
            runtime_s = NULL, poster = NULL, backdrop = NULL, cast_json = NULL WHERE id = ?1",
     )
     .bind(id)
@@ -817,6 +817,23 @@ pub async fn shows_with_bare_episodes(
          JOIN items se ON se.id = e.parent_id
          JOIN items sh ON sh.id = se.parent_id
          WHERE sh.library_id = ?1 AND sh.tmdb_id IS NOT NULL AND e.kind = 'episode' AND e.meta_tried = 0",
+    )
+    .bind(library_id)
+    .fetch_all(pool)
+    .await?)
+}
+
+/// TVmaze ids of shows without a TMDB match whose seasons got new episodes without metadata.
+pub async fn tvmaze_shows_with_bare_episodes(
+    pool: &SqlitePool,
+    library_id: i64,
+) -> Result<Vec<(i64, i64)>, DbError> {
+    Ok(sqlx::query_as(
+        "SELECT DISTINCT sh.id, sh.tvmaze_id FROM items e
+         JOIN items se ON se.id = e.parent_id
+         JOIN items sh ON sh.id = se.parent_id
+         WHERE sh.library_id = ?1 AND sh.tmdb_id IS NULL AND sh.tvmaze_id IS NOT NULL
+           AND e.kind = 'episode' AND e.meta_tried = 0",
     )
     .bind(library_id)
     .fetch_all(pool)

@@ -318,22 +318,26 @@ fn valid_image_name(name: &str) -> bool {
         && (name.ends_with(".jpg") || name.ends_with(".png"))
 }
 
-/// TMDB artwork, fetched on first view and kept on disk afterwards.
+/// TMDB or TVmaze artwork, fetched on first view and kept on disk afterwards.
 async fn image(
     State(state): State<AppState>,
     _: AuthUser,
     Path((size, name)): Path<(String, String)>,
     req: Request,
 ) -> ApiResult<Response> {
-    if !kinema_meta::IMAGE_SIZES.contains(&size.as_str()) || !valid_image_name(&name) {
+    let tvmaze = size == kinema_meta::tvmaze::IMAGE_PREFIX;
+    if !(tvmaze || kinema_meta::IMAGE_SIZES.contains(&size.as_str())) || !valid_image_name(&name) {
         return Err(ApiError::bad_request("media.image_invalid"));
     }
     let dir = state.cache_dir("images").join(&size);
     let path = dir.join(&name);
     if !path.exists() {
-        let bytes = kinema_meta::fetch_image(&state.http, &size, &name)
-            .await
-            .map_err(|_| ApiError::not_found())?;
+        let bytes = if tvmaze {
+            kinema_meta::tvmaze::fetch_image(&state.http, &name).await
+        } else {
+            kinema_meta::fetch_image(&state.http, &size, &name).await
+        }
+        .map_err(|_| ApiError::not_found())?;
         tokio::fs::create_dir_all(&dir).await?;
         let tmp = dir.join(format!("{name}.tmp"));
         tokio::fs::write(&tmp, &bytes).await?;
@@ -344,7 +348,7 @@ async fn image(
         .await
         .map_err(|_| ApiError::internal())?
         .into_response();
-    // Keys are content-addressed by TMDB, so the bytes behind a key never change.
+    // Keys are content-addressed by TMDB and TVmaze, so the bytes behind a key never change.
     res.headers_mut().insert(
         CACHE_CONTROL,
         HeaderValue::from_static("private, max-age=31536000, immutable"),

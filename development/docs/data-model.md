@@ -44,6 +44,7 @@ CREATE TABLE items (
   runtime_s INTEGER,
   rating REAL,
   tmdb_id INTEGER,
+  tvmaze_id INTEGER,               -- shows matched on TVmaze when TMDB had no key or no match
   poster TEXT,                     -- image cache key
   backdrop TEXT,
   added_at INTEGER NOT NULL,

@@ -72,6 +72,7 @@ async fn apply(
         id,
         &Meta {
             tmdb_id: Some(d.tmdb_id),
+            tvmaze_id: None,
             title: Some(d.title).filter(|t| !t.is_empty()),
             year: d.year,
             summary: d.overview,

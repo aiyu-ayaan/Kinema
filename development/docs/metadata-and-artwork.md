@@ -21,7 +21,26 @@ Output: `{kind, title, year?, season?, episode?, confidence}`.
 
 Rate limit: token bucket at 30 req/s max, with retry and backoff. Responses cached in SQLite for 7 days.
 
-A TMDB API key is configured by the user in `kinema.toml` (`tmdb_api_key`). Without a key, matching is skipped and only local fallbacks run.
+A TMDB API key is configured by the user in `kinema.toml` (`tmdb_api_key`). Without a key, movies are not matched and only local fallbacks run. Kinema cannot ship its own key: TMDB's free key is for personal use only.
+
+## Matching (TVmaze fallback for TV)
+
+TVmaze (`kinema-meta::tvmaze`) needs no key, so shows still get metadata without TMDB. It covers TV only, in English. The data is CC BY-SA.
+
+```
+show without metadata
+  -> TMDB key set?  yes -> TMDB /search/tv -> match? yes -> tmdb_id, TMDB seasons
+                                                     no  -+
+                    no  --------------------------------- +-> TVmaze /search/shows (prefers a hit that premiered in the file's year)
+                                                              -> /shows/{id}?embed[]=seasons,episodes,images,cast (one call)
+                                                              -> tvmaze_id, posters, episodes
+```
+
+- TMDB always wins. A show is only matched on TVmaze when TMDB has no key or finds nothing. Adding a key later resets `meta_tried` for rows without a `tmdb_id`, so TVmaze matches are upgraded to TMDB on the next scan.
+- "Fix match" still uses TMDB only. A manual match clears `tvmaze_id`.
+- Rate limit is about 20 calls per 10 s. On HTTP 429 the client waits 10 s and retries, up to 3 times.
+- Summaries are HTML. Tags are stripped before saving.
+- Image keys are `tvmaze/<variant>-<dir>-<file>`, for example `tvmaze/original_untouched-501-1253519.jpg`. The image route maps them back to `static.tvmaze.com/uploads/images/<variant>/<dir>/<file>`. Only the `original_untouched`, `medium_portrait` and `medium_landscape` variants are allowed.
 
 ## Fields stored
 

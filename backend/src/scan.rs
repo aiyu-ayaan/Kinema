@@ -5,8 +5,9 @@ use crate::state::AppState;
 use kinema_db::items::{self, Meta, NewItem, NewStream};
 use kinema_db::{libraries, settings};
 use kinema_meta::TmdbClient;
+use kinema_meta::tvmaze::{self, TvmazeClient};
 use kinema_scanner::{FoundFile, parse};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -445,16 +446,20 @@ pub async fn tmdb_client(state: &AppState) -> Option<TmdbClient> {
 }
 
 async fn fetch_metadata(state: &AppState, library_id: i64) -> anyhow::Result<()> {
-    let Some(tmdb) = tmdb_client(state).await else {
-        return Ok(());
-    };
+    let tmdb = tmdb_client(state).await;
+    let tvmaze = TvmazeClient::new();
+    // Shows matched in this pass, so their episodes need no second call.
+    let mut tvmaze_shows: HashMap<i64, tvmaze::Show> = HashMap::new();
     let db = &state.db;
 
     for target in items::needing_meta(db, library_id).await? {
-        let found = if target.kind == "movie" {
-            tmdb.movie(&target.title, target.year).await
-        } else {
-            tmdb.show(&target.title, target.year).await
+        let is_show = target.kind == "show";
+        let found = match &tmdb {
+            Some(t) if is_show => t.show(&target.title, target.year).await,
+            Some(t) => t.movie(&target.title, target.year).await,
+            // Without a key movies wait for one; adding it resets `meta_tried`.
+            None if !is_show => continue,
+            None => Ok(None),
         };
         match found {
             Ok(Some(d)) => {
@@ -468,60 +473,133 @@ async fn fetch_metadata(state: &AppState, library_id: i64) -> anyhow::Result<()>
                     poster: image_key("w500", d.poster),
                     backdrop: image_key("w1280", d.backdrop),
                     genres: d.genres,
-                    cast: Some(
-                        d.cast
-                            .into_iter()
-                            .map(|c| items::CastMember {
-                                id: c.id,
-                                name: c.name,
-                                role: c.role,
-                                image: c.image,
-                            })
-                            .collect(),
-                    ),
+                    cast: Some(cast(d.cast)),
+                    ..Default::default()
                 };
                 items::save_meta(db, target.id, &meta).await?;
             }
+            Ok(None) if is_show => match tvmaze_show(&tvmaze, &target).await {
+                Ok(Some(show)) => {
+                    let d = &show.details;
+                    let meta = Meta {
+                        tvmaze_id: Some(show.id),
+                        title: Some(d.title.clone()).filter(|t| !t.is_empty()),
+                        year: d.year,
+                        summary: d.overview.clone(),
+                        rating: d.rating,
+                        runtime_s: d.runtime_min.map(|m| m * 60),
+                        poster: d.poster.clone(),
+                        backdrop: d.backdrop.clone(),
+                        genres: d.genres.clone(),
+                        cast: Some(cast(d.cast.clone())),
+                        ..Default::default()
+                    };
+                    items::save_meta(db, target.id, &meta).await?;
+                    tvmaze_shows.insert(show.id, show);
+                }
+                Ok(None) => items::mark_meta_tried(db, target.id).await?,
+                Err(e) => return Err(e.into()),
+            },
             Ok(None) => items::mark_meta_tried(db, target.id).await?,
             // Network or key trouble: stop, and retry on the next scan.
             Err(e) => return Err(e.into()),
         }
     }
 
-    for (show_id, tmdb_id) in items::shows_with_bare_episodes(db, library_id).await? {
-        for (season_id, season_no) in items::numbered_children(db, show_id).await? {
-            let season = match tmdb.season(tmdb_id, season_no).await {
-                Ok(s) => s,
-                Err(e) => {
-                    warn!("tmdb season {tmdb_id}/{season_no}: {e}");
-                    kinema_meta::Season::default()
-                }
-            };
-            items::save_meta(
-                db,
-                season_id,
-                &Meta {
-                    poster: image_key("w500", season.poster),
-                    ..Default::default()
-                },
-            )
-            .await?;
-            for (episode_id, episode_no) in items::numbered_children(db, season_id).await? {
-                match season.episodes.iter().find(|e| e.number == episode_no) {
-                    Some(e) => {
-                        let meta = Meta {
-                            title: Some(e.title.clone()).filter(|t| !t.is_empty()),
-                            summary: e.overview.clone(),
-                            rating: e.rating,
-                            runtime_s: e.runtime_min.map(|m| m * 60),
-                            backdrop: image_key("w300", e.still.clone()),
-                            ..Default::default()
-                        };
-                        items::save_meta(db, episode_id, &meta).await?;
+    if let Some(tmdb) = &tmdb {
+        for (show_id, tmdb_id) in items::shows_with_bare_episodes(db, library_id).await? {
+            for (season_id, season_no) in items::numbered_children(db, show_id).await? {
+                let season = match tmdb.season(tmdb_id, season_no).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        warn!("tmdb season {tmdb_id}/{season_no}: {e}");
+                        kinema_meta::Season::default()
                     }
-                    None => items::mark_meta_tried(db, episode_id).await?,
-                }
+                };
+                let season = kinema_meta::Season {
+                    poster: image_key("w500", season.poster),
+                    episodes: season
+                        .episodes
+                        .into_iter()
+                        .map(|e| kinema_meta::Episode {
+                            still: image_key("w300", e.still),
+                            ..e
+                        })
+                        .collect(),
+                };
+                save_season(db, season_id, &season).await?;
             }
+        }
+    }
+
+    for (show_id, tvmaze_id) in items::tvmaze_shows_with_bare_episodes(db, library_id).await? {
+        let show = match tvmaze_shows.remove(&tvmaze_id) {
+            Some(s) => Some(s),
+            None => tvmaze.show(tvmaze_id).await.unwrap_or_else(|e| {
+                warn!("tvmaze show {tvmaze_id}: {e}");
+                None
+            }),
+        };
+        let seasons = show.map(|s| s.seasons).unwrap_or_default();
+        for (season_id, season_no) in items::numbered_children(db, show_id).await? {
+            let season = seasons.get(&season_no).cloned().unwrap_or_default();
+            save_season(db, season_id, &season).await?;
+        }
+    }
+    Ok(())
+}
+
+/// Search, then the full show, from TVmaze.
+async fn tvmaze_show(
+    tvmaze: &TvmazeClient,
+    target: &items::MetaTarget,
+) -> Result<Option<tvmaze::Show>, kinema_meta::MetaError> {
+    match tvmaze.search(&target.title, target.year).await? {
+        Some(id) => tvmaze.show(id).await,
+        None => Ok(None),
+    }
+}
+
+fn cast(c: Vec<kinema_meta::CastMember>) -> Vec<items::CastMember> {
+    c.into_iter()
+        .map(|c| items::CastMember {
+            id: c.id,
+            name: c.name,
+            role: c.role,
+            image: c.image,
+        })
+        .collect()
+}
+
+/// Season poster and episode metadata. Images must already be image keys.
+async fn save_season(
+    db: &sqlx::SqlitePool,
+    season_id: i64,
+    season: &kinema_meta::Season,
+) -> anyhow::Result<()> {
+    items::save_meta(
+        db,
+        season_id,
+        &Meta {
+            poster: season.poster.clone(),
+            ..Default::default()
+        },
+    )
+    .await?;
+    for (episode_id, episode_no) in items::numbered_children(db, season_id).await? {
+        match season.episodes.iter().find(|e| e.number == episode_no) {
+            Some(e) => {
+                let meta = Meta {
+                    title: Some(e.title.clone()).filter(|t| !t.is_empty()),
+                    summary: e.overview.clone(),
+                    rating: e.rating,
+                    runtime_s: e.runtime_min.map(|m| m * 60),
+                    backdrop: e.still.clone(),
+                    ..Default::default()
+                };
+                items::save_meta(db, episode_id, &meta).await?;
+            }
+            None => items::mark_meta_tried(db, episode_id).await?,
         }
     }
     Ok(())

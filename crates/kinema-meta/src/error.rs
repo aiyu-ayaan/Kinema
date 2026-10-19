@@ -14,6 +14,9 @@ pub enum MetaError {
     #[error("TMDB error: {0}")]
     Tmdb(String),
 
+    #[error("TVmaze error: {0}")]
+    Tvmaze(String),
+
     #[error("Not found: {0}")]
     NotFound(String),
 }
