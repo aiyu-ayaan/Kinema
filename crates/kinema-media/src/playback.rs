@@ -180,6 +180,12 @@ pub fn stream_command(
     let mut cmd = Command::new(&bins.ffmpeg);
     cmd.args(["-hide_banner", "-loglevel", "error", "-nostdin"]);
     if start_s > 0.0 {
+        // Copied video can only start at a keyframe before `start_s`. Accurate seek
+        // would still trim re-encoded audio to `start_s` exactly, then both land on
+        // 0 and the audio runs out of sync; cut audio at the same seek point instead.
+        if copy_video && video.is_some() {
+            cmd.arg("-noaccurate_seek");
+        }
         cmd.arg("-ss").arg(format!("{start_s:.6}"));
     }
     cmd.arg("-i").arg(path);
@@ -259,6 +265,35 @@ mod tests {
         assert_eq!(landing_from_packets(csv, &[0, 1]), Some(5.921));
         assert_eq!(landing_from_packets(csv, &[0]), Some(6.0));
         assert_eq!(landing_from_packets("", &[0]), None);
+    }
+
+    #[test]
+    fn copied_video_seeks_audio_to_the_same_keyframe() {
+        let bins = MediaBinaries {
+            ffmpeg: "ffmpeg".into(),
+            ffprobe: "ffprobe".into(),
+        };
+        let encode = Encode {
+            preset: "veryfast",
+            crf: 23,
+            max_height: 0,
+        };
+        let has_flag = |start: f64, copy_video: bool| {
+            let cmd = stream_command(
+                &bins,
+                Path::new("a.mkv"),
+                start,
+                Some(H264),
+                Some(DTS),
+                copy_video,
+                false,
+                encode,
+            );
+            cmd.as_std().get_args().any(|a| a == "-noaccurate_seek")
+        };
+        assert!(has_flag(600.0, true));
+        assert!(!has_flag(600.0, false));
+        assert!(!has_flag(0.0, true));
     }
 
     #[test]
