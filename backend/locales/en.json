@@ -17,6 +17,8 @@
   "media.ffmpeg_missing": "ffmpeg was not found, so this file cannot be converted for the browser.",
   "media.subtitle_unsupported": "This subtitle is an image format and cannot be shown yet.",
   "media.image_invalid": "Unknown image.",
+  "media.transcode_busy": "The server is already converting as many videos as allowed. Try again when another stream stops, or raise the limit in Settings → Transcoder.",
+  "settings.cache_unknown": "Unknown cache.",
   "common.not_found": "Not found.",
   "common.internal": "Something went wrong on the server. Check the server log."
 }

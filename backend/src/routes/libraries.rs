@@ -16,6 +16,8 @@ pub fn router() -> Router<AppState> {
         .route("/libraries", get(list).post(create))
         .route("/libraries/:id", axum::routing::delete(remove))
         .route("/libraries/:id/scan", post(rescan))
+        .route("/libraries/:id/thumbnails", post(regenerate_thumbnails))
+        .route("/libraries/:id/match", post(match_missing))
         .route("/libraries/:id/items", get(library_items))
         .route("/fs", get(browse))
 }
@@ -25,11 +27,13 @@ pub struct LibraryView {
     #[serde(flatten)]
     pub library: Library,
     pub scanning: bool,
+    pub generating_thumbnails: bool,
 }
 
 pub fn view(state: &AppState, library: Library) -> LibraryView {
     LibraryView {
         scanning: scan::is_scanning(state, library.id),
+        generating_thumbnails: crate::thumbs::is_running(state, library.id),
         library,
     }
 }
@@ -99,6 +103,35 @@ async fn rescan(
     libraries::get(&state.db, id)
         .await?
         .ok_or_else(ApiError::not_found)?;
+    scan::spawn_scan(state, id);
+    Ok(StatusCode::ACCEPTED)
+}
+
+async fn regenerate_thumbnails(
+    State(state): State<AppState>,
+    _: AdminUser,
+    Path(id): Path<i64>,
+) -> ApiResult<StatusCode> {
+    libraries::get(&state.db, id)
+        .await?
+        .ok_or_else(ApiError::not_found)?;
+    crate::thumbs::regenerate(state, id).await.map_err(|e| {
+        tracing::error!("regenerate thumbnails: {e}");
+        ApiError::internal()
+    })?;
+    Ok(StatusCode::ACCEPTED)
+}
+
+/// Looks up unmatched titles again (new key, new language, or TMDB added them since).
+async fn match_missing(
+    State(state): State<AppState>,
+    _: AdminUser,
+    Path(id): Path<i64>,
+) -> ApiResult<StatusCode> {
+    libraries::get(&state.db, id)
+        .await?
+        .ok_or_else(ApiError::not_found)?;
+    items::reset_meta_tried_library(&state.db, id).await?;
     scan::spawn_scan(state, id);
     Ok(StatusCode::ACCEPTED)
 }

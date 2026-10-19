@@ -1,6 +1,8 @@
 use crate::auth::AuthUser;
 use crate::error::{ApiError, ApiResult};
-use crate::state::AppState;
+use crate::server_settings::lang_matches;
+use crate::state::{AppState, Counted};
+use crate::thumbs;
 use axum::body::Body;
 use axum::extract::{Path, Query, Request, State};
 use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE};
@@ -14,6 +16,7 @@ use kinema_media::playback::{self, ClientCaps, Plan, Track};
 use kinema_media::subtitles;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::atomic::Ordering;
 use tokio_util::io::ReaderStream;
 use tower::ServiceExt;
 use tower_http::services::ServeFile;
@@ -67,9 +70,16 @@ async fn choose(state: &AppState, file_id: i64, q: &PlayQuery) -> ApiResult<Chos
         .filter(|(_, s)| s.kind == "audio")
         .map(|(i, _)| i)
         .collect();
+    let preferred = state.settings().preferred_audio_language;
     let audio = q
         .audio
         .and_then(|idx| audios.iter().copied().find(|&i| streams[i].idx == idx))
+        .or_else(|| {
+            audios
+                .iter()
+                .copied()
+                .find(|&i| lang_matches(streams[i].language.as_deref(), &preferred))
+        })
         .or_else(|| audios.iter().copied().find(|&i| streams[i].is_default))
         .or_else(|| audios.first().copied());
     let caps = ClientCaps {
@@ -104,6 +114,37 @@ struct PlanResponse {
     audio: Option<i64>,
     /// Where the stream for the requested start really begins; the player's time offset.
     start: f64,
+    /// Subtitle stream id the Languages settings ask for; the player applies it on first load.
+    subtitle: Option<i64>,
+}
+
+/// The default subtitle per the admin's subtitle mode and language.
+fn default_subtitle(state: &AppState, c: &Chosen) -> Option<i64> {
+    let s = state.settings();
+    let audio_lang = c.audio.and_then(|i| c.streams[i].language.as_deref());
+    let wanted = match s.subtitle_mode.as_str() {
+        "always" => true,
+        "foreign" => {
+            !s.preferred_audio_language.is_empty()
+                && !lang_matches(audio_lang, &s.preferred_audio_language)
+        }
+        _ => false,
+    };
+    if !wanted {
+        return None;
+    }
+    let text: Vec<&Stream> = c
+        .streams
+        .iter()
+        .filter(|st| st.kind == "subtitle" && subtitles::is_text_subtitle(st.codec.as_deref()))
+        .collect();
+    text.iter()
+        .find(|st| lang_matches(st.language.as_deref(), &s.preferred_subtitle_language))
+        .or_else(|| {
+            text.first()
+                .filter(|_| s.preferred_subtitle_language.is_empty())
+        })
+        .map(|st| st.id)
 }
 
 async fn plan(
@@ -136,6 +177,7 @@ async fn plan(
         duration_s: c.file.duration_s,
         audio: c.audio.map(|i| c.streams[i].idx),
         start,
+        subtitle: default_subtitle(&state, &c),
     }))
 }
 
@@ -164,6 +206,20 @@ async fn stream(
         .bins
         .clone()
         .ok_or_else(|| ApiError::bad_request("media.ffmpeg_missing"))?;
+    let settings = state.settings();
+    // Re-encoding is the only CPU-heavy path; cap it so one server cannot be swamped.
+    let transcode_slot = if copy_video {
+        None
+    } else {
+        if state.active_transcodes.load(Ordering::SeqCst) >= settings.max_transcodes as usize {
+            return Err(ApiError::new(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "media.transcode_busy",
+            ));
+        }
+        Some(Counted::new(&state.active_transcodes))
+    };
+    let stream_slot = Counted::new(&state.active_streams);
     let mut child = playback::stream_command(
         &bins,
         &path,
@@ -172,13 +228,19 @@ async fn stream(
         c.audio.map(|i| track(&c.streams[i])),
         copy_video,
         copy_audio,
+        playback::Encode {
+            preset: &settings.transcode_preset,
+            crf: settings.transcode_crf,
+            max_height: settings.transcode_max_height,
+        },
     )
     .spawn()?;
     let stdout = child.stdout.take().ok_or_else(ApiError::internal)?;
     // The stream owns the child: when the client goes away the body drops and
     // kill_on_drop stops ffmpeg, so abandoned sessions never keep encoding.
+    // The counters live as long as the stream, so the dashboard sees real activity.
     let body = ReaderStream::with_capacity(stdout, 256 * 1024).map(move |chunk| {
-        let _owner = &child;
+        let _owner = (&child, &stream_slot, &transcode_slot);
         chunk
     });
     Ok((
@@ -289,8 +351,8 @@ async fn image(
     Ok(res)
 }
 
-/// A video frame for items without artwork, grabbed on first view and kept per file
-/// version. A failed grab leaves a marker so it is not retried on every page load.
+/// A video frame for items without artwork. Cache only: frames are made by the
+/// background job (`thumbs.rs`), so this never runs ffmpeg. A miss nudges the job.
 async fn thumb(
     State(state): State<AppState>,
     _: AuthUser,
@@ -300,43 +362,24 @@ async fn thumb(
     let file = items::thumb_file(&state.db, id)
         .await?
         .ok_or_else(ApiError::not_found)?;
-    let dir = state.cache_dir("thumbs");
-    let out = dir.join(format!("{}-{}.jpg", file.id, file.mtime));
-    let failed = dir.join(format!("{}-{}.fail", file.id, file.mtime));
+    let (out, failed) = thumbs::paths(&state, &file);
     if !out.exists() {
-        if failed.exists() {
-            return Err(ApiError::not_found());
+        if !failed.exists()
+            && let Some(card) = items::card(&state.db, 0, id).await?
+        {
+            thumbs::spawn(state.clone(), card.library_id);
         }
-        let bins = state.bins.clone().ok_or_else(ApiError::not_found)?;
-        let _permit = state
-            .thumb_slots
-            .acquire()
-            .await
-            .map_err(|_| ApiError::internal())?;
-        // Another request may have made it while this one waited.
-        if !out.exists() {
-            tokio::fs::create_dir_all(&dir).await?;
-            // 15 % in skips logos and cold opens; short clips use their middle.
-            let at = file
-                .duration_s
-                .map_or(30.0, |d| if d > 120.0 { d * 0.15 } else { d / 2.0 });
-            if let Err(e) =
-                kinema_media::thumbs::frame(&bins, std::path::Path::new(&file.path), at, &out).await
-            {
-                tracing::warn!("thumbnail for {}: {e}", file.path);
-                let _ = tokio::fs::write(&failed, b"").await;
-                return Err(ApiError::not_found());
-            }
-        }
+        return Err(ApiError::not_found());
     }
     let mut res = ServeFile::new(&out)
         .oneshot(req)
         .await
         .map_err(|_| ApiError::internal())?
         .into_response();
+    // Short cache: "Regenerate thumbnails" should show up on the next visit.
     res.headers_mut().insert(
         CACHE_CONTROL,
-        HeaderValue::from_static("private, max-age=86400"),
+        HeaderValue::from_static("private, max-age=600"),
     );
     Ok(res)
 }

@@ -26,9 +26,8 @@ async fn target(state: &AppState, id: i64) -> ApiResult<(String, i64)> {
 }
 
 async fn client(state: &AppState) -> ApiResult<TmdbClient> {
-    scan::tmdb_key(state)
+    scan::tmdb_client(state)
         .await
-        .map(TmdbClient::new)
         .ok_or_else(|| ApiError::bad_request("match.no_key"))
 }
 

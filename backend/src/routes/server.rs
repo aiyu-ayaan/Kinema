@@ -1,6 +1,13 @@
+use crate::auth::AdminUser;
+use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
-use axum::{Json, Router, extract::State, routing::get};
+use crate::{scan, thumbs};
+use axum::extract::Path;
+use axum::http::StatusCode;
+use axum::{Json, Router, extract::State, routing::get, routing::post};
+use kinema_db::{items, libraries};
 use serde::Serialize;
+use std::sync::atomic::Ordering;
 
 #[derive(Serialize)]
 pub struct ServerInfoResponse {
@@ -10,17 +17,154 @@ pub struct ServerInfoResponse {
 }
 
 pub fn router() -> Router<AppState> {
-    Router::new().route("/info", get(server_info))
+    Router::new()
+        .route("/info", get(server_info))
+        .route("/status", get(status))
+        .route("/cache/:kind/clear", post(clear_cache))
 }
 
-async fn server_info(State(_state): State<AppState>) -> Json<ServerInfoResponse> {
+/// Public: the sign-in screen shows the server name.
+async fn server_info(State(state): State<AppState>) -> Json<ServerInfoResponse> {
     Json(ServerInfoResponse {
-        name: "Kinema Media Server".to_string(),
+        name: state.settings().server_name,
         version: env!("CARGO_PKG_VERSION").to_string(),
         capabilities: vec![
             "direct_play".to_string(),
-            "hls_remux".to_string(),
+            "remux".to_string(),
+            "transcode".to_string(),
             "metadata_tmdb".to_string(),
         ],
     })
+}
+
+#[derive(Serialize)]
+struct LibraryStatus {
+    id: i64,
+    name: String,
+    kind: String,
+    titles: i64,
+    files: usize,
+    thumbnails: usize,
+    scanning: bool,
+    generating_thumbnails: bool,
+}
+
+#[derive(Serialize)]
+struct Caches {
+    thumbnails: u64,
+    subtitles: u64,
+    images: u64,
+}
+
+#[derive(Serialize)]
+struct Status {
+    name: String,
+    version: String,
+    uptime_s: u64,
+    ffmpeg: Option<String>,
+    ffprobe: Option<String>,
+    data_dir: String,
+    listen: String,
+    lan_urls: Vec<String>,
+    stats: items::Stats,
+    libraries: Vec<LibraryStatus>,
+    active_streams: usize,
+    active_transcodes: usize,
+    caches: Caches,
+}
+
+fn dir_size(path: &std::path::Path) -> u64 {
+    let Ok(entries) = std::fs::read_dir(path) else {
+        return 0;
+    };
+    entries
+        .filter_map(Result::ok)
+        .map(|e| match e.metadata() {
+            Ok(m) if m.is_dir() => dir_size(&e.path()),
+            Ok(m) => m.len(),
+            Err(_) => 0,
+        })
+        .sum()
+}
+
+/// The LAN address other devices reach this server on. Connecting a UDP socket
+/// sends no packet; it only asks the OS which interface would route outwards.
+fn lan_ip() -> Option<std::net::IpAddr> {
+    let socket = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
+    socket.connect("192.0.2.1:9").ok()?;
+    socket.local_addr().ok().map(|a| a.ip())
+}
+
+async fn status(State(state): State<AppState>, _: AdminUser) -> ApiResult<Json<Status>> {
+    let mut libs = Vec::new();
+    for lib in libraries::list(&state.db).await? {
+        let files = items::library_media_files(&state.db, lib.id).await?;
+        let paths: Vec<_> = files.iter().map(|f| thumbs::paths(&state, f).0).collect();
+        let thumbnails =
+            tokio::task::spawn_blocking(move || paths.iter().filter(|p| p.exists()).count())
+                .await?;
+        libs.push(LibraryStatus {
+            scanning: scan::is_scanning(&state, lib.id),
+            generating_thumbnails: thumbs::is_running(&state, lib.id),
+            id: lib.id,
+            name: lib.name,
+            kind: lib.kind,
+            titles: lib.item_count,
+            files: files.len(),
+            thumbnails,
+        });
+    }
+    let cache = |n: &str| state.cache_dir(n);
+    let (t, s, i) = (cache("thumbs"), cache("subtitles"), cache("images"));
+    let caches = tokio::task::spawn_blocking(move || Caches {
+        thumbnails: dir_size(&t),
+        subtitles: dir_size(&s),
+        images: dir_size(&i),
+    })
+    .await?;
+    let port = state.config.server.port;
+    let host = &state.config.server.host;
+    let lan_urls = match (host.as_str(), lan_ip()) {
+        ("127.0.0.1" | "localhost" | "::1", _) | (_, None) => Vec::new(),
+        (_, Some(ip)) => vec![format!("http://{ip}:{port}")],
+    };
+    Ok(Json(Status {
+        name: state.settings().server_name,
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        uptime_s: state.started.elapsed().as_secs(),
+        ffmpeg: state.bins.as_ref().map(|b| b.ffmpeg.display().to_string()),
+        ffprobe: state.bins.as_ref().map(|b| b.ffprobe.display().to_string()),
+        data_dir: state.config.data_dir.display().to_string(),
+        listen: format!("{host}:{port}"),
+        lan_urls,
+        stats: items::stats(&state.db).await?,
+        libraries: libs,
+        active_streams: state.active_streams.load(Ordering::SeqCst),
+        active_transcodes: state.active_transcodes.load(Ordering::SeqCst),
+        caches,
+    }))
+}
+
+/// Troubleshooting: drop a cache. Thumbnails are made again in the background.
+async fn clear_cache(
+    State(state): State<AppState>,
+    _: AdminUser,
+    Path(kind): Path<String>,
+) -> ApiResult<StatusCode> {
+    let dir = match kind.as_str() {
+        "thumbnails" => "thumbs",
+        "subtitles" => "subtitles",
+        "images" => "images",
+        _ => return Err(ApiError::bad_request("settings.cache_unknown")),
+    };
+    let path = state.cache_dir(dir);
+    if path.exists() {
+        tokio::fs::remove_dir_all(&path).await?;
+    }
+    if dir == "thumbs" {
+        for lib in libraries::list(&state.db).await? {
+            thumbs::spawn(state.clone(), lib.id);
+        }
+    }
+    Ok(StatusCode::NO_CONTENT)
 }

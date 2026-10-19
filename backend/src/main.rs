@@ -5,7 +5,7 @@ use kinema_db::{init_pool, run_migrations};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::Semaphore;
 use tower_http::services::{ServeDir, ServeFile};
 use tracing::{info, warn};
@@ -13,9 +13,12 @@ use tracing::{info, warn};
 mod auth;
 mod error;
 mod i18n;
+mod jobs;
 mod routes;
 mod scan;
+mod server_settings;
 mod state;
+mod thumbs;
 
 use state::AppState;
 
@@ -64,18 +67,24 @@ async fn main() -> anyhow::Result<()> {
     let (changes, changes_rx) = tokio::sync::mpsc::unbounded_channel();
     let state = AppState {
         config: config.clone(),
-        db: pool,
+        db: pool.clone(),
         bins,
-        scans: Arc::new(Mutex::new(HashMap::new())),
+        settings: Arc::new(RwLock::new(server_settings::load(&pool).await?)),
+        scans: jobs::Jobs::new("scan"),
+        thumb_jobs: jobs::Jobs::new("thumbnails"),
         watchers: Arc::new(Mutex::new(HashMap::new())),
         changes,
         probe_slots: Arc::new(Semaphore::new(2)),
-        thumb_slots: Arc::new(Semaphore::new(2)),
+        thumb_slots: Arc::new(Semaphore::new(1)),
+        active_streams: Arc::default(),
+        active_transcodes: Arc::default(),
+        started: std::time::Instant::now(),
         http: reqwest::Client::new(),
     };
 
     // Watch every library and catch up on changes made while the server was off.
     tokio::spawn(scan::debounce_changes(state.clone(), changes_rx));
+    tokio::spawn(scan::scheduled_rescans(state.clone()));
     for lib in kinema_db::libraries::list(&state.db).await? {
         scan::watch(&state, lib.id, &lib.roots);
         scan::spawn_scan(state.clone(), lib.id);

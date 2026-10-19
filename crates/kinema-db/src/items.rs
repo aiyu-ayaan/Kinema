@@ -267,6 +267,48 @@ pub async fn item_files(pool: &SqlitePool, item_id: i64) -> Result<Vec<MediaFile
     .await?)
 }
 
+/// Probed files of a library, in browsing order, for background thumbnail work.
+pub async fn library_media_files(
+    pool: &SqlitePool,
+    library_id: i64,
+) -> Result<Vec<MediaFile>, DbError> {
+    Ok(sqlx::query_as(
+        "SELECT f.id, f.item_id, f.path, f.size, f.mtime, f.container, f.duration_s, f.bitrate, f.probe_status
+         FROM files f JOIN items i ON i.id = f.item_id
+         WHERE i.library_id = ?1 AND f.probe_status = 'ok'
+         ORDER BY i.added_at DESC, i.season_no, i.episode_no",
+    )
+    .bind(library_id)
+    .fetch_all(pool)
+    .await?)
+}
+
+/// Totals for the dashboard.
+#[derive(Debug, Clone, Default, Serialize, sqlx::FromRow)]
+pub struct Stats {
+    pub movies: i64,
+    pub shows: i64,
+    pub episodes: i64,
+    pub files: i64,
+    pub bytes: i64,
+    pub hours: f64,
+}
+
+pub async fn stats(pool: &SqlitePool) -> Result<Stats, DbError> {
+    Ok(sqlx::query_as(
+        "SELECT
+           (SELECT COUNT(*) FROM items WHERE kind IN ('movie','video')) AS movies,
+           (SELECT COUNT(*) FROM items WHERE kind = 'show') AS shows,
+           (SELECT COUNT(*) FROM items WHERE kind = 'episode') AS episodes,
+           COUNT(*) AS files,
+           COALESCE(SUM(size), 0) AS bytes,
+           COALESCE(SUM(duration_s), 0) / 3600.0 AS hours
+         FROM files",
+    )
+    .fetch_one(pool)
+    .await?)
+}
+
 /// (file id, path) of every file in a library.
 pub async fn library_files(
     pool: &SqlitePool,
@@ -605,6 +647,15 @@ pub async fn needing_meta(pool: &SqlitePool, library_id: i64) -> Result<Vec<Meta
 /// Allow lookups again, e.g. after an API key was added.
 pub async fn reset_meta_tried(pool: &SqlitePool) -> Result<(), DbError> {
     sqlx::query("UPDATE items SET meta_tried = 0 WHERE tmdb_id IS NULL")
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// "Match missing": look up a library's unmatched movies, shows and episodes again.
+pub async fn reset_meta_tried_library(pool: &SqlitePool, library_id: i64) -> Result<(), DbError> {
+    sqlx::query("UPDATE items SET meta_tried = 0 WHERE library_id = ?1 AND tmdb_id IS NULL")
+        .bind(library_id)
         .execute(pool)
         .await?;
     Ok(())

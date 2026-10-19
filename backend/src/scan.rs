@@ -14,40 +14,39 @@ use tokio::task::JoinSet;
 use tracing::{info, warn};
 
 pub fn is_scanning(state: &AppState, library_id: i64) -> bool {
-    state
-        .scans
-        .lock()
-        .is_ok_and(|s| s.contains_key(&library_id))
+    state.scans.is_running(library_id)
 }
 
 /// Starts a scan, or asks the running one to go again when it finishes.
+/// Thumbnails for whatever the scan found follow in their own background job.
 pub fn spawn_scan(state: AppState, library_id: i64) {
-    {
-        let Ok(mut scans) = state.scans.lock() else {
-            return;
-        };
-        if let Some(rerun) = scans.get_mut(&library_id) {
-            *rerun = true;
-            return;
-        }
-        scans.insert(library_id, false);
-    }
-    tokio::spawn(async move {
-        loop {
-            if let Err(e) = scan(&state, library_id).await {
-                warn!("scan of library {library_id} failed: {e}");
-            }
-            let Ok(mut scans) = state.scans.lock() else {
-                return;
-            };
-            if scans.get(&library_id) == Some(&true) {
-                scans.insert(library_id, false);
-            } else {
-                scans.remove(&library_id);
-                return;
-            }
+    let jobs = state.scans.clone();
+    jobs.spawn(library_id, move || {
+        let state = state.clone();
+        async move {
+            scan(&state, library_id).await?;
+            crate::thumbs::spawn(state, library_id);
+            Ok(())
         }
     });
+}
+
+/// Full rescans every `rescan_hours`, for drives that do not report changes
+/// (network shares). Checks the setting every 5 minutes.
+pub async fn scheduled_rescans(state: AppState) {
+    let mut last = std::time::Instant::now();
+    loop {
+        tokio::time::sleep(Duration::from_secs(300)).await;
+        let hours = state.settings().rescan_hours;
+        if hours > 0 && last.elapsed() >= Duration::from_secs(u64::from(hours) * 3600) {
+            last = std::time::Instant::now();
+            if let Ok(libs) = libraries::list(&state.db).await {
+                for lib in libs {
+                    spawn_scan(state.clone(), lib.id);
+                }
+            }
+        }
+    }
 }
 
 /// Turns bursts of filesystem events into one scan per library, 10 s after the last event.
@@ -76,8 +75,11 @@ pub async fn debounce_changes(state: AppState, mut rx: UnboundedReceiver<i64>) {
     }
 }
 
-/// (Re)starts the filesystem watcher for a library.
+/// (Re)starts the filesystem watcher for a library, if watching is on.
 pub fn watch(state: &AppState, library_id: i64, roots: &[String]) {
+    if !state.settings().watch_changes {
+        return;
+    }
     let roots: Vec<PathBuf> = roots
         .iter()
         .map(PathBuf::from)
@@ -90,6 +92,18 @@ pub fn watch(state: &AppState, library_id: i64, roots: &[String]) {
             }
         }
         Err(e) => warn!("cannot watch library {library_id}: {e}"),
+    }
+}
+
+/// Applies the watch setting to every library.
+pub async fn rewatch_all(state: &AppState) {
+    if let Ok(mut watchers) = state.watchers.lock() {
+        watchers.clear();
+    }
+    if let Ok(libs) = libraries::list(&state.db).await {
+        for lib in libs {
+            watch(state, lib.id, &lib.roots);
+        }
     }
 }
 
@@ -424,11 +438,16 @@ fn image_key(size: &str, path: Option<String>) -> Option<String> {
     path.map(|p| format!("{size}/{}", p.trim_start_matches('/')))
 }
 
+/// TMDB client with the configured key and metadata language.
+pub async fn tmdb_client(state: &AppState) -> Option<TmdbClient> {
+    let key = tmdb_key(state).await?;
+    Some(TmdbClient::new(key).language(state.settings().metadata_language))
+}
+
 async fn fetch_metadata(state: &AppState, library_id: i64) -> anyhow::Result<()> {
-    let Some(key) = tmdb_key(state).await else {
+    let Some(tmdb) = tmdb_client(state).await else {
         return Ok(());
     };
-    let tmdb = TmdbClient::new(key);
     let db = &state.db;
 
     for target in items::needing_meta(db, library_id).await? {

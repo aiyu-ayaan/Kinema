@@ -157,6 +157,16 @@ fn landing_from_packets(csv: &str, streams: &[i64]) -> Option<f64> {
 
 /// ffmpeg writing fragmented MP4 to stdout, starting at `start_s`. Seeking means
 /// a new request with a new start; the process dies when the client disconnects.
+/// Re-encode settings, from the admin's Transcoder options.
+#[derive(Debug, Clone, Copy)]
+pub struct Encode<'a> {
+    pub preset: &'a str,
+    pub crf: u32,
+    /// 0 keeps the source height.
+    pub max_height: u32,
+}
+
+#[allow(clippy::too_many_arguments)]
 pub fn stream_command(
     bins: &MediaBinaries,
     path: &Path,
@@ -165,6 +175,7 @@ pub fn stream_command(
     audio: Option<Track>,
     copy_video: bool,
     copy_audio: bool,
+    encode: Encode,
 ) -> Command {
     let mut cmd = Command::new(&bins.ffmpeg);
     cmd.args(["-hide_banner", "-loglevel", "error", "-nostdin"]);
@@ -180,18 +191,16 @@ pub fn stream_command(
                 cmd.args(["-tag:v", "hvc1"]);
             }
         } else {
-            cmd.args([
-                "-c:v",
-                "libx264",
-                "-preset",
-                "veryfast",
-                "-crf",
-                "22",
-                "-pix_fmt",
-                "yuv420p",
-                "-vf",
-                "scale='min(1920,iw)':-2",
-            ]);
+            // Never upscale; -2 keeps the width even, which libx264 needs.
+            let scale = if encode.max_height > 0 {
+                format!("scale=-2:'min({},ih)'", encode.max_height)
+            } else {
+                "scale=-2:ih".to_string()
+            };
+            cmd.args(["-c:v", "libx264", "-preset", encode.preset, "-crf"])
+                .arg(encode.crf.to_string())
+                .args(["-pix_fmt", "yuv420p", "-vf"])
+                .arg(scale);
         }
     }
     if let Some(a) = audio {

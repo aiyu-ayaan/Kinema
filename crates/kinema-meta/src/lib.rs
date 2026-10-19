@@ -45,6 +45,7 @@ pub struct Episode {
 pub struct TmdbClient {
     client: Client,
     api_key: String,
+    language: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -129,7 +130,14 @@ impl TmdbClient {
                 .build()
                 .unwrap_or_default(),
             api_key,
+            language: None,
         }
+    }
+
+    /// Titles and summaries in this language ("hi-IN"); TMDB falls back to the original.
+    pub fn language(mut self, language: String) -> Self {
+        self.language = Some(language).filter(|l| !l.is_empty());
+        self
     }
 
     async fn get<T: DeserializeOwned>(
@@ -138,6 +146,9 @@ impl TmdbClient {
         query: &[(&str, String)],
     ) -> Result<T, MetaError> {
         let mut req = self.client.get(format!("{API}{path}")).query(query);
+        if let Some(lang) = &self.language {
+            req = req.query(&[("language", lang)]);
+        }
         // v4 tokens are JWTs; v3 keys are 32 hex chars.
         req = if self.api_key.starts_with("eyJ") {
             req.bearer_auth(&self.api_key)
