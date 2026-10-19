@@ -1,0 +1,72 @@
+## v0.0.1-alpha.1 (2026-10-19)
+
+- !alpha : Initial alpha release with home server bundle, desktop app, and web player
+- feat(installers) : Auto pick highest available release channel (stable -> beta -> alpha)
+- docs(readme) : Add quick install one-liners at the top of README
+- ci(workflow) : Add release and CI GitHub Actions workflows
+- feat(installers) : Add home server and desktop installation scripts and quick install instructions
+- build(server) : Add Dockerfile, compose file and the bundled server tarball with ffmpeg
+- build(android) : Sign release builds from keystore.properties and take versionCode from the root build number
+- feat(backend) : Fall back to the next free port when the configured one is taken
+- fix(desktop) : Add homepage and author email so the deb package builds
+- fix(web) : Add right padding for desktop window controls overlay
+- docs(README) : Add architecture diagrams, data model and project overview
+- fix(desktop) : Robustly locate web dist and handle load failures in desktop app
+- feat(desktop) : Add desktop app with server switching and remove default menu items
+- feat(android) : Redesign the library switcher sheet and keep shows collapsed between opens
+- feat(android) : Open a collapsible library switcher sheet when Library is tapped again
+- feat(web) : Indent shows under their library in the sidebar
+- feat(android) : Show a mixed library's movies with its shows as chips, like the web sidebar
+- feat(sync) : Save each profile's audio and subtitle pick across devices
+- fix(android) : Fall back to H.264 when the phone fails to decode a stream
+- fix(android) : Keep the leaving page on top during predictive back
+- feat(android) : Add the Android app with Material 3 Expressive design
+- feat(server) : Serve HTTPS with a self-signed certificate, LAN discovery and a public URL
+- web(Player) : Add stop button matching Plex playback controls
+- feat(web) : Pick audio and subtitle tracks for all episodes of a show
+- feat(media) : Store a per-show audio and subtitle track choice
+- feat(item) : Add play, watched and copy-link actions to show and season pages
+- feat(tvmaze) : Integrate TVmaze metadata support for shows without TMDB matches
+- docs(media) : Note -noaccurate_seek for copied video with re-encoded audio
+- fix(media) : Keep re-encoded audio in sync with copied video after a seek
+- web(Nav) : List individual TV show titles directly and remove TV Shows option
+- web(Library) : Segregate TV serials and movies into distinct top-level titles
+- feat(codegraph) : Add CodeGraph configuration and documentation files
+- docs(meta) : Document cast and crew metadata and profile image caching
+- feat(web) : Display cast and crew avatars and roles on item details
+- feat(meta) : Fetch and persist movie and show cast and crew from TMDB
+- feat(web) : Add Plex-style split click targets to play video or open details
+- fix(player) : Fix seek click dropping, slider snapback and out-of-order responses
+- style(player) : Expand range slider hit area and add hover styling
+- docs(users) : Document profiles, PIN lockout, library access and new endpoints
+- feat(web) : Add profile picker with PIN pad, users manager, and settings nav in the app sidebar
+- feat(users) : Add family profiles with PIN lock, lockout and per-profile library access
+- docs(settings) : Document settings sections, background thumbnails and new endpoints
+- feat(settings) : Add sectioned settings with dashboard, transcoder, languages and library actions
+- feat(backend) : Generate thumbnails in a background job and add server settings, status and cache APIs
+- docs(mvp) : Document thumbnails cache and new home layout
+- feat(web) : Redesign home with hero carousel, show episodes as a grid, use frame thumbnails
+- feat(media) : Add cached video-frame thumbnails and kind-split home shelves
+- docs(mvp) : Document episode grouping, fix match and library sub-entries
+- feat(web) : Add Movies and TV Shows sub-entries for mixed libraries
+- feat(match) : Add admin fix-match search and apply against TMDB
+- feat(scanner) : Group episodes found in movie libraries into shows and regroup old items
+- chore(dev) : Restart backend on source changes in pnpm dev without cargo-watch
+- fix(scanner) : Reject whole-drive and system folders as library roots and skip /proc, /sys, /dev, /run
+- docs(mvp) : Document MVP architecture, playback flow, API, Ember palette and TODO
+- feat(web) : Add login, home, library, detail, settings and player with audio and subtitle switching
+- fix(media) : Align remux time offset with ffmpeg's real seek point for subtitle sync
+- feat(backend) : Add admin setup, login sessions, library scan, metadata, direct/remux streaming and subtitles API
+- feat(meta) : Add TMDB client for movies, shows, seasons and images
+- style(scanner) : Fix clippy lints
+- feat(media) : Add ffprobe parsing, direct/remux/transcode plan, fMP4 stream command and WebVTT extraction
+- feat(scanner) : Add release-name parser, video walker, sidecar subtitles and fs watcher
+- feat(db) : Add MVP migration and queries for users, libraries, items, files and watch state
+- docs(m0) : Update roadmap, playback pipeline, and mark M0 complete in TODO
+- feat(web) : Initialize React TypeScript web app with Vite and Tailwind
+- style(design-system) : Add Kinema design tokens and UI principles
+- chore(packaging) : Add build and packaging scripts for Linux, Windows, Docker, and ffmpeg pinning
+- chore(agents) : Add agent workspace skills and configuration
+- feat(backend) : Initialize Cargo workspace and crate skeleton
+- docs(init) : Add design documentation and repository baseline
+

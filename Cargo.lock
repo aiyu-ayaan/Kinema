@@ -194,7 +194,7 @@ dependencies = [
 
 [[package]]
 name = "backend"
-version = "0.1.0"
+version = "0.0.1-alpha.1"
 dependencies = [
  "anyhow",
  "argon2",
@@ -1103,7 +1103,7 @@ dependencies = [
 
 [[package]]
 name = "kinema-core"
-version = "0.1.0"
+version = "0.0.1-alpha.1"
 dependencies = [
  "chrono",
  "serde",
@@ -1116,7 +1116,7 @@ dependencies = [
 
 [[package]]
 name = "kinema-db"
-version = "0.1.0"
+version = "0.0.1-alpha.1"
 dependencies = [
  "chrono",
  "kinema-core",
@@ -1131,7 +1131,7 @@ dependencies = [
 
 [[package]]
 name = "kinema-media"
-version = "0.1.0"
+version = "0.0.1-alpha.1"
 dependencies = [
  "kinema-core",
  "serde",
@@ -1143,7 +1143,7 @@ dependencies = [
 
 [[package]]
 name = "kinema-meta"
-version = "0.1.0"
+version = "0.0.1-alpha.1"
 dependencies = [
  "kinema-core",
  "reqwest",
@@ -1156,7 +1156,7 @@ dependencies = [
 
 [[package]]
 name = "kinema-scanner"
-version = "0.1.0"
+version = "0.0.1-alpha.1"
 dependencies = [
  "kinema-core",
  "notify",
