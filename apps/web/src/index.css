@@ -149,19 +149,24 @@
   *, *::before, *::after { transition-duration: 1ms !important; }
 }
 
-/* Seek and volume sliders */
+/* Seek and volume sliders. The input is 20 px tall so it is easy to hit; the visible
+   track is the 4 px band drawn in its middle. */
 input[type='range'].range {
   -webkit-appearance: none;
   appearance: none;
-  height: 4px;
-  border-radius: 9999px;
+  height: 20px;
   cursor: pointer;
   background: linear-gradient(
-    to right,
-    rgb(var(--primary)) 0%,
-    rgb(var(--primary)) var(--fill, 0%),
-    rgb(255 255 255 / 0.25) var(--fill, 0%)
-  );
+      to right,
+      rgb(var(--primary)) 0%,
+      rgb(var(--primary)) var(--fill, 0%),
+      rgb(255 255 255 / 0.25) var(--fill, 0%)
+    )
+    center / 100% 4px no-repeat;
+  transition: background-size 120ms ease;
+}
+input[type='range'].range:hover {
+  background-size: 100% 6px;
 }
 input[type='range'].range::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -170,6 +175,13 @@ input[type='range'].range::-webkit-slider-thumb {
   border-radius: 9999px;
   background: rgb(var(--primary));
   border: 0;
+  transition: transform 120ms ease;
+}
+input[type='range'].range:hover::-webkit-slider-thumb {
+  transform: scale(1.25);
+}
+input[type='range'].range::-moz-range-track {
+  background: transparent;
 }
 input[type='range'].range::-moz-range-thumb {
   width: 14px;
@@ -177,4 +189,8 @@ input[type='range'].range::-moz-range-thumb {
   border-radius: 9999px;
   background: rgb(var(--primary));
   border: 0;
+  transition: transform 120ms ease;
+}
+input[type='range'].range:hover::-moz-range-thumb {
+  transform: scale(1.25);
 }
