@@ -10,6 +10,7 @@
 - Filename parser with test corpus.
 - `GET /api/stream/{id}` with `Range`.
 - Minimal web page: list items, play in `<video>`.
+- Keyframe/Cues index stored at probe time so large-file seek is instant (`media-pipeline.md` 6a).
 
 ## M2: Metadata and artwork
 - TMDB client, matcher, artwork cache and resizer.
@@ -25,7 +26,9 @@
 - Capability negotiation, playback decision.
 - HLS remux, audio transcode, software video transcode.
 - Hardware encoder detection (VAAPI, NVENC, QSV).
-- WebVTT subtitles, track selection.
+- WebVTT subtitles, track selection. Extracted at scan time; track switch is client-side with no reload.
+- Seek reuses live HLS segments; session restart only outside the cut range.
+- Optional OCR of PGS/VobSub to WebVTT at scan time (avoids burn-in restarts).
 
 ## M5: Playlists, collections, sharing
 - Playlists, collections, shelves.

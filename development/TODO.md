@@ -1,14 +1,22 @@
 # TODO
 
 ## M0: Skeleton
-- [ ] Cargo workspace with `backend/` and `crates/*`
-- [ ] Root `package.json` and `pnpm-workspace.yaml` with the Domus scripts
-- [ ] `apps/web` Vite + React + TS + Tailwind scaffold (`@kinema/web`)
-- [ ] Dev/prod flavors (`kinema.dev.*` storage keys, DEV pill)
-- [ ] `design-system/` tokens from the reference screen
-- [ ] CI: fmt, clippy, eslint, tests
-- [ ] SQLite migrations for users, libraries, items, files, streams
-- [ ] `GET /api/server/info`
+- [x] Cargo workspace with `backend/` and `crates/*`
+- [x] Root `package.json` and `pnpm-workspace.yaml` with the Domus scripts
+- [x] `apps/web` Vite + React + TS + Tailwind scaffold (`@kinema/web`)
+- [x] Dev/prod flavors (`kinema.dev.*` storage keys, DEV pill)
+- [x] `design-system/` tokens from the reference screen
+- [x] CI: fmt, clippy, eslint, tests
+- [x] SQLite migrations for users, libraries, items, files, streams
+- [x] `GET /api/server/info`
+
+## Playback speed (Plex pain points)
+- [ ] Store keyframe/Cues index at probe time (M1)
+- [ ] Direct play: ranged `sendfile`, no session (M1)
+- [ ] Scan-time subtitle extraction to cached WebVTT (M4)
+- [ ] Client-side subtitle track switch, no player reload (M4)
+- [ ] HLS seek reuses existing segments; keep idle session 60 s (M4)
+- [ ] Optional OCR of PGS/VobSub to WebVTT (M4)
 
 ## Packaging (end goal)
 - [x] Decisions: GPL ffmpeg as separate process; static musl (Linux) + MSVC (Windows); aarch64 in first release

@@ -51,6 +51,32 @@ Text subtitles never force a transcode: convert to WebVTT and send as a side tra
 - External files `name.lang.srt|ass|vtt` matched by basename.
 - Embedded text tracks extracted on demand and cached.
 - `ass` converted to WebVTT with styling stripped by default.
+- Extraction runs at scan time (low priority), not at play time, so the first track switch is a cache hit.
+- Switching a text track is client-side only: the player swaps the `<track>` source. No server session restart, no ffmpeg run, no video reload.
+- Image tracks (PGS, VobSub) are OCRed at scan time to WebVTT (optional, off by default, runs after probe at lowest priority). Without OCR they fall back to burn-in, which restarts the transcode on each change. Burn-in is the only case where a caption change costs a restart.
+
+## 6a. Fast start and seek on large files
+
+Goal: no Plex-style stall on multi-GB files, on seek, or on caption change.
+
+```
+ play request
+      |
+      v
+ cached probe + keyframe index  (size+mtime+fingerprint key; miss => ffprobe once)
+      |
+      +-- direct play ---> ranged read / sendfile  (seek = byte-range jump, no server session)
+      |
+      +-- remux ---------> ffmpeg -c copy -> HLS fMP4, started at -ss, seek inside cut segments
+      |
+      +-- transcode -----> HLS, session kept alive across seeks; reuse segments already cut
+```
+
+- Probe and keyframe index are stored in the DB at scan time, never computed on the play path.
+- MKV with Cues at the end: read the Cues once at scan time and store the offsets, so the first seek does not scan the file.
+- Direct play uses `Range` with no read-ahead cap and `sendfile`; no transcode session is created.
+- A seek inside an active HLS session first checks for existing segments; only a seek outside the cut range restarts ffmpeg, and it uses input seeking (`-ss` before `-i`) to the nearest keyframe.
+- Idle sessions are kept 60 s so a quick seek back does not pay startup again.
 
 ## 7. Chapters and intro skip
 
