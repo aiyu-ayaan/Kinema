@@ -72,6 +72,16 @@ export function GeneralSection() {
               onChange={(e) => set({ public_url: e.target.value })}
             />
           </SettingRow>
+          {typeof window !== 'undefined' && (window.kinema?.chooseServer || window.desktop?.chooseServer) && (
+            <SettingRow label={t('auth.changeServer')} description={t('connect.subtitle')}>
+              <Button
+                variant="ghost"
+                onClick={() => (window.kinema?.chooseServer || window.desktop?.chooseServer)?.()}
+              >
+                {t('auth.changeServer')}
+              </Button>
+            </SettingRow>
+          )}
         </>
       )}
     </ServerForm>

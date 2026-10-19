@@ -244,6 +244,8 @@
   "settings.troubleshooting.images": "TMDB artwork",
   "settings.troubleshooting.imagesHint": "Downloaded again the next time a poster is shown.",
   "auth.switchProfile": "Switch profile",
+  "auth.changeServer": "Use another server",
+  "connect.subtitle": "Your movies and shows, from your own server.",
   "auth.profiles.title": "Who's watching?",
   "auth.profiles.back": "Profiles",
   "auth.profiles.locked": "Locked",

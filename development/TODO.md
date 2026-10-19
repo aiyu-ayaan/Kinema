@@ -36,6 +36,13 @@
 - [ ] Seek inside the buffered part of a remux stream without restarting it
 - [ ] Translations (`values-<lang>/strings.xml`)
 
+## Desktop app (2026-10-20)
+- [x] Electron scaffold (`apps/desktop`, `@kinema/desktop`) with isolated dev/prod flavors
+- [x] Remove default menu items (`Menu.setApplicationMenu(null)` / `win.setMenu(null)`)
+- [x] LAN server discovery beacon probe (UDP 48555) with local fallback
+- [x] Server switcher and manual address input with TLS certificate verification and pin approval
+- [x] Web integration: server change button on profile picker, setup, settings, and user menu
+
 ## Playback speed (Plex pain points)
 - [ ] Store keyframe/Cues index at probe time (M1)
 - [ ] Direct play: ranged `sendfile`, no session (M1)

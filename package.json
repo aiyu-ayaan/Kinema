@@ -18,8 +18,14 @@
     "android:build:dev": "(cd apps/android && ./gradlew :app:assembleDevDebug)",
     "android:build:prod": "(cd apps/android && ./gradlew :app:assembleProdRelease)",
     "android:test": "(cd apps/android && ./gradlew :core:testDebugUnitTest)",
+    "dev:desktop": "pnpm --filter @kinema/desktop dev",
+    "dev:desktop:prod": "pnpm --filter @kinema/desktop dev:prod",
+    "build:desktop": "pnpm --filter @kinema/desktop build:prod",
+    "build:desktop:dev": "pnpm --filter @kinema/desktop build:dev",
+    "build:desktop:prod": "pnpm --filter @kinema/desktop build:prod",
+    "test:desktop": "pnpm --filter @kinema/desktop test",
     "lint": "pnpm --filter @kinema/web lint && cargo clippy -- -D warnings",
-    "test": "cargo test && pnpm --filter @kinema/web test"
+    "test": "cargo test && pnpm --filter @kinema/web test && pnpm --filter @kinema/desktop test"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

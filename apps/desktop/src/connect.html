@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'" />
+    <title>Kinema</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #1A110F;
+        --panel: #231917;
+        --raised: #322825;
+        --border: #534340;
+        --border-strong: #A08C88;
+        --fg: #F1DFDB;
+        --muted: #D8C2BE;
+        --subtle: #A08C88;
+        --primary: #FFB4A3;
+        --on-primary: #5F1505;
+        --primary-container: #802A15;
+        --on-primary-container: #FFDAD2;
+        --warn: #F59E0B;
+        --danger: #FFB4AB;
+      }
+      :root[data-theme='light'] {
+        color-scheme: light;
+        --bg: #FFF8F6;
+        --panel: #FFFFFF;
+        --raised: #FCEAE6;
+        --border: #D8C2BE;
+        --border-strong: #85736F;
+        --fg: #231917;
+        --muted: #534340;
+        --subtle: #85736F;
+        --primary: #A23F26;
+        --on-primary: #FFFFFF;
+        --primary-container: #FFDAD2;
+        --on-primary-container: #3D0700;
+        --warn: #B45309;
+        --danger: #BA1A1A;
+      }
+      @media (prefers-color-scheme: light) {
+        :root:not([data-theme='dark']) {
+          color-scheme: light;
+          --bg: #FFF8F6;
+          --panel: #FFFFFF;
+          --raised: #FCEAE6;
+          --border: #D8C2BE;
+          --border-strong: #85736F;
+          --fg: #231917;
+          --muted: #534340;
+          --subtle: #85736F;
+          --primary: #A23F26;
+          --on-primary: #FFFFFF;
+          --primary-container: #FFDAD2;
+          --on-primary-container: #3D0700;
+          --warn: #B45309;
+          --danger: #BA1A1A;
+        }
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 60px 24px 32px;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        user-select: none;
+        overflow-x: hidden;
+      }
+
+      header {
+        position: fixed;
+        inset: 0 0 auto 0;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-bottom: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        background: var(--bg);
+        -webkit-app-region: drag;
+        z-index: 50;
+      }
+
+      .glow {
+        position: absolute;
+        top: -120px;
+        left: 50%;
+        width: 600px;
+        height: 400px;
+        transform: translateX(-50%);
+        background: radial-gradient(closest-side, var(--primary-container), transparent);
+        opacity: 0.35;
+        filter: blur(60px);
+        pointer-events: none;
+      }
+
+      .card {
+        position: relative;
+        width: 100%;
+        max-w: 420px;
+        max-width: 440px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 32px 28px;
+        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4);
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .logo-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: var(--primary-container);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .logo-icon svg {
+        width: 22px;
+        height: 22px;
+        fill: var(--on-primary-container);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--fg);
+        letter-spacing: -0.01em;
+      }
+
+      .subtitle {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .section-title {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--subtle);
+        margin-top: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .rescan-btn {
+        background: none;
+        border: none;
+        color: var(--primary);
+        font-size: 12px;
+        cursor: pointer;
+        padding: 0;
+      }
+      .rescan-btn:hover { text-decoration: underline; }
+
+      .server-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-height: 48px;
+      }
+
+      .server-row {
+        background: var(--raised);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        transition: all 120ms ease;
+      }
+      .server-row:hover {
+        border-color: var(--border-strong);
+        transform: translateY(-1px);
+      }
+      .server-row.busy {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      .server-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .server-name {
+        font-weight: 600;
+        color: var(--fg);
+        font-size: 14px;
+      }
+      .server-url {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .badge-btn {
+        background: var(--primary-container);
+        color: var(--on-primary-container);
+        border: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .status-box {
+        font-size: 13px;
+        color: var(--muted);
+        padding: 8px 12px;
+        background: var(--raised);
+        border-radius: 8px;
+        border: 1px solid var(--border);
+      }
+
+      .error-box {
+        font-size: 13px;
+        color: var(--danger);
+        padding: 8px 12px;
+        background: rgba(255, 180, 171, 0.1);
+        border: 1px solid var(--danger);
+        border-radius: 8px;
+        display: none;
+      }
+
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      label {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted);
+      }
+
+      input[type="text"] {
+        width: 100%;
+        background: var(--raised);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px 14px;
+        color: var(--fg);
+        font-size: 14px;
+        outline: none;
+        transition: border-color 120ms ease;
+      }
+      input[type="text"]:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(255, 180, 163, 0.2);
+      }
+
+      .primary-btn {
+        background: var(--primary);
+        color: var(--on-primary);
+        border: none;
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 120ms ease;
+      }
+      .primary-btn:hover { opacity: 0.9; }
+      .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      .cancel-btn {
+        background: transparent;
+        color: var(--muted);
+        border: none;
+        font-size: 13px;
+        cursor: pointer;
+        padding: 6px;
+        text-align: center;
+      }
+      .cancel-btn:hover { color: var(--fg); text-decoration: underline; }
+
+      .spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid var(--border);
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <header id="win-title">Kinema</header>
+    <div class="glow"></div>
+    <div class="card">
+      <div class="brand">
+        <div class="logo-icon">
+          <svg viewBox="0 0 32 32">
+            <path d="M12 9.5v13l10.5-6.5L12 9.5Z" />
+          </svg>
+        </div>
+        <div>
+          <h1 id="title-text">Connect to Kinema</h1>
+          <p class="subtitle" id="subtitle-text">Your movies and shows, from your own server.</p>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <span id="on-network-label">On this network</span>
+        <button type="button" class="rescan-btn" id="rescan-btn">Search again</button>
+      </div>
+
+      <div class="server-list" id="server-list">
+        <div class="status-box" id="scan-status"><span class="spinner"></span>Looking for servers…</div>
+      </div>
+
+      <div class="error-box" id="error-box"></div>
+
+      <form id="connect-form">
+        <label for="address-input" id="address-label">Server address</label>
+        <input type="text" id="address-input" placeholder="192.168.1.10:3000 or media.example.com" autocomplete="off" autocorrect="off" spellcheck="false" />
+        <button type="submit" class="primary-btn" id="submit-btn">Connect</button>
+      </form>
+
+      <button type="button" class="cancel-btn" id="cancel-btn" style="display: none;">Cancel and return to current server</button>
+    </div>
+
+    <script>
+      const bridge = window.kinema || window.desktop
+      const params = new URLSearchParams(window.location.search)
+      const theme = params.get('theme') || (bridge ? bridge.getTheme() : 'dark')
+      if (theme && theme !== 'system') document.documentElement.setAttribute('data-theme', theme)
+
+      const initialMessage = params.get('message')
+      const errorBox = document.getElementById('error-box')
+      if (initialMessage) {
+        errorBox.textContent = initialMessage
+        errorBox.style.display = 'block'
+      }
+
+      const msgs = (bridge && bridge.getMessages) ? bridge.getMessages() : {}
+      const t = (k, fb) => msgs[k] || fb
+
+      document.getElementById('title-text').textContent = t('connect.title', 'Connect to Kinema')
+      document.getElementById('subtitle-text').textContent = t('connect.subtitle', 'Your movies and shows, from your own server.')
+      document.getElementById('on-network-label').textContent = t('connect.onNetwork', 'On this network')
+      document.getElementById('rescan-btn').textContent = t('connect.rescan', 'Search again')
+      document.getElementById('address-label').textContent = t('connect.address', 'Server address')
+      document.getElementById('address-input').placeholder = t('connect.addressPlaceholder', '192.168.1.10:3000 or media.example.com')
+      document.getElementById('submit-btn').textContent = t('connect.connect', 'Connect')
+      document.getElementById('cancel-btn').textContent = t('connect.cancel', 'Cancel and return to current server')
+
+      if (bridge && bridge.hasSavedServer && bridge.hasSavedServer()) {
+        document.getElementById('cancel-btn').style.display = 'block'
+      }
+
+      const serverList = document.getElementById('server-list')
+      const addressInput = document.getElementById('address-input')
+      const submitBtn = document.getElementById('submit-btn')
+      const cancelBtn = document.getElementById('cancel-btn')
+      const rescanBtn = document.getElementById('rescan-btn')
+
+      cancelBtn.addEventListener('click', () => {
+        if (bridge && bridge.cancel) bridge.cancel()
+      })
+
+      async function scan() {
+        serverList.innerHTML = `<div class="status-box"><span class="spinner"></span>${t('connect.searching', 'Looking for servers…')}</div>`
+        errorBox.style.display = 'none'
+        if (!bridge || !bridge.discover) {
+          serverList.innerHTML = `<div class="status-box">${t('connect.noneFound', 'No server answered.')}</div>`
+          return
+        }
+        try {
+          const list = await bridge.discover()
+          if (!list || list.length === 0) {
+            serverList.innerHTML = `<div class="status-box">${t('connect.noneFound', 'No server answered. Make sure Kinema is running and on the same Wi-Fi, or enter its address below.')}</div>`
+            return
+          }
+          serverList.innerHTML = ''
+          for (const s of list) {
+            const row = document.createElement('div')
+            row.className = 'server-row'
+            row.innerHTML = `
+              <div class="server-info">
+                <span class="server-name">${escapeHtml(s.name || 'Kinema')}</span>
+                <span class="server-url">${escapeHtml(s.url)}</span>
+              </div>
+              <button type="button" class="badge-btn">${t('connect.connect', 'Connect')}</button>
+            `
+            row.addEventListener('click', () => doConnect(s.url, row))
+            serverList.appendChild(row)
+          }
+        } catch (e) {
+          serverList.innerHTML = `<div class="status-box">${escapeHtml(e.message || String(e))}</div>`
+        }
+      }
+
+      function escapeHtml(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+      }
+
+      async function doConnect(url, rowElem) {
+        if (!bridge || !bridge.connect) return
+        errorBox.style.display = 'none'
+        submitBtn.disabled = true
+        if (rowElem) rowElem.classList.add('busy')
+        submitBtn.textContent = '…'
+
+        try {
+          const err = await bridge.connect(url)
+          if (err) {
+            errorBox.textContent = err
+            errorBox.style.display = 'block'
+          }
+        } catch (e) {
+          errorBox.textContent = e.message || String(e)
+          errorBox.style.display = 'block'
+        } finally {
+          submitBtn.disabled = false
+          submitBtn.textContent = t('connect.connect', 'Connect')
+          if (rowElem) rowElem.classList.remove('busy')
+        }
+      }
+
+      document.getElementById('connect-form').addEventListener('submit', (e) => {
+        e.preventDefault()
+        const val = addressInput.value.trim()
+        if (val) doConnect(val)
+      })
+
+      rescanBtn.addEventListener('click', scan)
+      scan()
+    </script>
+  </body>
+</html>

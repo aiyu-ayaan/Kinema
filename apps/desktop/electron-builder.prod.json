@@ -1,0 +1,37 @@
+{
+  "appId": "com.aiyu.kinema",
+  "productName": "Kinema",
+  "executableName": "kinema-desktop",
+  "files": [
+    "src/**"
+  ],
+  "extraResources": [
+    {
+      "from": "build/icon.png",
+      "to": "icon.png"
+    }
+  ],
+  "linux": {
+    "target": [
+      "deb",
+      "AppImage"
+    ],
+    "icon": "build/icon.png",
+    "category": "AudioVideo",
+    "synopsis": "Personal media player"
+  },
+  "deb": {
+    "packageName": "kinema-desktop",
+    "afterInstall": "build/after-install.sh",
+    "artifactName": "kinema-desktop_${version}_${arch}.${ext}"
+  },
+  "win": {
+    "target": [
+      "nsis"
+    ],
+    "icon": "build/icon.png"
+  },
+  "nsis": {
+    "artifactName": "Kinema-Desktop-${version}-Setup.${ext}"
+  }
+}

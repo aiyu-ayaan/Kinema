@@ -1,0 +1,32 @@
+{
+  "appId": "com.aiyu.kinema.dev",
+  "productName": "Kinema Dev",
+  "executableName": "kinema-desktop-dev",
+  "files": [
+    "src/**"
+  ],
+  "extraResources": [
+    {
+      "from": "build/icon-dev.png",
+      "to": "icon-dev.png"
+    },
+    {
+      "from": "build/icon-dev.png",
+      "to": "icon.png"
+    }
+  ],
+  "linux": {
+    "target": [
+      "deb",
+      "AppImage"
+    ],
+    "icon": "build/icon-dev.png",
+    "category": "AudioVideo",
+    "synopsis": "Personal media player (Development)"
+  },
+  "deb": {
+    "packageName": "kinema-desktop-dev",
+    "afterInstall": "build/after-install.sh",
+    "artifactName": "kinema-desktop-dev_${version}_${arch}.${ext}"
+  }
+}

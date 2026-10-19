@@ -1,0 +1,23 @@
+{
+  "cert.cancel": "Cancel",
+  "cert.detail": "No public authority vouches for {host}. Compare this fingerprint with the one in the server log before you trust it.\n\n{fingerprint}",
+  "cert.title": "Trust this server?",
+  "cert.trust": "Trust this server",
+  "connect.address": "Server address",
+  "connect.addressInvalid": "Enter an address like 192.168.1.10:3000 or media.example.com.",
+  "connect.addressPlaceholder": "192.168.1.10:3000 or media.example.com",
+  "connect.cancel": "Cancel and return to current server",
+  "connect.cannotLoad": "Can’t load {url}.",
+  "connect.cannotReach": "Can’t reach {hosts}.",
+  "connect.connect": "Connect",
+  "connect.hostOr": " or ",
+  "connect.noAnswer": "No Kinema server answers at {host}.",
+  "connect.noneFound": "No server answered. Make sure Kinema is running and on the same Wi-Fi, or enter its address below.",
+  "connect.onNetwork": "On this network",
+  "connect.rescan": "Search again",
+  "connect.searching": "Looking for servers…",
+  "connect.subtitle": "Your movies and shows, from your own server.",
+  "connect.title": "Connect to Kinema",
+  "connect.thisComputer": "This computer",
+  "connect.changeServer": "Use another server"
+}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { GearSix, House, List, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
+import { GearSix, HardDrives, House, List, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
 import { Avatar } from './ui/Avatar'
 import { SettingsNav } from '@/features/settings/SettingsNav'
 import { libraryIcon } from './media/libraryIcon'
@@ -172,6 +172,15 @@ function UserMenu() {
       </span>
       {/* Signing out returns to the profile picker, which is how profiles switch. */}
       <Button variant="ghost" onClick={signOut} aria-label={t('auth.switchProfile')} title={t('auth.switchProfile')} icon={<UserSwitch size={18} />} />
+      {typeof window !== 'undefined' && (window.kinema?.chooseServer || window.desktop?.chooseServer) && (
+        <Button
+          variant="ghost"
+          onClick={() => (window.kinema?.chooseServer || window.desktop?.chooseServer)?.()}
+          aria-label={t('auth.changeServer')}
+          title={t('auth.changeServer')}
+          icon={<HardDrives size={18} />}
+        />
+      )}
     </div>
   )
 }

@@ -69,6 +69,16 @@ function Setup() {
           {t('auth.setup.submit')}
         </Button>
       </form>
+      {typeof window !== 'undefined' && (window.kinema?.chooseServer || window.desktop?.chooseServer) && (
+        <div className="mt-4 flex justify-center">
+          <Button
+            variant="ghost"
+            onClick={() => (window.kinema?.chooseServer || window.desktop?.chooseServer)?.()}
+          >
+            {t('auth.changeServer')}
+          </Button>
+        </div>
+      )}
     </Backdrop>
   )
 }
@@ -248,6 +258,16 @@ function ProfilePicker() {
       <div className="mx-auto mt-6 max-w-sm">
         <ErrorText>{error}</ErrorText>
       </div>
+      {typeof window !== 'undefined' && (window.kinema?.chooseServer || window.desktop?.chooseServer) && (
+        <div className="mt-8 flex justify-center">
+          <Button
+            variant="ghost"
+            onClick={() => (window.kinema?.chooseServer || window.desktop?.chooseServer)?.()}
+          >
+            {t('auth.changeServer')}
+          </Button>
+        </div>
+      )}
     </Backdrop>
   )
 }
