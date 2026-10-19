@@ -78,6 +78,7 @@
   "item.episodeCount": "{n} episodes",
   "item.episodeCount.one": "1 episode",
   "item.file": "File",
+  "item.cast": "Cast & Crew",
   "item.video": "Video",
   "item.audio": "Audio",
   "item.subtitles": "Subtitles",

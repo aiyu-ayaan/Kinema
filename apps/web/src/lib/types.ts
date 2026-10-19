@@ -86,11 +86,19 @@ export interface MediaFile {
   streams: Stream[]
 }
 
+export interface CastMember {
+  id: number
+  name: string
+  role: string
+  image: string | null
+}
+
 export interface ItemDetail {
   item: ItemCard
   genres: string[]
   files: MediaFile[]
   children: ItemCard[]
+  cast: CastMember[]
   prev_id: number | null
   next_id: number | null
 }

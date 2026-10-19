@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowCounterClockwise, CheckCircle, Play, Star } from '@phosphor-icons/react'
+import { ArrowCounterClockwise, CheckCircle, Play, Star, User } from '@phosphor-icons/react'
 import { Artwork } from '@/components/media/Artwork'
 import { PosterGrid } from '@/components/media/PosterCard'
 import { Badge, Skeleton } from '@/components/ui/Card'
@@ -11,7 +11,7 @@ import { useIsAdmin } from '@/lib/auth'
 import { FixMatch } from './FixMatch'
 import { clock, fileSize, progressOf, runtime, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
-import type { ItemCard, ItemDetail } from '@/lib/types'
+import type { CastMember, ItemCard, ItemDetail } from '@/lib/types'
 
 function Hero({ detail, children }: { detail: ItemDetail; children?: ReactNode }) {
   const { item, genres, files } = detail
@@ -152,6 +152,54 @@ function TechInfo({ detail }: { detail: ItemDetail }) {
   )
 }
 
+function CastAvatar({ member }: { member: CastMember }) {
+  const [failed, setFailed] = useState(false)
+  const src = member.image && !failed ? imageUrl(member.image) : null
+  const initials = member.name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('')
+
+  return (
+    <div className="flex w-24 shrink-0 flex-col items-center text-center md:w-28" title={`${member.name} (${member.role})`}>
+      <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-white/10 ring-1 ring-white/10 md:h-24 md:w-24">
+        {src ? (
+          <img
+            src={src}
+            alt={member.name}
+            loading="lazy"
+            decoding="async"
+            onError={() => setFailed(true)}
+            className="h-full w-full object-cover"
+          />
+        ) : initials ? (
+          <span className="select-none text-title font-semibold text-white/70">{initials}</span>
+        ) : (
+          <User size={32} weight="duotone" className="text-white/40" />
+        )}
+      </div>
+      <p className="mt-2 w-full truncate text-label font-medium text-fg">{member.name}</p>
+      <p className="w-full truncate text-caption text-muted">{member.role}</p>
+    </div>
+  )
+}
+
+function CastSection({ cast }: { cast: CastMember[] }) {
+  if (!cast || cast.length === 0) return null
+  return (
+    <section>
+      <h2 className="mb-4 text-title font-semibold">{t('item.cast')}</h2>
+      <div className="scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 pb-2 md:-mx-8 md:px-8">
+        {cast.map((m) => (
+          <CastAvatar key={`${m.id}-${m.role}`} member={m} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
 export function ItemPage() {
   const id = Number(useParams().id)
   const admin = useIsAdmin()
@@ -167,10 +215,10 @@ export function ItemPage() {
       </div>
     )
   }
-  const { item, children } = data
+  const { item, children, cast } = data
   const playable = item.kind === 'movie' || item.kind === 'episode' || item.kind === 'video'
   return (
-    <div className="anim-enter">
+    <div className="anim-enter space-y-8">
       <Hero detail={data}>
         <div className="mt-6 flex flex-wrap gap-2">
           {playable && data.files.length > 0 && <PlayButtons item={item} />}
@@ -193,6 +241,7 @@ export function ItemPage() {
           </div>
         </section>
       )}
+      <CastSection cast={cast} />
       {playable && <TechInfo detail={data} />}
     </div>
   )
