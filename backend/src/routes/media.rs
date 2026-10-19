@@ -49,6 +49,7 @@ struct Chosen {
     video: Option<usize>,
     audio: Option<usize>,
     plan: Plan,
+    series: items::SeriesTracks,
 }
 
 fn track(s: &Stream) -> Track<'_> {
@@ -72,9 +73,14 @@ async fn choose(state: &AppState, file_id: i64, q: &PlayQuery) -> ApiResult<Chos
         .map(|(i, _)| i)
         .collect();
     let preferred = state.settings().preferred_audio_language;
+    let series = items::file_series_tracks(&state.db, file_id).await?;
     let audio = q
         .audio
         .and_then(|idx| audios.iter().copied().find(|&i| streams[i].idx == idx))
+        .or_else(|| {
+            let n = usize::try_from(series.audio?).ok()?;
+            audios.get(n).copied()
+        })
         .or_else(|| {
             audios
                 .iter()
@@ -105,6 +111,7 @@ async fn choose(state: &AppState, file_id: i64, q: &PlayQuery) -> ApiResult<Chos
         video,
         audio,
         plan,
+        series,
     })
 }
 
@@ -121,6 +128,17 @@ struct PlanResponse {
 
 /// The default subtitle per the admin's subtitle mode and language.
 fn default_subtitle(state: &AppState, c: &Chosen) -> Option<i64> {
+    // The show's own choice wins; -1 is off. Image subtitles cannot be shown, so they mean off too.
+    if let Some(n) = c.series.subtitle {
+        let n = usize::try_from(n).ok()?;
+        return c
+            .streams
+            .iter()
+            .filter(|st| st.kind == "subtitle")
+            .nth(n)
+            .filter(|st| subtitles::is_text_subtitle(st.codec.as_deref()))
+            .map(|st| st.id);
+    }
     let s = state.settings();
     let audio_lang = c.audio.and_then(|i| c.streams[i].language.as_deref());
     let wanted = match s.subtitle_mode.as_str() {

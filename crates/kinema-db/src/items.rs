@@ -914,3 +914,55 @@ pub async fn set_watched_tree(
     .await?;
     Ok(())
 }
+
+// ---- series track choice ----
+
+/// A show's audio and subtitle choice: positions among an episode's audio and
+/// subtitle streams. `None` follows the server settings; subtitle `-1` is off.
+#[derive(Debug, Clone, Copy, Default, Serialize, sqlx::FromRow)]
+pub struct SeriesTracks {
+    pub audio: Option<i64>,
+    pub subtitle: Option<i64>,
+}
+
+pub async fn series_tracks(pool: &SqlitePool, show_id: i64) -> Result<SeriesTracks, DbError> {
+    Ok(sqlx::query_as(
+        "SELECT audio_track AS audio, subtitle_track AS subtitle FROM items WHERE id = ?1",
+    )
+    .bind(show_id)
+    .fetch_optional(pool)
+    .await?
+    .unwrap_or_default())
+}
+
+/// The choice of the show a file's episode belongs to; default for anything else.
+pub async fn file_series_tracks(pool: &SqlitePool, file_id: i64) -> Result<SeriesTracks, DbError> {
+    Ok(sqlx::query_as(
+        "SELECT g.audio_track AS audio, g.subtitle_track AS subtitle
+         FROM files f
+         JOIN items i ON i.id = f.item_id AND i.kind = 'episode'
+         JOIN items p ON p.id = i.parent_id
+         JOIN items g ON g.id = p.parent_id AND g.kind = 'show'
+         WHERE f.id = ?1",
+    )
+    .bind(file_id)
+    .fetch_optional(pool)
+    .await?
+    .unwrap_or_default())
+}
+
+pub async fn set_series_tracks(
+    pool: &SqlitePool,
+    show_id: i64,
+    tracks: SeriesTracks,
+) -> Result<(), DbError> {
+    sqlx::query(
+        "UPDATE items SET audio_track = ?2, subtitle_track = ?3 WHERE id = ?1 AND kind = 'show'",
+    )
+    .bind(show_id)
+    .bind(tracks.audio)
+    .bind(tracks.subtitle)
+    .execute(pool)
+    .await?;
+    Ok(())
+}

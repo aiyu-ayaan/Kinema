@@ -1,5 +1,5 @@
 use crate::access;
-use crate::auth::AuthUser;
+use crate::auth::{AdminUser, AuthUser};
 use crate::error::{ApiError, ApiResult};
 use crate::routes::libraries::{LibraryView, view};
 use crate::state::AppState;
@@ -18,6 +18,7 @@ pub fn router() -> Router<AppState> {
         .route("/items/:id", get(detail))
         .route("/items/:id/progress", put(progress))
         .route("/items/:id/watched", put(watched))
+        .route("/items/:id/tracks", put(set_tracks))
 }
 
 #[derive(Serialize)]
@@ -110,6 +111,15 @@ struct Detail {
     next_id: Option<i64>,
     /// The episode "Play" starts on a show or season page.
     next_up: Option<ItemCard>,
+    /// Show only: its audio and subtitle choice, and the first episode's streams to pick from.
+    tracks: Option<TracksView>,
+}
+
+#[derive(Serialize)]
+struct TracksView {
+    #[serde(flatten)]
+    chosen: items::SeriesTracks,
+    streams: Vec<Stream>,
 }
 
 async fn detail(
@@ -141,6 +151,18 @@ async fn detail(
         "show" | "season" => items::next_up(db, user.id, id).await?,
         _ => None,
     };
+    let tracks = if item.kind == "show" {
+        let streams = match items::thumb_file(db, id).await? {
+            Some(f) => items::streams(db, f.id).await?,
+            None => Vec::new(),
+        };
+        Some(TracksView {
+            chosen: items::series_tracks(db, id).await?,
+            streams,
+        })
+    } else {
+        None
+    };
     let cast = items::item_cast(db, id).await?;
     Ok(Json(Detail {
         genres: items::genres(db, id).await?,
@@ -151,6 +173,7 @@ async fn detail(
         prev_id,
         next_id,
         next_up,
+        tracks,
     }))
 }
 
@@ -185,5 +208,28 @@ async fn watched(
 ) -> ApiResult<StatusCode> {
     access::check_item(&state, &user, id).await?;
     items::set_watched_tree(&state.db, user.id, id, w.watched).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Deserialize)]
+struct TracksBody {
+    audio: Option<i64>,
+    subtitle: Option<i64>,
+}
+
+async fn set_tracks(
+    State(state): State<AppState>,
+    _: AdminUser,
+    Path(id): Path<i64>,
+    Json(b): Json<TracksBody>,
+) -> ApiResult<StatusCode> {
+    if items::kind_of(&state.db, id).await?.as_deref() != Some("show") {
+        return Err(ApiError::not_found());
+    }
+    let tracks = items::SeriesTracks {
+        audio: b.audio.filter(|&n| n >= 0),
+        subtitle: b.subtitle.filter(|&n| n >= -1),
+    };
+    items::set_series_tracks(&state.db, id, tracks).await?;
     Ok(StatusCode::NO_CONTENT)
 }
