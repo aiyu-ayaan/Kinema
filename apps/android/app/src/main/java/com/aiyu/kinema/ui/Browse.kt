@@ -89,10 +89,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ModalBottomSheet
 import com.aiyu.kinema.R
 import com.aiyu.kinema.core.Home
 import com.aiyu.kinema.core.ItemCard
 import com.aiyu.kinema.core.KinemaApi
+import com.aiyu.kinema.core.Library
 import com.aiyu.kinema.ui.theme.rememberReducedMotion
 import kotlin.math.absoluteValue
 import kotlinx.coroutines.delay
@@ -149,10 +157,12 @@ fun MainScreen() {
     // Back from another tab returns home first, previewed by the gesture; from home it leaves the app.
     val back = rememberPredictiveBack(tab != 0) { tab = 0 }
     Box(Modifier.fillMaxSize().predictiveBackEffect { back.value }) {
-        FloatingNavScaffold(tabs, tab, { tab = it }) { current ->
+        // Tapping Library while already on it opens the library switcher.
+        var switcher by rememberSaveable { mutableIntStateOf(0) }
+        FloatingNavScaffold(tabs, tab, { if (it == 1 && tab == 1) switcher++ else tab = it }) { current ->
             when (current) {
                 0 -> HomeTab()
-                1 -> LibraryTab()
+                1 -> LibraryTab(switcher)
                 2 -> SearchTab()
                 else -> SettingsTab()
             }
@@ -315,7 +325,7 @@ private fun TabHeader(title: String) {
 }
 
 @Composable
-private fun LibraryTab() {
+private fun LibraryTab(switcher: Int) {
     val libraries = rememberLoad { it.libraries() }
     Column(Modifier.fillMaxSize()) {
         TabHeader(stringResource(R.string.tab_library))
@@ -328,6 +338,12 @@ private fun LibraryTab() {
             val open = rememberOpen()
             val shows = rememberLoad(libs) { api -> libs.filter { it.showCount > 0 }.associate { l -> l.id to api.libraryItems(l.id).filter { it.kind == "show" } } }
             val lib = libs.firstOrNull { it.id == selected } ?: libs.first()
+            var sheet by rememberSaveable { mutableStateOf(false) }
+            var seen by rememberSaveable { mutableIntStateOf(switcher) }
+            if (switcher != seen) { seen = switcher; sheet = true }
+            if (sheet) {
+                LibrarySheet(libs, shows.state.value.let { (it as? Load.Ok)?.value.orEmpty() }, lib.id, { selected = it }, open) { sheet = false }
+            }
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(libs, key = { it.id }) { l ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -357,6 +373,42 @@ private fun LibraryTab() {
                         val shown = if (mixed) list.filter { it.kind != "show" } else list
                         PullToRefreshBox(items.refreshing.value, items.reload) { PosterGrid(shown, wide = lib.kind == "other") }
                     }
+                }
+            }
+        }
+    }
+}
+
+/** Library switcher: each library collapses to hide the shows under it, like the web sidebar. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LibrarySheet(libs: List<Library>, shows: Map<Long, List<ItemCard>>, current: Long, onPick: (Long) -> Unit, onShow: (ItemCard) -> Unit, onDismiss: () -> Unit) {
+    var collapsed by rememberSaveable { mutableStateOf(emptyList<Long>()) }
+    ModalBottomSheet(onDismiss) {
+        LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+            libs.forEach { l ->
+                val children = shows[l.id].orEmpty()
+                val open = l.id !in collapsed
+                item(key = "lib${l.id}") {
+                    ListItem(
+                        headlineContent = { Text(l.name) },
+                        leadingContent = { Icon(Icons.Rounded.VideoLibrary, null) },
+                        trailingContent = if (children.isEmpty()) null else {
+                            {
+                                IconButton({ collapsed = if (open) collapsed + l.id else collapsed - l.id }) {
+                                    Icon(if (open) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null)
+                                }
+                            }
+                        },
+                        colors = ListItemDefaults.colors(containerColor = if (l.id == current) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent),
+                        modifier = Modifier.clickable { onPick(l.id); onDismiss() },
+                    )
+                }
+                if (open) items(children, key = { "show${it.id}" }) { show ->
+                    ListItem(
+                        headlineContent = { Text(show.title, maxLines = 1) },
+                        modifier = Modifier.padding(start = 40.dp).clickable { onShow(show); onDismiss() },
+                    )
                 }
             }
         }
