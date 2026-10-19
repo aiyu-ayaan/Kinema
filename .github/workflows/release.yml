@@ -1,0 +1,446 @@
+# Automated release, driven by a marker at the START of a commit subject on master.
+# Rules and diagram: development/docs/RELEASE.md. Version maths: scripts/release-version.mjs.
+#
+#   !alpha  (nothing released) -> 0.0.1-alpha.1     !fix    1.4.2 -> 1.4.3
+#   !alpha  0.0.1-alpha.1      -> 0.0.1-alpha.2     !feat   1.4.2 -> 1.5.0
+#   !beta   0.0.1-alpha.3      -> 0.0.1-beta.1      !major  1.4.2 -> 2.0.0
+#   !stable 0.0.1-beta.2       -> 0.0.1             !patch  rebuild the released version in place
+#
+# A scope of platform names limits what is built: !alpha(android), !fix(server,desktop).
+#
+# Two steps:
+#   1. A marker on master opens a release PR: version and build number bumped, CHANGELOG entry
+#      written. Nothing is built.
+#   2. Merging that PR releases: Server tarball, Docker image (amd64 + arm64), Linux AppImage and deb,
+#      Android APK and Windows installer, then the tag, the GitHub Release and Docker channel tags.
+
+name: Release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'pr = open the release PR; release = build and publish the version master carries; patch = rebuild that version in place'
+        required: true
+        default: pr
+        type: choice
+        options: [pr, release, patch]
+      marker:
+        description: 'Release type (pr mode only)'
+        default: alpha
+        type: choice
+        options: [alpha, beta, stable, fix, feat, major]
+      targets:
+        description: 'What to build (pr and patch modes): all, or any of server,docker,desktop,android'
+        default: all
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+  actions: write # delete the build artifacts once they are published
+
+# Never two at once: the second would compute its version from a state the first is changing.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  IMAGE: ${{ vars.KINEMA_IMAGE || 'ghcr.io/aiyu-ayaan/kinema' }}
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.plan.outputs.mode }}
+      marker: ${{ steps.plan.outputs.marker }}
+      version: ${{ steps.plan.outputs.version }}
+      previous: ${{ steps.plan.outputs.previous }}
+      targets: ${{ steps.plan.outputs.targets }}
+      channel: ${{ steps.plan.outputs.channel }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/release-version.mjs --check
+
+      - name: Plan
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          MODE: ${{ inputs.mode }}
+          MARKER: ${{ inputs.marker }}
+          INPUT_TARGETS: ${{ inputs.targets }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          stamp='const p = JSON.parse(require("fs").readFileSync(0, "utf8")); console.log(p.version + "+" + p.build)'
+          current="$(node -p "require('./package.json').version")"
+          previous="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
+          previous="${previous#v}"
+          scope="$(printf '%s' "${INPUT_TARGETS:-all}" | tr -d ' ')"
+
+          if [ "$EVENT" = workflow_dispatch ]; then
+            echo "!$([ "$MODE" = patch ] && echo patch || echo "$MARKER")(${scope}): manual" > subjects.txt
+          elif [ -n "$(echo "$BEFORE_SHA" | tr -d 0)" ] && git cat-file -e "$BEFORE_SHA^{commit}" 2>/dev/null; then
+            git log "$BEFORE_SHA..$GITHUB_SHA" --format=%s > subjects.txt
+          else
+            git log -1 --format=%s > subjects.txt
+          fi
+          cat subjects.txt
+          plan="$(node scripts/release-version.mjs --current "${previous:-0.0.0}" --subjects-file subjects.txt)"
+          field() { printf '%s\n' "$plan" | sed -n "s/^$1=//p"; }
+
+          if [ "$EVENT" = workflow_dispatch ] && [ "$MODE" = release ]; then
+            mode=release
+          elif [ "$EVENT" = push ] && [ "$(git show HEAD^:package.json | node -e "$stamp")" != "$(node -e "$stamp" < package.json)" ]; then
+            mode=release # the release PR was merged
+          elif [ "$(field marker)" = patch ]; then
+            mode=patch
+          elif [ "$(field release)" = true ]; then
+            mode=pr
+          else
+            mode=none
+          fi
+
+          case "$mode" in
+            pr)
+              version="$(field version)"
+              targets="$(field targets)" ;;
+            release)
+              version="$current"
+              targets="$(tr -d '[:space:]' < .github/release-targets 2>/dev/null || true)" ;;
+            patch)
+              version="$previous"
+              targets="$(field targets)"
+              [ -n "$previous" ] || { echo "::error::Nothing has been released yet; !patch has nothing to rebuild."; exit 1; }
+              [ "$previous" = "$current" ] || { echo "::error::master carries $current but the last release is $previous."; exit 1; } ;;
+          esac
+          case "${version:-}" in
+            *-alpha.*) channel=alpha ;;
+            *-beta.*) channel=beta ;;
+            *) channel=latest ;;
+          esac
+          {
+            echo "mode=$mode"
+            echo "marker=$(field marker)"
+            echo "version=${version:-}"
+            echo "previous=$previous"
+            echo "targets=${targets:-server,docker,desktop,android}"
+            echo "channel=$channel"
+          } | tee -a "$GITHUB_OUTPUT"
+
+      - name: Check the secrets this release needs
+        if: steps.plan.outputs.mode != 'none'
+        env:
+          MODE: ${{ steps.plan.outputs.mode }}
+          TARGETS: ${{ steps.plan.outputs.targets }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=""
+          need() { for name in "$@"; do [ -n "$(printenv "$name")" ] || missing="$missing $name"; done; }
+          case "$TARGETS" in *android*) need ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD ;; esac
+          [ -z "$missing" ] && exit 0
+          level=$([ "$MODE" = pr ] && echo warning || echo error)
+          echo "::$level::Missing repository secrets:$missing (see Android release secrets setup)"
+          [ "$MODE" = pr ]
+
+  # --- Step 1: the release PR ------------------------------------------------
+
+  release-pr:
+    name: Release PR for v${{ needs.plan.outputs.version }}
+    needs: plan
+    if: needs.plan.outputs.mode == 'pr'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Bump the version and the build number
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: node scripts/set-version.mjs "$VERSION" --bump-build
+
+      - name: Record what this release builds
+        run: |
+          mkdir -p .github
+          echo "${{ needs.plan.outputs.targets }}" > .github/release-targets
+
+      - name: Write the CHANGELOG entry
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+          PREVIOUS: ${{ needs.plan.outputs.previous }}
+        run: |
+          {
+            echo "## v${VERSION} ($(date -u +%Y-%m-%d))"
+            echo
+            git log ${PREVIOUS:+"v${PREVIOUS}..HEAD"} --no-merges --format='- %s' | grep -v '^- chore(release)' || true
+            echo
+            cat CHANGELOG.md 2>/dev/null || true
+          } > CHANGELOG.next.md
+          mv CHANGELOG.next.md CHANGELOG.md
+
+      - name: Open or update the release PR
+        id: pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(release): v${{ needs.plan.outputs.version }}'
+          title: 'chore(release): v${{ needs.plan.outputs.version }}'
+          body: |
+            Automated release PR, opened by a `!${{ needs.plan.outputs.marker }}` marker on master.
+
+            | | |
+            | --- | --- |
+            | From | `${{ needs.plan.outputs.previous || 'nothing released yet' }}` |
+            | To | `${{ needs.plan.outputs.version }}` |
+            | Builds | `${{ needs.plan.outputs.targets }}` |
+
+            The CHANGELOG diff is the release note; edit it in this branch if it reads badly.
+
+            **Merging this PR is what releases.** Closing it releases nothing.
+          branch: chore/release-v${{ needs.plan.outputs.version }}
+          base: master
+          delete-branch: true
+
+      - name: Ensure the PR exists
+        if: steps.pr.outputs.pull-request-number == ''
+        run: |
+          echo "::error::No release PR was created. Allow GitHub Actions to create pull requests (Settings > Actions > General) or add a RELEASE_TOKEN secret."
+          exit 1
+
+      - run: echo "Release PR ${{ steps.pr.outputs.pull-request-url }}" >> "$GITHUB_STEP_SUMMARY"
+
+  # --- Step 2: merging that PR is the release --------------------------------
+
+  server:
+    name: Server bundle (${{ matrix.arch }})
+    needs: plan
+    if: contains(fromJSON('["release","patch"]'), needs.plan.outputs.mode) && contains(needs.plan.outputs.targets, 'server')
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build server bundle
+        run: ./scripts/package-server.sh ${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server-${{ matrix.arch }}
+          path: dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  image:
+    name: Docker image (${{ matrix.arch }})
+    needs: plan
+    if: contains(fromJSON('["release","patch"]'), needs.plan.outputs.mode) && contains(needs.plan.outputs.targets, 'docker')
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        id: build
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=kinema-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=kinema-${{ matrix.arch }}
+      - name: Record the digest
+        run: |
+          mkdir digests
+          echo "${{ steps.build.outputs.digest }}" > "digests/${{ matrix.arch }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.arch }}
+          path: digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  desktop:
+    name: Linux desktop app
+    needs: plan
+    if: contains(fromJSON('["release","patch"]'), needs.plan.outputs.mode) && contains(needs.plan.outputs.targets, 'desktop')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g pnpm@12
+      - run: pnpm install --frozen-lockfile --filter @kinema/desktop
+      - run: pnpm --filter @kinema/desktop build:prod
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop
+          path: |
+            apps/desktop/dist/*.AppImage
+            apps/desktop/dist/*.deb
+          if-no-files-found: error
+          retention-days: 1
+
+  windows:
+    name: Windows desktop app
+    needs: plan
+    if: contains(fromJSON('["release","patch"]'), needs.plan.outputs.mode) && contains(needs.plan.outputs.targets, 'desktop')
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g pnpm@12
+      - run: pnpm install --frozen-lockfile --filter @kinema/desktop
+      - run: pnpm --filter @kinema/desktop build:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: apps/desktop/dist/*-Setup.exe
+          if-no-files-found: error
+          retention-days: 1
+
+  android:
+    name: Android APK
+    needs: plan
+    if: contains(fromJSON('["release","patch"]'), needs.plan.outputs.mode) && contains(needs.plan.outputs.targets, 'android')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          printf '%s' "$KEYSTORE_BASE64" | tr -d ' \n\r' | base64 -d > release.jks
+          printf 'storeFile=release.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
+          keytool -list -keystore release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null \
+            || { echo "::error::The keystore secrets do not open the keystore."; exit 1; }
+      - run: ./gradlew :app:assembleProdRelease --stacktrace
+      - name: Name the APK after the version
+        run: |
+          mkdir -p "$RUNNER_TEMP/android"
+          cp app/build/outputs/apk/prod/release/app-prod-release.apk \
+            "$RUNNER_TEMP/android/Kinema-${{ needs.plan.outputs.version }}.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: ${{ runner.temp }}/android/*.apk
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish v${{ needs.plan.outputs.version }}
+    needs: [plan, server, image, desktop, windows, android]
+    if: >-
+      !cancelled() && contains(fromJSON('["release","patch"]'), needs.plan.outputs.mode)
+      && !contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+      CHANNEL: ${{ needs.plan.outputs.channel }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: '{desktop,windows,android,server-*,digest-*}'
+      - name: Say so when the Windows build is missing
+        if: needs.windows.result != 'skipped' && hashFiles('artifacts/windows/*') == ''
+        run: echo "::warning::The Windows installer failed to build; this release ships without it."
+      - name: GitHub Release
+        run: |
+          files="$(find artifacts/desktop artifacts/windows artifacts/android artifacts/server-* -type f 2>/dev/null || true)"
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            [ -z "$files" ] || gh release upload "v$VERSION" $files --clobber
+          else
+            awk -v h="## v$VERSION " 'index($0, h) == 1 { on = 1; next } /^## v/ { on = 0 } on' CHANGELOG.md > notes.md 2>/dev/null || true
+            if [ ! -s notes.md ]; then
+              echo "Release v$VERSION" > notes.md
+            fi
+            {
+              echo
+              echo "Home server bundle: \`kinema-server-$VERSION-linux-x86_64.tar.gz\` / \`kinema-server-$VERSION-linux-aarch64.tar.gz\`"
+              echo "Desktop App: \`Kinema-$VERSION.AppImage\` / \`kinema-desktop_${VERSION}_amd64.deb\`"
+              echo "Docker: \`ghcr.io/aiyu-ayaan/kinema:$VERSION\`"
+              echo "Android: \`Kinema-$VERSION.apk\`"
+            } >> notes.md
+            gh release create "v$VERSION" $files --target "$GITHUB_SHA" --title "v$VERSION" --notes-file notes.md \
+              $([ "$CHANNEL" = latest ] && echo --latest || echo --prerelease)
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+        if: needs.image.result == 'success'
+      - uses: docker/login-action@v3
+        if: needs.image.result == 'success'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag the image
+        if: needs.image.result == 'success'
+        run: |
+          case "$CHANNEL" in
+            alpha) names="alpha" ;;
+            beta) names="beta alpha" ;;
+            *) names="latest beta alpha" ;;
+          esac
+          tags=""
+          for name in "$VERSION" $names; do tags="$tags --tag $IMAGE:$name"; done
+          refs=""
+          for arch in amd64 arm64; do refs="$refs $IMAGE@$(cat "artifacts/digest-$arch/$arch")"; done
+          docker buildx imagetools create $tags $refs
+          docker buildx imagetools inspect "$IMAGE:$VERSION"
+
+      - name: Delete the build artifacts
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --paginate --jq '.artifacts[].id' |
+            xargs -r -I{} gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/{}"
+
+      - run: echo "Released v$VERSION ($CHANNEL) https://github.com/$GITHUB_REPOSITORY/releases/tag/v$VERSION" >> "$GITHUB_STEP_SUMMARY"
