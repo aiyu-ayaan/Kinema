@@ -1,10 +1,12 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { GearSix, House, List, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
 import { Avatar } from './ui/Avatar'
 import { SettingsNav } from '@/features/settings/SettingsNav'
 import { libraryIcon } from './media/libraryIcon'
 import { Button } from './ui/Button'
+import { api } from '@/lib/api'
 import { useAuth, useIsAdmin } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { isDev } from '@/lib/flavor'
@@ -42,59 +44,57 @@ const navCls = (active: boolean) =>
     active ? 'bg-primary-container text-on-primary-container' : 'text-muted hover:bg-raised hover:text-fg',
   )
 
-/** A library, segregated into top-level Movies and TV Shows entries when it holds both. */
+/** A library, with Movies as the library and actual TV shows listed directly. */
 function LibraryNav({ library: l, onNavigate }: { library: Library; onNavigate?: () => void }) {
   const location = useLocation()
   const here = location.pathname === `/library/${l.id}`
-  const type = new URLSearchParams(location.search).get('type')
-  const mixed = l.show_count > 0 && l.show_count < l.item_count
+  const I = libraryIcon[l.kind]
 
-  const renderEntry = (key: 'movie' | 'show' | null, label: string, Icon: Icon, active: boolean) => (
-    <Link
-      key={key ?? 'all'}
-      to={key ? `/library/${l.id}?type=${key}` : `/library/${l.id}`}
-      onClick={onNavigate}
-      aria-current={active ? 'page' : undefined}
-      className={navCls(active)}
-    >
-      <Icon size={18} weight={active ? 'fill' : 'regular'} aria-hidden />
-      <span className="truncate">{label}</span>
-    </Link>
-  )
+  const { data: items } = useQuery({
+    queryKey: ['library', l.id],
+    queryFn: () => api.libraryItems(l.id),
+    enabled: l.show_count > 0,
+  })
 
-  if (!mixed) {
-    const I = libraryIcon[l.kind]
-    return renderEntry(null, l.name, I, here)
-  }
+  const shows = useMemo(() => {
+    if (!items) return []
+    return items.filter((i) => i.kind === 'show')
+  }, [items])
 
-  const isMovieLib =
-    l.name.toLowerCase() === 'movies' ||
-    l.name.toLowerCase() === t('library.kind.movie').toLowerCase() ||
-    l.kind === 'movie'
-  const isShowLib =
-    l.name.toLowerCase() === 'tv shows' ||
-    l.name.toLowerCase() === t('library.kind.show').toLowerCase() ||
-    l.kind === 'show'
-
-  const movieLabel = isMovieLib
-    ? l.name
-    : isShowLib
-      ? t('library.kind.movie')
-      : `${l.name} · ${t('library.kind.movie')}`
-
-  const showLabel = isShowLib
-    ? l.name
-    : isMovieLib
-      ? t('library.kind.show')
-      : `${l.name} · ${t('library.kind.show')}`
-
-  const movieActive = here && (type === 'movie' || (!type && l.kind !== 'show'))
-  const showActive = here && (type === 'show' || (!type && l.kind === 'show'))
+  const isGenericShowLib =
+    l.kind === 'show' &&
+    (l.name.toLowerCase() === 'tv shows' || l.name.toLowerCase() === t('library.kind.show').toLowerCase())
 
   return (
     <>
-      {renderEntry('movie', movieLabel, libraryIcon.movie, movieActive)}
-      {renderEntry('show', showLabel, libraryIcon.show, showActive)}
+      {!isGenericShowLib && (
+        <Link
+          to={`/library/${l.id}`}
+          onClick={onNavigate}
+          aria-current={here ? 'page' : undefined}
+          className={navCls(here)}
+        >
+          <I size={18} weight={here ? 'fill' : 'regular'} aria-hidden className="shrink-0" />
+          <span className="truncate">{l.name}</span>
+        </Link>
+      )}
+      {shows.map((show) => {
+        const active = location.pathname === `/item/${show.id}`
+        const ShowIcon = libraryIcon.show
+        return (
+          <Link
+            key={show.id}
+            to={`/item/${show.id}`}
+            onClick={onNavigate}
+            aria-current={active ? 'page' : undefined}
+            className={navCls(active)}
+            title={show.title}
+          >
+            <ShowIcon size={18} weight={active ? 'fill' : 'regular'} aria-hidden className="shrink-0" />
+            <span className="truncate">{show.title}</span>
+          </Link>
+        )
+      })}
     </>
   )
 }
