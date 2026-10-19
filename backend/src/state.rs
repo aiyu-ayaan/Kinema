@@ -31,6 +31,8 @@ pub struct AppState {
     pub active_streams: Arc<AtomicUsize>,
     pub active_transcodes: Arc<AtomicUsize>,
     pub started: Instant,
+    /// Failed sign-ins per profile: (count, last failure), for PIN lockout.
+    pub login_failures: Arc<Mutex<HashMap<i64, (u32, Instant)>>>,
     pub http: reqwest::Client,
 }
 

@@ -10,6 +10,7 @@ use tokio::sync::Semaphore;
 use tower_http::services::{ServeDir, ServeFile};
 use tracing::{info, warn};
 
+mod access;
 mod auth;
 mod error;
 mod i18n;
@@ -79,6 +80,7 @@ async fn main() -> anyhow::Result<()> {
         active_streams: Arc::default(),
         active_transcodes: Arc::default(),
         started: std::time::Instant::now(),
+        login_failures: Arc::default(),
         http: reqwest::Client::new(),
     };
 

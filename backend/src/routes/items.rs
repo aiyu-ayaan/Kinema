@@ -1,3 +1,4 @@
+use crate::access;
 use crate::auth::AuthUser;
 use crate::error::{ApiError, ApiResult};
 use crate::routes::libraries::{LibraryView, view};
@@ -32,8 +33,12 @@ struct Home {
 }
 
 async fn home(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiResult<Json<Home>> {
+    let visible = access::visible(&state, &user).await?;
     let mut shelves = Vec::new();
     for lib in libraries::list(&state.db).await? {
+        if !access::allows(&visible, lib.id) {
+            continue;
+        }
         let movies = lib.item_count > lib.show_count;
         let shows = lib.show_count > 0;
         let wanted = [
@@ -56,7 +61,11 @@ async fn home(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiRes
         }
     }
     Ok(Json(Home {
-        continue_watching: items::continue_watching(&state.db, user.id, 20).await?,
+        continue_watching: items::continue_watching(&state.db, user.id, 20)
+            .await?
+            .into_iter()
+            .filter(|i| access::allows(&visible, i.library_id))
+            .collect(),
         shelves,
     }))
 }
@@ -75,7 +84,10 @@ async fn search(
     if q.is_empty() {
         return Ok(Json(Vec::new()));
     }
-    Ok(Json(items::search(&state.db, user.id, q, 50).await?))
+    let visible = access::visible(&state, &user).await?;
+    let mut hits = items::search(&state.db, user.id, q, 50).await?;
+    hits.retain(|i| access::allows(&visible, i.library_id));
+    Ok(Json(hits))
 }
 
 #[derive(Serialize)]
@@ -105,6 +117,7 @@ async fn detail(
     let item = items::card(db, user.id, id)
         .await?
         .ok_or_else(ApiError::not_found)?;
+    access::check_library(&state, &user, item.library_id).await?;
     let mut files = Vec::new();
     for file in items::item_files(db, id).await? {
         let streams = items::streams(db, file.id).await?;
@@ -143,6 +156,7 @@ async fn progress(
     Path(id): Path<i64>,
     Json(p): Json<Progress>,
 ) -> ApiResult<StatusCode> {
+    access::check_item(&state, &user, id).await?;
     items::set_progress(&state.db, user.id, id, p.position_s.max(0.0), p.watched).await?;
     Ok(StatusCode::NO_CONTENT)
 }

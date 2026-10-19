@@ -1,3 +1,4 @@
+use crate::access;
 use crate::auth::AuthUser;
 use crate::error::{ApiError, ApiResult};
 use crate::server_settings::lang_matches;
@@ -149,10 +150,11 @@ fn default_subtitle(state: &AppState, c: &Chosen) -> Option<i64> {
 
 async fn plan(
     State(state): State<AppState>,
-    _: AuthUser,
+    AuthUser(user): AuthUser,
     Path(id): Path<i64>,
     Query(q): Query<PlayQuery>,
 ) -> ApiResult<Json<PlanResponse>> {
+    access::check_file(&state, &user, id).await?;
     let c = choose(&state, id, &q).await?;
     let start = match (c.plan, &state.bins) {
         (Plan::Direct, _) => 0.0,
@@ -183,11 +185,12 @@ async fn plan(
 
 async fn stream(
     State(state): State<AppState>,
-    _: AuthUser,
+    AuthUser(user): AuthUser,
     Path(id): Path<i64>,
     Query(q): Query<PlayQuery>,
     req: Request,
 ) -> ApiResult<Response> {
+    access::check_file(&state, &user, id).await?;
     let c = choose(&state, id, &q).await?;
     let path = PathBuf::from(&c.file.path);
     let Plan::Stream {
@@ -256,13 +259,14 @@ async fn stream(
 /// WebVTT for a subtitle stream, extracted once and cached by file mtime.
 async fn subtitle(
     State(state): State<AppState>,
-    _: AuthUser,
+    AuthUser(user): AuthUser,
     Path(stream_id): Path<i64>,
 ) -> ApiResult<Response> {
     let s = items::stream(&state.db, stream_id)
         .await?
         .filter(|s| s.kind == "subtitle")
         .ok_or_else(ApiError::not_found)?;
+    access::check_file(&state, &user, s.file_id).await?;
     if !subtitles::is_text_subtitle(s.codec.as_deref()) {
         return Err(ApiError::bad_request("media.subtitle_unsupported"));
     }
@@ -355,10 +359,11 @@ async fn image(
 /// background job (`thumbs.rs`), so this never runs ffmpeg. A miss nudges the job.
 async fn thumb(
     State(state): State<AppState>,
-    _: AuthUser,
+    AuthUser(user): AuthUser,
     Path(id): Path<i64>,
     req: Request,
 ) -> ApiResult<Response> {
+    access::check_item(&state, &user, id).await?;
     let file = items::thumb_file(&state.db, id)
         .await?
         .ok_or_else(ApiError::not_found)?;

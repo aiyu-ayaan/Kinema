@@ -38,8 +38,13 @@ pub fn view(state: &AppState, library: Library) -> LibraryView {
     }
 }
 
-async fn list(State(state): State<AppState>, _: AuthUser) -> ApiResult<Json<Vec<LibraryView>>> {
-    let libs = libraries::list(&state.db).await?;
+async fn list(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+) -> ApiResult<Json<Vec<LibraryView>>> {
+    let visible = crate::access::visible(&state, &user).await?;
+    let mut libs = libraries::list(&state.db).await?;
+    libs.retain(|l| crate::access::allows(&visible, l.id));
     Ok(Json(libs.into_iter().map(|l| view(&state, l)).collect()))
 }
 
@@ -141,6 +146,7 @@ async fn library_items(
     AuthUser(user): AuthUser,
     Path(id): Path<i64>,
 ) -> ApiResult<Json<Vec<ItemCard>>> {
+    crate::access::check_library(&state, &user, id).await?;
     Ok(Json(items::library_items(&state.db, user.id, id).await?))
 }
 

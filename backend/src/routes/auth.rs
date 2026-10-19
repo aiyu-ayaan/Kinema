@@ -12,12 +12,14 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use kinema_db::users::{self, User};
 use serde::{Deserialize, Serialize};
+use std::time::{Duration, Instant};
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/status", get(status))
         .route("/setup", post(setup))
         .route("/login", post(login))
+        .route("/profiles", get(profiles))
         .route("/logout", post(logout))
         .route("/me", get(me))
 }
@@ -73,31 +75,84 @@ async fn setup(State(state): State<AppState>, Json(c): Json<Credentials>) -> Api
     let id = users::create_first_admin(&state.db, name, &hash)
         .await?
         .ok_or_else(|| ApiError::new(StatusCode::CONFLICT, "auth.setup_done"))?;
-    start_session(
-        &state,
-        User {
-            id,
-            name: name.to_string(),
-            is_admin: true,
-        },
-    )
-    .await
-}
-
-async fn login(State(state): State<AppState>, Json(c): Json<Credentials>) -> ApiResult<Response> {
-    let invalid = || ApiError::new(StatusCode::UNAUTHORIZED, "auth.invalid_credentials");
-    let (id, hash) = users::credentials(&state.db, c.name.trim())
-        .await?
-        .ok_or_else(invalid)?;
-    let hash = hash.ok_or_else(invalid)?;
-    let password = c.password;
-    let ok = tokio::task::spawn_blocking(move || verify_password(&password, &hash)).await?;
-    if !ok {
-        return Err(invalid());
-    }
     let user = users::get(&state.db, id)
         .await?
         .ok_or_else(ApiError::not_found)?;
+    start_session(&state, user).await
+}
+
+/// The profile picker. Public, like a TV's "who's watching" screen: names and
+/// avatars only, plus which lock each profile has.
+async fn profiles(State(state): State<AppState>) -> ApiResult<Json<Vec<User>>> {
+    Ok(Json(users::list(&state.db).await?))
+}
+
+#[derive(Deserialize)]
+struct Login {
+    /// From the profile picker.
+    user_id: Option<i64>,
+    /// Typed name, for clients without the picker.
+    name: Option<String>,
+    password: Option<String>,
+    pin: Option<String>,
+}
+
+const MAX_FAILURES: u32 = 5;
+const LOCKOUT: Duration = Duration::from_secs(60);
+
+/// A 4-digit PIN has 10 000 values; five tries a minute makes guessing take days.
+fn locked_out(state: &AppState, user_id: i64) -> bool {
+    state.login_failures.lock().is_ok_and(|f| {
+        f.get(&user_id)
+            .is_some_and(|(n, at)| *n >= MAX_FAILURES && at.elapsed() < LOCKOUT)
+    })
+}
+
+fn record_failure(state: &AppState, user_id: i64) {
+    if let Ok(mut f) = state.login_failures.lock() {
+        let entry = f.entry(user_id).or_insert((0, Instant::now()));
+        if entry.1.elapsed() >= LOCKOUT {
+            *entry = (0, Instant::now());
+        }
+        entry.0 += 1;
+        entry.1 = Instant::now();
+    }
+}
+
+async fn login(State(state): State<AppState>, Json(c): Json<Login>) -> ApiResult<Response> {
+    let invalid = || ApiError::new(StatusCode::UNAUTHORIZED, "auth.invalid_credentials");
+    let user = match (c.user_id, c.name.as_deref()) {
+        (Some(id), _) => users::get(&state.db, id).await?,
+        (None, Some(name)) => users::find_by_name(&state.db, name.trim()).await?,
+        (None, None) => None,
+    }
+    .ok_or_else(invalid)?;
+    if locked_out(&state, user.id) {
+        return Err(ApiError::new(StatusCode::TOO_MANY_REQUESTS, "auth.locked"));
+    }
+    let (password_hash, pin_hash) = users::secrets(&state.db, user.id).await?;
+    // A profile with no lock opens directly; otherwise the password or the PIN must match.
+    let ok = match (password_hash, pin_hash) {
+        (None, None) => true,
+        (pw, pin) => {
+            let password = c.password.unwrap_or_default();
+            let entered_pin = c.pin.unwrap_or_default();
+            tokio::task::spawn_blocking(move || {
+                pw.is_some_and(|h| !password.is_empty() && verify_password(&password, &h))
+                    || pin.is_some_and(|h| {
+                        !entered_pin.is_empty() && verify_password(&entered_pin, &h)
+                    })
+            })
+            .await?
+        }
+    };
+    if !ok {
+        record_failure(&state, user.id);
+        return Err(invalid());
+    }
+    if let Ok(mut f) = state.login_failures.lock() {
+        f.remove(&user.id);
+    }
     start_session(&state, user).await
 }
 

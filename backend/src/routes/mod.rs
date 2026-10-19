@@ -5,6 +5,7 @@ pub mod matching;
 pub mod media;
 pub mod server;
 pub mod settings;
+pub mod users;
 
 use crate::state::AppState;
 use axum::Router;
@@ -18,4 +19,5 @@ pub fn api_router() -> Router<AppState> {
         .merge(matching::router())
         .merge(media::router())
         .merge(settings::router())
+        .merge(users::router())
 }
