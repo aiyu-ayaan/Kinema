@@ -1,8 +1,19 @@
+pub mod auth;
+pub mod items;
+pub mod libraries;
+pub mod media;
 pub mod server;
+pub mod settings;
 
 use crate::state::AppState;
 use axum::Router;
 
 pub fn api_router() -> Router<AppState> {
-    Router::new().nest("/server", server::router())
+    Router::new()
+        .nest("/server", server::router())
+        .nest("/auth", auth::router())
+        .merge(libraries::router())
+        .merge(items::router())
+        .merge(media::router())
+        .merge(settings::router())
 }

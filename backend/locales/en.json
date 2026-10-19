@@ -1,0 +1,19 @@
+{
+  "auth.required": "Sign in to continue.",
+  "auth.admin_only": "Only the administrator can do this.",
+  "auth.invalid_credentials": "Wrong name or password.",
+  "auth.setup_done": "Setup is already complete. Sign in instead.",
+  "auth.name_required": "Enter a name.",
+  "auth.password_too_short": "Use at least 8 characters for the password.",
+  "library.name_required": "Enter a library name.",
+  "library.invalid_kind": "Choose Movies, TV Shows or Other videos.",
+  "library.path_required": "Add at least one folder.",
+  "library.path_invalid": "One of the folders does not exist or cannot be read.",
+  "fs.not_found": "That folder does not exist or cannot be read.",
+  "settings.tmdb_invalid": "TMDB rejected this key. Check it and try again.",
+  "media.ffmpeg_missing": "ffmpeg was not found, so this file cannot be converted for the browser.",
+  "media.subtitle_unsupported": "This subtitle is an image format and cannot be shown yet.",
+  "media.image_invalid": "Unknown image.",
+  "common.not_found": "Not found.",
+  "common.internal": "Something went wrong on the server. Check the server log."
+}

@@ -47,6 +47,15 @@ pub async fn credentials(
     )
 }
 
+pub async fn get(pool: &SqlitePool, id: i64) -> Result<Option<User>, DbError> {
+    Ok(
+        sqlx::query_as("SELECT id, name, is_admin FROM users WHERE id = ?1")
+            .bind(id)
+            .fetch_optional(pool)
+            .await?,
+    )
+}
+
 pub async fn create_session(
     pool: &SqlitePool,
     token_hash: &str,

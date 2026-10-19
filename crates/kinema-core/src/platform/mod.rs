@@ -39,3 +39,18 @@ pub fn default_data_dir() -> PathBuf {
 
     PathBuf::from("data")
 }
+
+/// Top-level folders for a folder picker: "/" on Unix, drive letters on Windows.
+pub fn filesystem_roots() -> Vec<PathBuf> {
+    #[cfg(windows)]
+    {
+        (b'A'..=b'Z')
+            .map(|d| PathBuf::from(format!("{}:\\", d as char)))
+            .filter(|p| p.is_dir())
+            .collect()
+    }
+    #[cfg(not(windows))]
+    {
+        vec![PathBuf::from("/")]
+    }
+}

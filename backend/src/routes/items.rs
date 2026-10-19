@@ -1,0 +1,132 @@
+use crate::auth::AuthUser;
+use crate::error::{ApiError, ApiResult};
+use crate::routes::libraries::{LibraryView, view};
+use crate::state::AppState;
+use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
+use axum::routing::{get, put};
+use axum::{Json, Router};
+use kinema_db::items::{self, ItemCard, MediaFile, Stream};
+use kinema_db::libraries;
+use serde::{Deserialize, Serialize};
+
+pub fn router() -> Router<AppState> {
+    Router::new()
+        .route("/home", get(home))
+        .route("/search", get(search))
+        .route("/items/:id", get(detail))
+        .route("/items/:id/progress", put(progress))
+}
+
+#[derive(Serialize)]
+struct Shelf {
+    library: LibraryView,
+    items: Vec<ItemCard>,
+}
+
+#[derive(Serialize)]
+struct Home {
+    continue_watching: Vec<ItemCard>,
+    recently_added: Vec<Shelf>,
+}
+
+async fn home(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiResult<Json<Home>> {
+    let mut recently_added = Vec::new();
+    for lib in libraries::list(&state.db).await? {
+        let items = items::recently_added(&state.db, user.id, lib.id, 20).await?;
+        recently_added.push(Shelf {
+            library: view(&state, lib),
+            items,
+        });
+    }
+    Ok(Json(Home {
+        continue_watching: items::continue_watching(&state.db, user.id, 20).await?,
+        recently_added,
+    }))
+}
+
+#[derive(Deserialize)]
+struct SearchQuery {
+    q: String,
+}
+
+async fn search(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Query(q): Query<SearchQuery>,
+) -> ApiResult<Json<Vec<ItemCard>>> {
+    let q = q.q.trim();
+    if q.is_empty() {
+        return Ok(Json(Vec::new()));
+    }
+    Ok(Json(items::search(&state.db, user.id, q, 50).await?))
+}
+
+#[derive(Serialize)]
+struct FileView {
+    #[serde(flatten)]
+    file: MediaFile,
+    streams: Vec<Stream>,
+}
+
+#[derive(Serialize)]
+struct Detail {
+    item: ItemCard,
+    genres: Vec<String>,
+    files: Vec<FileView>,
+    children: Vec<ItemCard>,
+    /// Previous and next sibling, for episode navigation and autoplay.
+    prev_id: Option<i64>,
+    next_id: Option<i64>,
+}
+
+async fn detail(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<i64>,
+) -> ApiResult<Json<Detail>> {
+    let db = &state.db;
+    let item = items::card(db, user.id, id)
+        .await?
+        .ok_or_else(ApiError::not_found)?;
+    let mut files = Vec::new();
+    for file in items::item_files(db, id).await? {
+        let streams = items::streams(db, file.id).await?;
+        files.push(FileView { file, streams });
+    }
+    let (mut prev_id, mut next_id) = (None, None);
+    if item.kind == "episode"
+        && let Some(parent) = item.parent_id
+    {
+        let siblings = items::children(db, user.id, parent).await?;
+        if let Some(pos) = siblings.iter().position(|s| s.id == id) {
+            prev_id = pos.checked_sub(1).map(|p| siblings[p].id);
+            next_id = siblings.get(pos + 1).map(|s| s.id);
+        }
+    }
+    Ok(Json(Detail {
+        genres: items::genres(db, id).await?,
+        children: items::children(db, user.id, id).await?,
+        files,
+        item,
+        prev_id,
+        next_id,
+    }))
+}
+
+#[derive(Deserialize)]
+struct Progress {
+    position_s: f64,
+    #[serde(default)]
+    watched: bool,
+}
+
+async fn progress(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<i64>,
+    Json(p): Json<Progress>,
+) -> ApiResult<StatusCode> {
+    items::set_progress(&state.db, user.id, id, p.position_s.max(0.0), p.watched).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
