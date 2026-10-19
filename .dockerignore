@@ -1,0 +1,16 @@
+# Only what the Dockerfile copies.
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!.npmrc
+!apps/web
+apps/web/dist
+apps/web/node_modules
+apps/web/*.tsbuildinfo
+!apps/desktop/package.json
+!Cargo.toml
+!Cargo.lock
+!crates
+!backend
+**/target
