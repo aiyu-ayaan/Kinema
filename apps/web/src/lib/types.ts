@@ -76,7 +76,7 @@ export interface ItemDetail {
 
 export interface Home {
   continue_watching: ItemCard[]
-  recently_added: { library: Library; items: ItemCard[] }[]
+  shelves: { library: Library; kind: 'movies' | 'shows' | 'episodes'; items: ItemCard[] }[]
 }
 
 export interface PlaybackPlan {

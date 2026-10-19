@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowCounterClockwise, CheckCircle, Play, Star } from '@phosphor-icons/react'
@@ -6,7 +6,7 @@ import { Artwork } from '@/components/media/Artwork'
 import { PosterGrid } from '@/components/media/PosterCard'
 import { Badge, Skeleton } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { api, imageUrl } from '@/lib/api'
+import { api, frameUrl, imageUrl } from '@/lib/api'
 import { useIsAdmin } from '@/lib/auth'
 import { FixMatch } from './FixMatch'
 import { clock, fileSize, progressOf, runtime, subtitleOf, trackLabel } from '@/lib/format'
@@ -15,7 +15,10 @@ import type { ItemCard, ItemDetail } from '@/lib/types'
 
 function Hero({ detail, children }: { detail: ItemDetail; children?: ReactNode }) {
   const { item, genres, files } = detail
-  const backdrop = imageUrl(item.backdrop)
+  // No TMDB backdrop: a blurred video frame still gives the page its colour.
+  const [frameFailed, setFrameFailed] = useState(false)
+  const backdrop = imageUrl(item.backdrop) ?? (frameFailed ? null : frameUrl(item.id))
+  const blurred = !item.backdrop
   const duration = files[0]?.duration_s ?? item.duration_s
   const facts = [
     item.kind === 'episode' ? subtitleOf(item) : item.year,
@@ -26,13 +29,13 @@ function Hero({ detail, children }: { detail: ItemDetail; children?: ReactNode }
     <section className="relative -mx-4 -mt-6 mb-8 overflow-hidden md:-mx-8 md:-mt-8">
       {backdrop && (
         <div aria-hidden className="absolute inset-0">
-          <img src={backdrop} alt="" className="h-full w-full object-cover opacity-40" />
+          <img src={backdrop} alt="" onError={() => setFrameFailed(true)} className={blurred ? 'h-full w-full scale-110 object-cover opacity-40 blur-2xl' : 'h-full w-full object-cover opacity-40'} />
           <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/80 to-bg/30" />
           <div className="absolute inset-0 bg-gradient-to-r from-bg/90 to-transparent" />
         </div>
       )}
       <div className="relative flex flex-col gap-6 px-4 pb-6 pt-8 sm:flex-row sm:items-end md:px-8 md:pt-16">
-        <Artwork image={item.kind === 'episode' ? (item.backdrop ?? item.poster) : item.poster} title={item.show_title ?? item.title} aspect={item.kind === 'episode' ? 'wide' : 'poster'} eager className={item.kind === 'episode' ? 'w-72 shrink-0 shadow-overlay' : 'w-40 shrink-0 shadow-overlay md:w-52'} />
+        <Artwork image={item.kind === 'episode' ? (item.backdrop ?? item.poster) : item.poster} frame={frameUrl(item.id)} title={item.show_title ?? item.title} aspect={item.kind === 'episode' ? 'wide' : 'poster'} eager className={item.kind === 'episode' ? 'w-72 shrink-0 shadow-overlay' : 'w-40 shrink-0 shadow-overlay md:w-52'} />
         <div className="min-w-0 max-w-3xl">
           {item.show_title && (
             <Link to={`/item/${item.parent_id}`} className="text-label font-semibold uppercase tracking-wider text-primary hover:underline">
@@ -89,27 +92,41 @@ function PlayButtons({ item }: { item: ItemCard }) {
   )
 }
 
-function EpisodeRow({ ep }: { ep: ItemCard }) {
+function EpisodeCard({ ep }: { ep: ItemCard }) {
+  const navigate = useNavigate()
   const progress = progressOf(ep)
   return (
-    <Link to={`/item/${ep.id}`} className="group flex gap-4 rounded-lg p-2 transition-colors hover:bg-raised">
-      <div className="relative w-40 shrink-0 sm:w-48">
-        <Artwork image={ep.backdrop} title={ep.title} aspect="wide" />
+    <Link to={`/item/${ep.id}`} className="group flex min-w-0 flex-col rounded-lg focus-visible:outline-offset-4">
+      <div className="relative">
+        <Artwork image={ep.backdrop} frame={frameUrl(ep.id)} title={ep.title} aspect="wide" className="ring-1 ring-inset ring-white/5" />
+        <span className="absolute start-2 top-2 rounded bg-black/70 px-1.5 py-0.5 text-caption font-semibold tabular text-white">
+          {t('item.episodeShort', { s: ep.season_no ?? 0, e: ep.episode_no ?? 0 })}
+        </span>
+        {ep.watched && <CheckCircle size={22} weight="fill" className="absolute end-2 top-2 rounded-full bg-black/40 text-primary" aria-label={t('item.watched')} />}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            navigate(`/play/${ep.id}`)
+          }}
+          aria-label={t('player.play')}
+          className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-lg bg-black/0 opacity-0 transition-all duration-base group-hover:bg-black/40 group-hover:opacity-100 focus-visible:opacity-100"
+        >
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-on-primary shadow-overlay">
+            <Play size={22} weight="fill" aria-hidden />
+          </span>
+        </button>
         {progress != null && (
-          <div className="absolute inset-x-2 bottom-2 h-1 overflow-hidden rounded-full bg-black/50">
+          <div className="pointer-events-none absolute inset-x-2 bottom-2 h-1 overflow-hidden rounded-full bg-black/50">
             <div className="h-full bg-primary" style={{ width: `${progress * 100}%` }} />
           </div>
         )}
-        {ep.watched && <CheckCircle size={20} weight="fill" className="absolute end-1.5 top-1.5 text-primary" aria-label={t('item.watched')} />}
       </div>
-      <div className="min-w-0 py-1">
-        <p className="text-body font-semibold">
-          <span className="text-muted">{ep.episode_no}. </span>
-          {ep.title}
-        </p>
-        <p className="text-caption text-subtle">{runtime(ep.duration_s)}</p>
-        {ep.summary && <p className="mt-1 line-clamp-2 text-label text-muted">{ep.summary}</p>}
+      <div className="mt-2 flex items-baseline justify-between gap-2">
+        <p className="min-w-0 truncate text-body font-semibold">{ep.title}</p>
+        <span className="shrink-0 text-caption tabular text-subtle">{runtime(ep.duration_s)}</span>
       </div>
+      {ep.summary && <p className="mt-0.5 line-clamp-2 text-label text-muted">{ep.summary}</p>}
     </Link>
   )
 }
@@ -170,11 +187,11 @@ export function ItemPage() {
         </section>
       )}
       {item.kind === 'season' && (
-        <section className="max-w-4xl">
-          <h2 className="mb-2 text-title font-semibold">{t('item.episodes')}</h2>
-          <div className="flex flex-col gap-1">
+        <section>
+          <h2 className="mb-4 text-title font-semibold">{t('item.episodes')}</h2>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-x-5 gap-y-7">
             {children.map((ep) => (
-              <EpisodeRow key={ep.id} ep={ep} />
+              <EpisodeCard key={ep.id} ep={ep} />
             ))}
           </div>
         </section>

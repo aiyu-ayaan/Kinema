@@ -129,5 +129,8 @@ export const api = {
   saveSettings: (tmdb_api_key: string) => request<ServerSettings>('PUT', '/settings', { tmdb_api_key }),
 }
 
+/** Server-made video frame for an item without artwork (a show uses its first episode). */
+export const frameUrl = (itemId: number) => `/api/items/${itemId}/thumb`
+
 /** `/api/images/w500/abc.jpg` for an image key, or null. */
 export const imageUrl = (key: string | null | undefined) => (key ? `/api/images/${key}` : null)

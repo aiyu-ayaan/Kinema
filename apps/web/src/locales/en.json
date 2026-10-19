@@ -40,7 +40,12 @@
   "search.none.message": "Try a shorter or different title.",
 
   "home.continue": "Continue Watching",
-  "home.recentlyAdded": "Recently Added in {library}",
+  "home.shelf.movies": "Recently Added Movies",
+  "home.shelf.shows": "Recently Added Shows",
+  "home.shelf.episodes": "New Episodes",
+  "home.hero.continue": "Continue watching",
+  "home.hero.new": "Recently added",
+  "home.hero.info": "More info",
   "home.seeAll": "See all",
   "home.empty.title": "Your library is empty",
   "home.empty.admin": "Add a folder with movies or TV shows and Kinema will organise it, fetch posters and get it ready to play.",

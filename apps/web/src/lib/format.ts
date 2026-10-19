@@ -4,7 +4,7 @@ import type { ItemCard, Stream } from './types'
 /** 5400 -> "1h 30m"; 300 -> "5m". */
 export function runtime(seconds: number | null | undefined): string | null {
   if (!seconds || seconds <= 0) return null
-  const m = Math.round(seconds / 60)
+  const m = Math.max(1, Math.round(seconds / 60))
   const h = Math.floor(m / 60)
   return h > 0 ? t('format.hoursMinutes', { h, m: m % 60 }) : t('format.minutes', { m })
 }

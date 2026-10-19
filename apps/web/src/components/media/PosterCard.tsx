@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle, Play } from '@phosphor-icons/react'
 import { Artwork } from './Artwork'
+import { frameUrl } from '@/lib/api'
 import { progressOf, subtitleOf } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import type { ItemCard } from '@/lib/types'
@@ -27,6 +28,7 @@ export function PosterCard({ item, wide }: { item: ItemCard; wide?: boolean }) {
       <div className="relative">
         <Artwork
           image={wide ? (item.backdrop ?? item.poster) : item.poster}
+          frame={frameUrl(item.id)}
           title={item.show_title && item.kind !== 'movie' ? item.show_title : item.title}
           aspect={wide ? 'wide' : 'poster'}
           className="ring-1 ring-inset ring-white/5 transition-transform duration-base ease-std group-hover:scale-[1.02]"
@@ -68,7 +70,8 @@ export function Shelf({ title, items, wide, action }: { title: string; items: It
         <h2 className="text-title font-semibold">{title}</h2>
         {action}
       </div>
-      <div className="scrollbar-none -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-1 md:-mx-8 md:px-8">
+      {/* scroll-px keeps snapped cards aligned with the title instead of the screen edge. */}
+      <div className="scrollbar-none -mx-4 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 pb-2 md:-mx-8 md:scroll-px-8 md:px-8">
         {items.map((i) => (
           <div key={i.id} className={wide ? 'w-64 shrink-0 snap-start' : 'w-36 shrink-0 snap-start md:w-40'}>
             <PosterCard item={i} wide={wide} />
