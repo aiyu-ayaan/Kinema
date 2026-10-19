@@ -1,23 +1,56 @@
-import React from 'react'
-import { Routes, Route } from 'react-router-dom'
-import { Sidebar } from './components/Sidebar'
-import { Header } from './components/Header'
+import { lazy, Suspense } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { CircleNotch } from '@phosphor-icons/react'
+import { AppShell } from './components/AppShell'
+import { AuthScreen } from './features/auth/AuthScreen'
 import { HomePage } from './features/home/HomePage'
+import { ItemPage } from './features/item/ItemPage'
 import { LibraryPage } from './features/library/LibraryPage'
+import { SearchPage } from './features/search/SearchPage'
+import { SettingsPage } from './features/settings/SettingsPage'
+import { useAuth } from './lib/auth'
+import { t } from './lib/i18n'
 
-export const App: React.FC = () => {
+// The player is the heaviest screen; load it only when something plays.
+const PlayerPage = lazy(() => import('./features/player/PlayerPage'))
+
+function Splash() {
   return (
-    <div className="flex min-h-screen bg-bg">
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <Header />
-        <main className="flex-1 overflow-y-auto">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/library/:kind" element={<LibraryPage />} />
-          </Routes>
-        </main>
-      </div>
+    <div className="flex min-h-dvh items-center justify-center">
+      <CircleNotch size={32} className="animate-spin text-primary" aria-label={t('common.loading')} />
     </div>
+  )
+}
+
+export function App() {
+  const { user, loading } = useAuth()
+  if (loading) return <Splash />
+  if (!user) return <AuthScreen />
+  return (
+    <Routes>
+      <Route
+        path="/play/:id"
+        element={
+          <Suspense fallback={<Splash />}>
+            <PlayerPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="*"
+        element={
+          <AppShell>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/library/:id" element={<LibraryPage />} />
+              <Route path="/item/:id" element={<ItemPage />} />
+              <Route path="/search" element={<SearchPage />} />
+              {user.is_admin && <Route path="/settings" element={<SettingsPage />} />}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AppShell>
+        }
+      />
+    </Routes>
   )
 }
