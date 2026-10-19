@@ -1,0 +1,22 @@
+{
+  "name": "kinema-root",
+  "license": "MIT",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kinema - Personal media server in the spirit of Plex",
+  "scripts": {
+    "dev": "concurrently -k -p \"[{name}]\" -n \"backend,web\" -c \"cyan,magenta\" \"pnpm run dev:backend\" \"pnpm run dev:web\"",
+    "dev:backend": "cargo run --manifest-path backend/Cargo.toml",
+    "dev:web": "pnpm --filter @kinema/web dev",
+    "build": "pnpm run build:web && pnpm run build:backend",
+    "build:web": "pnpm --filter @kinema/web build",
+    "build:web:dev": "pnpm --filter @kinema/web build:dev",
+    "build:web:prod": "pnpm --filter @kinema/web build:prod",
+    "build:backend": "cargo build --release --manifest-path backend/Cargo.toml",
+    "lint": "pnpm --filter @kinema/web lint && cargo clippy -- -D warnings",
+    "test": "cargo test && pnpm --filter @kinema/web test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

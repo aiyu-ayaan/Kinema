@@ -1,0 +1,31 @@
+@import '@fontsource-variable/inter';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Dark theme is default */
+  --bg: 15 17 21;
+  --panel: 22 25 31;
+  --raised: 30 34 42;
+  --border: 42 47 58;
+  --border-strong: 62 69 84;
+  --fg: 243 244 246;
+  --muted: 156 163 175;
+  --subtle: 107 114 128;
+  --primary: 229 160 13;
+  --on-primary: 0 0 0;
+  --primary-container: 48 37 12;
+  --on-primary-container: 253 230 138;
+  --warn: 234 179 8;
+  --danger: 239 68 68;
+  --info: 59 130 246;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter Variable', system-ui, -apple-system, sans-serif;
+  background-color: rgb(var(--bg));
+  color: rgb(var(--fg));
+}
