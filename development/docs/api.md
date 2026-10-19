@@ -1,0 +1,80 @@
+# HTTP API
+
+Base path `/api`. JSON bodies. Auth: `Authorization: Bearer <session token>` or `kinema_session` cookie. Errors: `{"error": {"code": "...", "message": "..."}}` with the matching HTTP status.
+
+This is Kinema's own API. It is not Plex-compatible.
+
+## Auth and profiles
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/auth/login` | `{name, password?|pin?}` returns session token |
+| POST | `/auth/logout` | Invalidate session |
+| GET | `/users` | List profiles (names and avatars only, for the picker) |
+| POST | `/users` | Admin: create profile |
+| PATCH | `/users/{id}` | Edit own profile, or admin edits any |
+| DELETE | `/users/{id}` | Admin |
+| PUT | `/users/{id}/libraries` | Admin: set library access |
+
+## Libraries and browsing
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/libraries` | Libraries the user can see |
+| POST | `/libraries` | Admin: create |
+| POST | `/libraries/{id}/scan` | Admin: trigger scan |
+| GET | `/libraries/{id}/items?sort=&filter=&offset=&limit=` | Paged items |
+| GET | `/items/{id}` | Item detail with files and streams |
+| GET | `/items/{id}/children` | Seasons of a show, episodes of a season |
+| GET | `/home` | Continue Watching, Recently Added rows, shelves |
+| GET | `/search?q=` | FTS search |
+
+## Images
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/images/{key}?w=400` | Poster/backdrop/thumb, WebP, `Cache-Control: immutable` |
+| GET | `/items/{id}/timeline.vtt` | Scrub-thumbnail index |
+| GET | `/items/{id}/sprite.jpg` | Scrub sprite sheet |
+
+## Playback
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/playback/decide` | Body: client codec/container capabilities and file id. Returns `direct`, `remux` or `transcode` and a URL |
+| GET | `/stream/{file_id}` | Direct play, supports `Range` |
+| GET | `/hls/{session}/master.m3u8` | Adaptive playlist |
+| GET | `/hls/{session}/{segment}` | Segment |
+| GET | `/subtitles/{file_id}/{stream_idx}.vtt` | Subtitle as WebVTT |
+| PUT | `/items/{id}/progress` | `{position_s}`, sent every 10 s |
+| POST | `/items/{id}/watched` | Mark watched, DELETE to unmark |
+
+## Playlists
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/playlists` | Own and shared |
+| POST | `/playlists` | Create |
+| PATCH | `/playlists/{id}` | Rename, share toggle |
+| PUT | `/playlists/{id}/items` | Replace ordered list |
+| POST | `/playlists/{id}/items` | Append |
+| DELETE | `/playlists/{id}` | Delete |
+
+## Sharing
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/shares` | Create link for item, playlist or library, with expiry and max uses |
+| GET | `/shares` | List own links |
+| DELETE | `/shares/{id}` | Revoke |
+| GET | `/s/{token}` | Public landing page for a link |
+
+## Server
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/server/info` | Version, name, capabilities |
+| GET | `/server/jobs` | Admin: queue state |
+| GET | `/server/events` | SSE stream: scan progress, new items |
+
+Pagination: `offset` and `limit` (max 200). Sorting: `title`, `added`, `year`, `rating`, `lastPlayed`.
