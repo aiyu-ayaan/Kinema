@@ -70,6 +70,7 @@ async fn main() -> anyhow::Result<()> {
         watchers: Arc::new(Mutex::new(HashMap::new())),
         changes,
         probe_slots: Arc::new(Semaphore::new(2)),
+        thumb_slots: Arc::new(Semaphore::new(2)),
         http: reqwest::Client::new(),
     };
 

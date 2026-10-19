@@ -24,6 +24,7 @@ pub fn router() -> Router<AppState> {
         .route("/stream/:id", get(stream))
         .route("/subtitles/:stream_id", get(subtitle))
         .route("/images/:size/:name", get(image))
+        .route("/items/:id/thumb", get(thumb))
 }
 
 #[derive(Deserialize)]
@@ -285,5 +286,57 @@ async fn image(
     if res.status() == StatusCode::NOT_FOUND {
         return Err(ApiError::not_found());
     }
+    Ok(res)
+}
+
+/// A video frame for items without artwork, grabbed on first view and kept per file
+/// version. A failed grab leaves a marker so it is not retried on every page load.
+async fn thumb(
+    State(state): State<AppState>,
+    _: AuthUser,
+    Path(id): Path<i64>,
+    req: Request,
+) -> ApiResult<Response> {
+    let file = items::thumb_file(&state.db, id)
+        .await?
+        .ok_or_else(ApiError::not_found)?;
+    let dir = state.cache_dir("thumbs");
+    let out = dir.join(format!("{}-{}.jpg", file.id, file.mtime));
+    let failed = dir.join(format!("{}-{}.fail", file.id, file.mtime));
+    if !out.exists() {
+        if failed.exists() {
+            return Err(ApiError::not_found());
+        }
+        let bins = state.bins.clone().ok_or_else(ApiError::not_found)?;
+        let _permit = state
+            .thumb_slots
+            .acquire()
+            .await
+            .map_err(|_| ApiError::internal())?;
+        // Another request may have made it while this one waited.
+        if !out.exists() {
+            tokio::fs::create_dir_all(&dir).await?;
+            // 15 % in skips logos and cold opens; short clips use their middle.
+            let at = file
+                .duration_s
+                .map_or(30.0, |d| if d > 120.0 { d * 0.15 } else { d / 2.0 });
+            if let Err(e) =
+                kinema_media::thumbs::frame(&bins, std::path::Path::new(&file.path), at, &out).await
+            {
+                tracing::warn!("thumbnail for {}: {e}", file.path);
+                let _ = tokio::fs::write(&failed, b"").await;
+                return Err(ApiError::not_found());
+            }
+        }
+    }
+    let mut res = ServeFile::new(&out)
+        .oneshot(req)
+        .await
+        .map_err(|_| ApiError::internal())?
+        .into_response();
+    res.headers_mut().insert(
+        CACHE_CONTROL,
+        HeaderValue::from_static("private, max-age=86400"),
+    );
     Ok(res)
 }

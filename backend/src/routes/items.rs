@@ -21,27 +21,43 @@ pub fn router() -> Router<AppState> {
 #[derive(Serialize)]
 struct Shelf {
     library: LibraryView,
+    kind: items::Shelf,
     items: Vec<ItemCard>,
 }
 
 #[derive(Serialize)]
 struct Home {
     continue_watching: Vec<ItemCard>,
-    recently_added: Vec<Shelf>,
+    shelves: Vec<Shelf>,
 }
 
 async fn home(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiResult<Json<Home>> {
-    let mut recently_added = Vec::new();
+    let mut shelves = Vec::new();
     for lib in libraries::list(&state.db).await? {
-        let items = items::recently_added(&state.db, user.id, lib.id, 20).await?;
-        recently_added.push(Shelf {
-            library: view(&state, lib),
-            items,
-        });
+        let movies = lib.item_count > lib.show_count;
+        let shows = lib.show_count > 0;
+        let wanted = [
+            (items::Shelf::Movies, movies),
+            (items::Shelf::Episodes, shows),
+            (items::Shelf::Shows, shows),
+        ];
+        for (kind, on) in wanted {
+            if !on {
+                continue;
+            }
+            let items = items::recently_added(&state.db, user.id, lib.id, kind, 24).await?;
+            if !items.is_empty() {
+                shelves.push(Shelf {
+                    library: view(&state, lib.clone()),
+                    kind,
+                    items,
+                });
+            }
+        }
     }
     Ok(Json(Home {
         continue_watching: items::continue_watching(&state.db, user.id, 20).await?,
-        recently_added,
+        shelves,
     }))
 }
 

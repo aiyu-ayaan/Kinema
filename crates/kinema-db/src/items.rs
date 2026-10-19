@@ -85,14 +85,30 @@ pub async fn card(
         .await?)
 }
 
+/// Which home row a "recently added" query fills.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Shelf {
+    /// Movies and loose videos.
+    Movies,
+    Shows,
+    Episodes,
+}
+
 pub async fn recently_added(
     pool: &SqlitePool,
     user_id: i64,
     library_id: i64,
+    shelf: Shelf,
     limit: i64,
 ) -> Result<Vec<ItemCard>, DbError> {
+    let filter = match shelf {
+        Shelf::Movies => "i.parent_id IS NULL AND i.kind != 'show'",
+        Shelf::Shows => "i.parent_id IS NULL AND i.kind = 'show'",
+        Shelf::Episodes => "i.kind = 'episode'",
+    };
     let sql = format!(
-        "{CARD_SELECT} WHERE i.library_id = ?2 AND i.parent_id IS NULL
+        "{CARD_SELECT} WHERE i.library_id = ?2 AND {filter}
          ORDER BY i.added_at DESC, i.id DESC LIMIT ?3"
     );
     Ok(sqlx::query_as(&sql)
@@ -216,6 +232,21 @@ pub async fn file(pool: &SqlitePool, id: i64) -> Result<Option<MediaFile>, DbErr
             .fetch_optional(pool)
             .await?,
     )
+}
+
+/// The file whose frame stands in for an item's art: its own, or a show's or
+/// season's first episode.
+pub async fn thumb_file(pool: &SqlitePool, item_id: i64) -> Result<Option<MediaFile>, DbError> {
+    Ok(sqlx::query_as(
+        "SELECT f.id, f.item_id, f.path, f.size, f.mtime, f.container, f.duration_s, f.bitrate, f.probe_status
+         FROM files f JOIN items i ON i.id = f.item_id
+         WHERE i.id = ?1 OR i.parent_id = ?1 OR i.parent_id IN (SELECT id FROM items WHERE parent_id = ?1)
+         ORDER BY i.id = ?1 DESC, i.season_no = 0, i.season_no, i.episode_no, f.size DESC
+         LIMIT 1",
+    )
+    .bind(item_id)
+    .fetch_optional(pool)
+    .await?)
 }
 
 pub async fn file_by_path(pool: &SqlitePool, path: &str) -> Result<Option<MediaFile>, DbError> {

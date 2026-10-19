@@ -20,6 +20,8 @@ pub struct AppState {
     pub changes: UnboundedSender<i64>,
     /// Bounds concurrent ffprobe runs so a big first scan stays light.
     pub probe_slots: Arc<Semaphore>,
+    /// Bounds frame grabs, so opening a grid of 30 episodes runs 2 ffmpegs at a time.
+    pub thumb_slots: Arc<Semaphore>,
     pub http: reqwest::Client,
 }
 
