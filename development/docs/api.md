@@ -1,6 +1,6 @@
 # HTTP API
 
-Base path `/api`. JSON bodies. Auth: `Authorization: Bearer <session token>` or `kinema_session` cookie. Errors: `{"error": {"code": "...", "message": "..."}}` with the matching HTTP status.
+Base path `/api`, over HTTPS (self-signed by default, see `security.md`). JSON bodies. Auth: `Authorization: Bearer <session token>` or `kinema_session` cookie. Errors: `{"error": {"code": "...", "message": "..."}}` with the matching HTTP status.
 
 This is Kinema's own API. It is not Plex-compatible.
 
@@ -34,6 +34,7 @@ This is Kinema's own API. It is not Plex-compatible.
 | GET | `/items/{id}/thumb` | Video frame JPEG from the background thumbnail cache; 404 until made |
 | POST | `/libraries/{id}/thumbnails` | Admin: delete and regenerate a library's thumbnails |
 | POST | `/libraries/{id}/match` | Admin: look up unmatched titles again |
+| GET | `/server/info` | Public: `{name, version, public_url, capabilities}`; apps read `public_url` to stream away from home |
 | GET | `/server/status` | Admin: dashboard data |
 | POST | `/server/cache/{thumbnails\|subtitles\|images}/clear` | Admin: clear a cache |
 | GET | `/items/{id}/match?q=&year=` | Admin: TMDB candidates for a movie or show |
@@ -41,6 +42,10 @@ This is Kinema's own API. It is not Plex-compatible.
 | GET | `/settings` | Admin: `{server, tmdb_configured, ffmpeg_found, options}` |
 | PUT | `/settings/server` | Admin: save server options (clamped to allowed values) |
 | PUT | `/settings/tmdb` | Admin: `{tmdb_api_key}`, verified before saving |
+
+### LAN discovery
+
+Not HTTP: apps broadcast the bytes `KINEMA_DISCOVER` to UDP port 48555. Each server answers the sender with `{"service":"kinema","name","port","version"}` (backend `discovery.rs`). A server bound to loopback does not answer.
 
 The tables below are the full target API.
 

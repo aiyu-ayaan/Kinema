@@ -150,6 +150,8 @@ export interface DirListing {
 /** Admin-editable server options (backend `server_settings.rs`). */
 export interface ServerOptions {
   server_name: string
+  /** Address the apps use away from home; '' when there is none. */
+  public_url: string
   watch_changes: boolean
   thumbnails: boolean
   thumbnail_position: number
@@ -186,6 +188,8 @@ export interface ServerStatus {
   data_dir: string
   listen: string
   lan_urls: string[]
+  /** SHA-256 of the HTTPS certificate; null when TLS is off. */
+  tls_fingerprint: string | null
   stats: { movies: number; shows: number; episodes: number; files: number; bytes: number; hours: number }
   libraries: {
     id: number

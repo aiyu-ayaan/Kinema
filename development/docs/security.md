@@ -13,12 +13,13 @@
 | XSS via metadata | Metadata is data, never HTML. The UI escapes all fields. CSP header with no inline scripts. |
 | SSRF through artwork fetch | Image downloader only accepts `https://image.tmdb.org` and the configured hosts. |
 | Resource exhaustion | Transcode session cap, request body limits, bounded job queue, connection limits. |
-| Plaintext on the internet | Document TLS setup, refuse non-LAN access over plain HTTP unless opted in. |
+| Plaintext on the network | HTTPS by default (backend `tls.rs`): a self-signed certificate is made in `data/tls` on first start, or `[tls] cert_path`/`key_path` use a real one. The session cookie is `Secure`. `[tls] enabled = false` only behind a TLS-terminating proxy. |
+| Fake server on the LAN | Apps show the certificate's SHA-256 fingerprint on first connect and pin it after the owner approves; the dashboard (Settings > Network) shows the same code. A certificate signed by a public authority (a reverse proxy on the public URL) is trusted as usual. |
 
 ## Defaults
 
 - Binds to `127.0.0.1` until the admin enables LAN or remote access.
-- Remote access needs TLS.
+- HTTPS on, self-signed. Remote access goes through the admin-set public URL, normally a reverse proxy with a real certificate.
 - Telemetry: none.
 
 ## Logging

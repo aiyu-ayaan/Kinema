@@ -124,6 +124,11 @@ export function NetworkSection() {
               </div>
             </SettingRow>
           ))}
+          {data.tls_fingerprint && (
+            <SettingRow label={t('settings.network.fingerprint')} description={t('settings.network.fingerprintHint')}>
+              <code className="block max-w-xs break-all rounded bg-raised px-2 py-1 font-mono text-caption">{data.tls_fingerprint}</code>
+            </SettingRow>
+          )}
         </div>
       </Card>
       {data.lan_urls.length === 0 && <Notice tone="warn">{t('settings.network.localOnly')}</Notice>}

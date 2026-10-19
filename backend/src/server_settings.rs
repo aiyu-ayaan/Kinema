@@ -11,6 +11,9 @@ const KEY: &str = "server";
 pub struct ServerSettings {
     /// Shown on the sign-in screen and in the browser title.
     pub server_name: String,
+    /// Address apps use away from home (reverse proxy, tunnel), e.g. `https://media.example.com`.
+    /// Empty when the server is only reachable on the LAN.
+    pub public_url: String,
     /// Rescan a library when files change (filesystem events).
     pub watch_changes: bool,
     /// Generate video-frame thumbnails in the background after scans.
@@ -39,6 +42,7 @@ impl Default for ServerSettings {
     fn default() -> Self {
         Self {
             server_name: "Kinema".into(),
+            public_url: String::new(),
             watch_changes: true,
             thumbnails: true,
             thumbnail_position: 15,
@@ -126,6 +130,7 @@ impl ServerSettings {
         if self.server_name.is_empty() {
             self.server_name = d.server_name;
         }
+        self.public_url = clean_url(&self.public_url);
         self.thumbnail_position = self.thumbnail_position.clamp(5, 90);
         if !METADATA_LANGUAGES.contains(&self.metadata_language.as_str()) {
             self.metadata_language = d.metadata_language;
@@ -150,6 +155,20 @@ impl ServerSettings {
         }
         self.rescan_hours = self.rescan_hours.min(168);
         self
+    }
+}
+
+/// `http(s)://host[:port][/path]` without a trailing slash, or "" for anything else.
+fn clean_url(url: &str) -> String {
+    let url = url.trim().trim_end_matches('/');
+    let rest = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"));
+    match rest {
+        Some(r) if !r.is_empty() && url.len() <= 200 && !r.contains(char::is_whitespace) => {
+            url.to_string()
+        }
+        _ => String::new(),
     }
 }
 
@@ -189,6 +208,18 @@ mod tests {
         assert_eq!(s.transcode_max_height, d.transcode_max_height);
         assert_eq!(s.preferred_audio_language, "");
         assert_eq!(s.subtitle_mode, "off");
+    }
+
+    #[test]
+    fn public_url() {
+        assert_eq!(
+            clean_url(" https://media.example.com/ "),
+            "https://media.example.com"
+        );
+        assert_eq!(clean_url("http://1.2.3.4:3000"), "http://1.2.3.4:3000");
+        assert_eq!(clean_url("media.example.com"), "");
+        assert_eq!(clean_url("https://"), "");
+        assert_eq!(clean_url("ftp://x"), "");
     }
 
     #[test]

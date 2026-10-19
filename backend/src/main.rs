@@ -12,6 +12,7 @@ use tracing::{info, warn};
 
 mod access;
 mod auth;
+mod discovery;
 mod error;
 mod i18n;
 mod jobs;
@@ -20,6 +21,7 @@ mod scan;
 mod server_settings;
 mod state;
 mod thumbs;
+mod tls;
 
 use state::AppState;
 
@@ -34,6 +36,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     info!("Starting Kinema Media Server...");
+    let _ = rustls::crypto::ring::default_provider().install_default();
 
     // Load configuration
     let config = Config::load().context("Failed to load configuration")?;
@@ -65,6 +68,12 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
+    let rustls = if config.tls.enabled {
+        Some(tls::load(&config).await?)
+    } else {
+        None
+    };
+
     let (changes, changes_rx) = tokio::sync::mpsc::unbounded_channel();
     let state = AppState {
         config: config.clone(),
@@ -82,11 +91,15 @@ async fn main() -> anyhow::Result<()> {
         started: std::time::Instant::now(),
         login_failures: Arc::default(),
         http: reqwest::Client::new(),
+        tls_fingerprint: rustls
+            .as_ref()
+            .and_then(|(_, fp)| fp.as_deref().map(Arc::from)),
     };
 
     // Watch every library and catch up on changes made while the server was off.
     tokio::spawn(scan::debounce_changes(state.clone(), changes_rx));
     tokio::spawn(scan::scheduled_rescans(state.clone()));
+    tokio::spawn(discovery::run(state.clone()));
     for lib in kinema_db::libraries::list(&state.db).await? {
         scan::watch(&state, lib.id, &lib.roots);
         scan::spawn_scan(state.clone(), lib.id);
@@ -110,10 +123,17 @@ async fn main() -> anyhow::Result<()> {
         .parse()
         .context("Invalid server host or port")?;
 
-    info!("Kinema server listening on http://{}", addr);
-
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app).await?;
+    if let Some((rustls, _)) = rustls {
+        info!("Kinema server listening on https://{}", addr);
+        axum_server::bind_rustls(addr, rustls)
+            .serve(app.into_make_service())
+            .await?;
+    } else {
+        warn!("TLS is off: traffic is unencrypted. Only do this behind a TLS-terminating proxy.");
+        info!("Kinema server listening on http://{}", addr);
+        let listener = tokio::net::TcpListener::bind(&addr).await?;
+        axum::serve(listener, app).await?;
+    }
 
     Ok(())
 }

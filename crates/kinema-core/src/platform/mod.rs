@@ -40,6 +40,32 @@ pub fn default_data_dir() -> PathBuf {
     PathBuf::from("data")
 }
 
+/// This machine's network name, for the self-signed certificate.
+pub fn hostname() -> Option<String> {
+    #[cfg(unix)]
+    let name = std::fs::read_to_string("/etc/hostname")
+        .ok()
+        .or_else(|| std::env::var("HOSTNAME").ok());
+    #[cfg(windows)]
+    let name = std::env::var("COMPUTERNAME").ok();
+    #[cfg(not(any(unix, windows)))]
+    let name: Option<String> = None;
+    name.map(|n| n.trim().to_string()).filter(|n| !n.is_empty())
+}
+
+/// Writes a secret (TLS key) readable only by this user where the OS supports file modes.
+pub fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    options.open(path)?.write_all(bytes)
+}
+
 /// Kernel and runtime pseudo-filesystems: never media, and walking them can hang
 /// (`/proc` has self-referencing links and files that block on read).
 pub fn is_virtual_fs(path: &Path) -> bool {

@@ -56,9 +56,23 @@ export function GeneralSection() {
   return (
     <ServerForm title={t('settings.nav.general')}>
       {(s, set) => (
-        <SettingRow label={t('settings.general.name')} description={t('settings.general.nameHint')} htmlFor="server-name">
-          <input id="server-name" className={cn(inputCls, 'w-64')} value={s.server_name} maxLength={60} onChange={(e) => set({ server_name: e.target.value })} />
-        </SettingRow>
+        <>
+          <SettingRow label={t('settings.general.name')} description={t('settings.general.nameHint')} htmlFor="server-name">
+            <input id="server-name" className={cn(inputCls, 'w-64')} value={s.server_name} maxLength={60} onChange={(e) => set({ server_name: e.target.value })} />
+          </SettingRow>
+          <SettingRow label={t('settings.general.publicUrl')} description={t('settings.general.publicUrlHint')} htmlFor="public-url">
+            <input
+              id="public-url"
+              type="url"
+              inputMode="url"
+              className={cn(inputCls, 'w-64')}
+              value={s.public_url}
+              maxLength={200}
+              placeholder="https://media.example.com"
+              onChange={(e) => set({ public_url: e.target.value })}
+            />
+          </SettingRow>
+        </>
       )}
     </ServerForm>
   )

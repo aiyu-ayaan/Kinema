@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 import { readFileSync } from 'fs'
 
-const backend = process.env.KINEMA_BACKEND ?? 'http://127.0.0.1:3000'
+const backend = process.env.KINEMA_BACKEND ?? 'https://127.0.0.1:3000'
 const root = JSON.parse(readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8'))
 
 export default defineConfig({

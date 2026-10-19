@@ -28,10 +28,39 @@ impl Default for ServerConfig {
     }
 }
 
+/// HTTPS. On by default with a self-signed certificate made in `data_dir/tls`; apps pin
+/// its fingerprint. Set `cert_path` and `key_path` to use a real certificate, or turn it
+/// off only behind a proxy that terminates TLS.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TlsConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub cert_path: Option<PathBuf>,
+    #[serde(default)]
+    pub key_path: Option<PathBuf>,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+impl Default for TlsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            cert_path: None,
+            key_path: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     #[serde(default)]
     pub server: ServerConfig,
+    #[serde(default)]
+    pub tls: TlsConfig,
     #[serde(default = "default_data_dir")]
     pub data_dir: PathBuf,
     #[serde(default)]
@@ -46,6 +75,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             server: ServerConfig::default(),
+            tls: TlsConfig::default(),
             data_dir: default_data_dir(),
             tmdb_api_key: None,
         }

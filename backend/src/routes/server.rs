@@ -13,6 +13,8 @@ use std::sync::atomic::Ordering;
 pub struct ServerInfoResponse {
     pub name: String,
     pub version: String,
+    /// The admin-set address for use away from home; "" when there is none.
+    pub public_url: String,
     pub capabilities: Vec<String>,
 }
 
@@ -23,10 +25,12 @@ pub fn router() -> Router<AppState> {
         .route("/cache/:kind/clear", post(clear_cache))
 }
 
-/// Public: the sign-in screen shows the server name.
+/// Public: the sign-in screen shows the server name; apps learn the public address here.
 async fn server_info(State(state): State<AppState>) -> Json<ServerInfoResponse> {
+    let settings = state.settings();
     Json(ServerInfoResponse {
-        name: state.settings().server_name,
+        name: settings.server_name,
+        public_url: settings.public_url,
         version: env!("CARGO_PKG_VERSION").to_string(),
         capabilities: vec![
             "direct_play".to_string(),
@@ -66,6 +70,8 @@ struct Status {
     data_dir: String,
     listen: String,
     lan_urls: Vec<String>,
+    /// SHA-256 of the TLS certificate, to compare with what an app shows on first connect.
+    tls_fingerprint: Option<String>,
     stats: items::Stats,
     libraries: Vec<LibraryStatus>,
     active_streams: usize,
@@ -85,14 +91,6 @@ fn dir_size(path: &std::path::Path) -> u64 {
             Err(_) => 0,
         })
         .sum()
-}
-
-/// The LAN address other devices reach this server on. Connecting a UDP socket
-/// sends no packet; it only asks the OS which interface would route outwards.
-fn lan_ip() -> Option<std::net::IpAddr> {
-    let socket = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
-    socket.connect("192.0.2.1:9").ok()?;
-    socket.local_addr().ok().map(|a| a.ip())
 }
 
 async fn status(State(state): State<AppState>, _: AdminUser) -> ApiResult<Json<Status>> {
@@ -124,9 +122,14 @@ async fn status(State(state): State<AppState>, _: AdminUser) -> ApiResult<Json<S
     .await?;
     let port = state.config.server.port;
     let host = &state.config.server.host;
-    let lan_urls = match (host.as_str(), lan_ip()) {
+    let scheme = if state.config.tls.enabled {
+        "https"
+    } else {
+        "http"
+    };
+    let lan_urls = match (host.as_str(), crate::tls::lan_ip()) {
         ("127.0.0.1" | "localhost" | "::1", _) | (_, None) => Vec::new(),
-        (_, Some(ip)) => vec![format!("http://{ip}:{port}")],
+        (_, Some(ip)) => vec![format!("{scheme}://{ip}:{port}")],
     };
     Ok(Json(Status {
         name: state.settings().server_name,
@@ -137,6 +140,7 @@ async fn status(State(state): State<AppState>, _: AdminUser) -> ApiResult<Json<S
         data_dir: state.config.data_dir.display().to_string(),
         listen: format!("{host}:{port}"),
         lan_urls,
+        tls_fingerprint: state.tls_fingerprint.as_deref().map(str::to_string),
         stats: items::stats(&state.db).await?,
         libraries: libs,
         active_streams: state.active_streams.load(Ordering::SeqCst),

@@ -75,8 +75,12 @@ pub fn token_from(parts: &Parts) -> Option<String> {
         })
 }
 
-pub fn session_cookie(token: &str, max_age: i64) -> String {
-    format!("{SESSION_COOKIE}={token}; Path=/api; HttpOnly; SameSite=Strict; Max-Age={max_age}")
+/// `secure` when the server speaks HTTPS: the browser then never sends the cookie in clear.
+pub fn session_cookie(token: &str, max_age: i64, secure: bool) -> String {
+    let secure = if secure { "; Secure" } else { "" };
+    format!(
+        "{SESSION_COOKIE}={token}; Path=/api; HttpOnly; SameSite=Strict; Max-Age={max_age}{secure}"
+    )
 }
 
 /// Any signed-in user.

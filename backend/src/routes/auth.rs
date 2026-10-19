@@ -47,9 +47,9 @@ struct SessionResponse {
     user: User,
 }
 
-fn signed_in(token: String, user: User) -> Response {
+fn signed_in(token: String, user: User, secure: bool) -> Response {
     let mut headers = HeaderMap::new();
-    if let Ok(v) = session_cookie(&token, SESSION_TTL_S).parse() {
+    if let Ok(v) = session_cookie(&token, SESSION_TTL_S, secure).parse() {
         headers.insert(SET_COOKIE, v);
     }
     (headers, Json(SessionResponse { token, user })).into_response()
@@ -58,7 +58,7 @@ fn signed_in(token: String, user: User) -> Response {
 async fn start_session(state: &AppState, user: User) -> ApiResult<Response> {
     let (token, hash) = new_token();
     users::create_session(&state.db, &hash, user.id, SESSION_TTL_S).await?;
-    Ok(signed_in(token, user))
+    Ok(signed_in(token, user, state.config.tls.enabled))
 }
 
 /// First run: the first account becomes the administrator.
@@ -162,7 +162,7 @@ async fn logout(State(state): State<AppState>, req: Request) -> ApiResult<Respon
         users::delete_session(&state.db, &token_hash(&token)).await?;
     }
     let mut headers = HeaderMap::new();
-    if let Ok(v) = session_cookie("", 0).parse() {
+    if let Ok(v) = session_cookie("", 0, state.config.tls.enabled).parse() {
         headers.insert(SET_COOKIE, v);
     }
     Ok((StatusCode::NO_CONTENT, headers).into_response())
