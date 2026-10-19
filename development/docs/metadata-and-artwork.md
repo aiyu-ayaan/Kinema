@@ -25,11 +25,11 @@ A TMDB API key is configured by the user in `kinema.toml` (`tmdb_api_key`). With
 
 ## Fields stored
 
-Title, original title, year, summary, runtime, rating, genres, cast and crew (top 15), content rating, poster, backdrop, logo, episode still, air date.
+Title, original title, year, summary, runtime, rating, genres, cast and crew (top 20 cast plus key directors/creators in `cast_json`), content rating, poster, backdrop, logo, episode still, air date. Episodes and seasons inherit cast from their parent show.
 
 ## Artwork
 
-- Download once, original size kept only for backdrop. Posters resized to 200/400/800 px WebP on demand and cached by `hash(source_url, width)`.
+- Download once, original size kept only for backdrop. Posters resized to 200/400/800 px WebP on demand and cached by `hash(source_url, width)`. Cast profile photos use TMDB `w185` and are cached on disk.
 - Local art wins when present: `poster.jpg`, `folder.jpg`, `cover.jpg`, `<name>-poster.jpg`, `fanart.jpg`.
 - Image resizing uses the `image` crate in `spawn_blocking`, or `ffmpeg` for exotic formats.
 
