@@ -339,7 +339,7 @@ private fun FileInfo(file: MediaFile) {
     val audio = file.streams.count { it.type == "audio" }
     val subs = file.streams.count { it.type == "subtitle" }
     val parts = listOfNotNull(
-        file.container?.uppercase(),
+        file.container?.substringBefore(',')?.uppercase(),
         video?.let { listOfNotNull(it.codec?.uppercase(), it.height?.let { h -> "${h}p" }).joinToString(" ") }?.ifBlank { null },
         if (audio > 0) pluralStringResource(R.plurals.item_audio_tracks, audio, audio) else null,
         if (subs > 0) pluralStringResource(R.plurals.item_subtitle_tracks, subs, subs) else null,

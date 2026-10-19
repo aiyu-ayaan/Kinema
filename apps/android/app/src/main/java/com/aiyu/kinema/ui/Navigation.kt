@@ -4,6 +4,8 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -12,7 +14,9 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
@@ -80,28 +84,40 @@ fun AppNavigation() {
             backStack = stack,
             onBack = { if (stack.size > 1) stack.removeAt(stack.lastIndex) },
             transitionSpec = { sharedAxisX(forward = true, motion) },
-            popTransitionSpec = { sharedAxisX(forward = false, motion) },
-            predictivePopTransitionSpec = { edge -> predictivePop(edge, motion) },
+            popTransitionSpec = { sharedAxisX(forward = false, motion).apply { targetContentZIndex = -1f } },
+            predictivePopTransitionSpec = { edge -> predictivePop(edge) },
+            // Each page is opaque, so the page beneath only shows around a shrinking one.
             entryProvider = entryProvider {
-                entry<TabsKey> { MainScreen() }
-                entry<ItemKey> { ItemScreen(it.id) }
+                entry<TabsKey> { Page { MainScreen() } }
+                entry<ItemKey> { Page { ItemScreen(it.id) } }
                 entry<PlayerKey> { PlayerScreen(it.id, it.start) }
             },
         )
     }
 }
 
+@Composable
+private fun Page(content: @Composable () -> Unit) = Surface(Modifier.fillMaxSize(), content = content)
+
 /** Shared axis X: the new page slides in from the end (or back from the start) while the old one fades out. */
 fun <T> AnimatedContentTransitionScope<T>.sharedAxisX(forward: Boolean, motion: MotionScheme): ContentTransform =
     (slideInHorizontally(motion.defaultSpatialSpec()) { if (forward) it / 4 else -it / 4 } + fadeIn(motion.defaultEffectsSpec()))
         .togetherWith(slideOutHorizontally(motion.fastSpatialSpec()) { if (forward) -it / 4 else it / 4 } + fadeOut(motion.fastEffectsSpec()))
 
-/** Material predictive back: the page scales to 90 % toward the swiped edge; the page beneath rises from 95 %. */
-private fun <T> AnimatedContentTransitionScope<T>.predictivePop(edge: Int, motion: MotionScheme): ContentTransform {
+/**
+ * Material predictive back: the page shrinks to 85 % toward the swiped edge and stays opaque until near the end, while
+ * the page beneath rises from 94 %. Tween specs, because the gesture seeks the transition by time. The page beneath is
+ * drawn under the leaving one, not over it.
+ */
+private fun <T> AnimatedContentTransitionScope<T>.predictivePop(edge: Int): ContentTransform {
     val pivot = if (edge == NavigationEvent.EDGE_LEFT) TransformOrigin(1f, 0.5f) else TransformOrigin(0f, 0.5f)
-    return (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.95f))
-        .togetherWith(scaleOut(motion.defaultSpatialSpec(), targetScale = 0.9f, transformOrigin = pivot) + fadeOut(motion.slowEffectsSpec()))
+    val enter = scaleIn(tween(PREDICTIVE_MS), initialScale = 0.94f) + fadeIn(tween(PREDICTIVE_MS), initialAlpha = 0.5f)
+    val exit = scaleOut(tween(PREDICTIVE_MS), targetScale = 0.85f, transformOrigin = pivot) +
+        fadeOut(keyframes { durationMillis = PREDICTIVE_MS; 1f at PREDICTIVE_MS * 3 / 4 })
+    return (enter togetherWith exit).apply { targetContentZIndex = -1f }
 }
+
+private const val PREDICTIVE_MS = 320
 
 /**
  * Back gesture with a live preview inside one screen (tabs, sheets). While the user drags, the returned progress runs

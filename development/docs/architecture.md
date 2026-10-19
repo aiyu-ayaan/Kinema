@@ -5,8 +5,8 @@
 One process, one async runtime. External `ffmpeg`/`ffprobe` child processes do all media work.
 
 ```
-clients (web SPA, apps)
-      |  HTTP/2, range requests
+clients (web SPA, Android app)
+      |  HTTPS, range requests          apps find servers by UDP broadcast (port 48555)
 +-----v------------------------------+
 | backend (axum)                     |
 |  auth | routes | stream | images   |
@@ -25,7 +25,7 @@ clients (web SPA, apps)
 
 ## Workspace layout
 
-`backend/` is the binary crate (routes, auth, streaming, job supervisor, `main`). Library crates live in `crates/`. The React UI lives in `apps/web` and is served as static files by the backend. See `web-ui.md`.
+`backend/` is the binary crate (routes, auth, streaming, job supervisor, `main`). Library crates live in `crates/`. The React UI lives in `apps/web` and is served as static files by the backend. See `web-ui.md`. The Android app lives in `apps/android` (Gradle, not part of the pnpm workspace). See `android.md`.
 
 ## Crates
 

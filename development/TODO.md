@@ -25,6 +25,17 @@
 - [x] Episodes inside Movies libraries grouped as shows; Movies / TV Shows sidebar sub-entries
 - [ ] Sidecar subtitles picked up without a video change
 
+## Android app (2026-10-19)
+- [x] HTTPS by default with a self-signed certificate; fingerprint on the dashboard, pinned by the app
+- [x] LAN discovery beacon (UDP 48555) and app-side scan, emulator / adb fallback
+- [x] Public address: server setting plus per-app override; automatic home/public switching on network change
+- [x] Compose app (watch only): connect, trust, profiles, home hero, library, search, title page, settings
+- [x] Media3 player: direct / remux / transcode, audio + subtitle switch, resume, next episode, double-tap seek
+- [x] Predictive back on every page (Navigation 3) and inside the tab host
+- [ ] Picture-in-picture and a media session (lock-screen controls)
+- [ ] Seek inside the buffered part of a remux stream without restarting it
+- [ ] Translations (`values-<lang>/strings.xml`)
+
 ## Playback speed (Plex pain points)
 - [ ] Store keyframe/Cues index at probe time (M1)
 - [ ] Direct play: ranged `sendfile`, no session (M1)

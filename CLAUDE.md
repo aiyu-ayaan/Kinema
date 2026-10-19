@@ -38,6 +38,7 @@ crates/
   kinema-meta/        TMDB client, artwork cache, local fallback
 apps/
   web/                React + TypeScript frontend
+  android/            Jetpack Compose app (watch only), see development/docs/android.md
 design-system/        UI tokens and page specs
 development/docs/     design docs (source of truth for decisions)
 development/TODO.md   task tracking
@@ -83,6 +84,8 @@ pnpm build:web:prod
 pnpm build:backend  # cargo build --release --manifest-path backend/Cargo.toml
 pnpm lint           # eslint + cargo clippy
 pnpm test           # cargo test + web tests
+pnpm android:dev    # build, install and open the Android dev app (phone or emulator)
+pnpm android:test   # Android core unit tests
 ```
 
 ```

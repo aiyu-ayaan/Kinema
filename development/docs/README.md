@@ -8,6 +8,7 @@
 | [data-model.md](data-model.md) | SQLite schema |
 | [api.md](api.md) | HTTP API reference |
 | [web-ui.md](web-ui.md) | React web UI: stack, layout, flavors, data flow |
+| [android.md](android.md) | Android app: modules, discovery, certificate pinning, home/public address, navigation, player |
 | [media-pipeline.md](media-pipeline.md) | Scanning, probing, direct play, remux, transcode, HLS |
 | [metadata-and-artwork.md](metadata-and-artwork.md) | Filename parsing, TMDB, posters, thumbnails |
 | [users-and-sharing.md](users-and-sharing.md) | Profiles, auth, permissions, sharing |
