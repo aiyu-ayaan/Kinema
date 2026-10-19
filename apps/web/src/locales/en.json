@@ -109,6 +109,7 @@
   "track.numbered": "Track {n}",
   "player.play": "Play",
   "player.pause": "Pause",
+  "player.stop": "Stop",
   "player.back10": "Back 10 seconds",
   "player.forward10": "Forward 10 seconds",
   "player.next": "Next episode",

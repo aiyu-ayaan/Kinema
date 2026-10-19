@@ -13,6 +13,7 @@ import {
   SkipForward,
   SpeakerHigh,
   SpeakerSlash,
+  Stop,
   Subtitles,
   Check,
 } from '@phosphor-icons/react'
@@ -22,6 +23,7 @@ import { clock, isTextSub, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import type { ItemDetail, PlaybackPlan, Stream } from '@/lib/types'
 import { parseVtt, type Cue } from '@/lib/vtt'
+
 
 /** What the browser decodes beyond the baseline; the server picks direct play, remux or transcode from it. */
 function detectCaps(): PlayCaps {
@@ -225,6 +227,20 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     [absTime, item.id],
   )
 
+  const stop = useCallback(() => {
+    const v = videoRef.current
+    if (v) v.pause()
+    if (!watchedSent.current) report()
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {})
+    }
+    if (window.history.length > 1) {
+      navigate(-1)
+    } else {
+      navigate(`/item/${item.id}`, { replace: true })
+    }
+  }, [item.id, navigate, report])
+
   // Progress every 10 s while playing, and once on leaving.
   useEffect(() => {
     if (!playing) return
@@ -283,12 +299,15 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
         seek(absTime() + 10)
       } else if (e.key === 'f') toggleFullscreen()
       else if (e.key === 'm') v.muted = !v.muted
-      else if (e.key === 'Escape' && !document.fullscreenElement) navigate(-1)
+      else if (e.key === 's' || e.key === 'x') {
+        e.preventDefault()
+        stop()
+      } else if (e.key === 'Escape' && !document.fullscreenElement) stop()
       poke()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [absTime, navigate, poke, seek, toggleFullscreen, togglePlay])
+  }, [absTime, poke, seek, stop, toggleFullscreen, togglePlay])
 
   useEffect(() => {
     const onChange = () => setFullscreen(!!document.fullscreenElement)
@@ -386,7 +405,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
 
       {/* Top bar */}
       <div className={cn('absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-black/80 to-transparent p-4 transition-opacity duration-slow', showChrome ? 'opacity-100' : 'pointer-events-none opacity-0')}>
-        <IconButton label={t('common.back')} onClick={() => navigate(-1)}>
+        <IconButton label={t('common.back')} onClick={stop}>
           <ArrowLeft size={22} />
         </IconButton>
         <div className="min-w-0">
@@ -462,6 +481,9 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
           </IconButton>
           <IconButton label={t('player.forward10')} onClick={() => seek(absTime() + 10)}>
             <ClockClockwise size={22} />
+          </IconButton>
+          <IconButton label={t('player.stop')} onClick={stop}>
+            <Stop size={22} weight="fill" />
           </IconButton>
           {detail.next_id && (
             <IconButton label={t('player.next')} onClick={() => navigate(`/play/${detail.next_id}?t=0`, { replace: true })}>
