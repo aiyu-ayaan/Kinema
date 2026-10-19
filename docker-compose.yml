@@ -1,0 +1,23 @@
+# Kinema media server from the published image. This file is all a host needs:
+#   wget https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/docker-compose.yml
+#   MEDIA_DIR=/path/to/media docker compose up -d
+# Update: docker compose pull && docker compose up -d
+services:
+  kinema:
+    # KINEMA_VERSION: latest (stable), beta, alpha, or an exact version like 0.0.1-alpha.1.
+    image: ghcr.io/aiyu-ayaan/kinema:${KINEMA_VERSION:-latest}
+    container_name: kinema
+    restart: unless-stopped
+    # Host networking: the apps find the server by LAN broadcast, which never reaches a bridged
+    # container. Port 3000, or the next free one; another port: mount a kinema.toml at /app/kinema.toml.
+    network_mode: host
+    environment:
+      TZ: ${TZ:-UTC}
+    volumes:
+      # Database, caches and the TLS certificate the apps pin. Back this up.
+      - kinema_data:/app/data
+      # Add libraries from /media in the web UI.
+      - ${MEDIA_DIR:-./media}:/media:ro
+
+volumes:
+  kinema_data:

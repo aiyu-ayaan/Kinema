@@ -4,11 +4,13 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App } from './App'
 import { AuthProvider } from './lib/auth'
+import { initializeDesktop } from './lib/desktop'
 import { initializeFlavor } from './lib/flavor'
 import { applyStoredTheme } from './lib/theme'
 import './index.css'
 
 initializeFlavor()
+initializeDesktop()
 applyStoredTheme()
 
 const queryClient = new QueryClient({

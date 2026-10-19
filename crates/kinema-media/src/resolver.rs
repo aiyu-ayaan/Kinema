@@ -12,7 +12,7 @@ impl MediaBinaries {
     /// Order:
     /// 1. KINEMA_FFMPEG / KINEMA_FFPROBE env vars
     /// 2. User-updated copy in $XDG_DATA_HOME/kinema/ffmpeg/
-    /// 3. Bundled AppDir ($APPDIR/usr/bin)
+    /// 3. Bundled AppDir ($APPDIR/usr/bin), or next to the executable (server tarball)
     /// 4. PATH lookup
     pub fn resolve() -> Result<Self, MediaError> {
         let ffmpeg = Self::resolve_binary("ffmpeg", "KINEMA_FFMPEG")?;
@@ -48,6 +48,17 @@ impl MediaBinaries {
                 .join("bin")
                 .join(binary_name);
             if candidate.exists() {
+                return Ok(candidate);
+            }
+        }
+
+        // 3b. Next to the executable
+        if let Some(dir) = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(PathBuf::from))
+        {
+            let candidate = dir.join(format!("{binary_name}{}", std::env::consts::EXE_SUFFIX));
+            if candidate.is_file() {
                 return Ok(candidate);
             }
         }

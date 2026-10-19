@@ -9,6 +9,7 @@ import { Button } from './ui/Button'
 import { api } from '@/lib/api'
 import { useAuth, useIsAdmin } from '@/lib/auth'
 import { cn } from '@/lib/cn'
+import { hasTopLeftWindowControls, hasTopRightWindowControls } from '@/lib/desktop'
 import { isDev } from '@/lib/flavor'
 import { t } from '@/lib/i18n'
 import { useLibraries, useServerInfo } from '@/lib/queries'
@@ -101,7 +102,7 @@ function LibraryNav({ library: l, onNavigate }: { library: Library; onNavigate?:
 
 function Brand() {
   return (
-    <div className="flex h-16 items-center gap-2.5 px-5">
+    <div className={cn('flex h-16 items-center gap-2.5 px-5', hasTopLeftWindowControls && 'ps-20')}>
       <img src={isDev ? '/favicon-dev.svg' : '/favicon.svg'} alt="" className="h-7 w-7" />
       <span className="text-title font-semibold tracking-[-0.01em]">{t('app.name')}</span>
       {isDev && <span className="rounded border border-info/30 bg-info/10 px-1.5 text-[11px] font-bold tracking-wide text-info">{t('app.dev')}</span>}
@@ -211,7 +212,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="chrome sticky top-0 z-nav flex h-16 items-center gap-3 border-b border-border px-4 md:px-8">
+        <header
+          className={cn(
+            'chrome sticky top-0 z-nav flex h-16 items-center gap-3 border-b border-border ps-4 md:ps-8',
+            hasTopRightWindowControls ? 'pe-40 md:pe-44' : 'pe-4 md:pe-8',
+          )}
+        >
           <Button variant="ghost" className="md:hidden" onClick={() => setDrawer(true)} aria-label={t('nav.menu')} icon={<List size={20} />} />
           <SearchBox />
           <div className="ms-auto">

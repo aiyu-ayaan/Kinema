@@ -13,6 +13,14 @@
 ![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20Android%20%7C%20Web-informational)
 ![Encrypted](https://img.shields.io/badge/HTTPS-by%20default-success?logo=letsencrypt&logoColor=white)
 
+```bash
+# Home Server (Linux x86_64 / aarch64) - standalone bundle with backend, web UI, bundled FFmpeg 8.1 & systemd service
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-server.sh | sudo sh
+
+# Desktop App (Linux x86_64) - AppImage, application menu launcher with icon & 'kinema' command
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-desktop.sh | sh
+```
+
 Kinema is a fast, self-hosted personal media server written in Rust, in the spirit of Plex Media Server. It scans local storage, organizes movies and TV shows with rich artwork and metadata from TMDB, and streams seamlessly across web browsers, desktop apps, and mobile devices.
 
 Priorities: **near-zero idle CPU**, support for any media container and codec, a small dependency-light binary, **direct-play first**, and rock-solid privacy.
@@ -26,6 +34,38 @@ Priorities: **near-zero idle CPU**, support for any media container and codec, a
 - **Native Android app**: Pure Jetpack Compose UI with Material 3 Expressive motion, Navigation 3 back-stack, Media3 ExoPlayer, and predictive back gestures.
 - **Zero-conf LAN discovery**: Automatic UDP beacon discovery (port `48555`) with seamless roaming between home LAN and public reverse-proxy addresses.
 - **HTTPS by default**: Generates an isolated self-signed TLS certificate on first boot; clients pin the certificate fingerprint to prevent MITM attacks on local networks.
+
+---
+
+## Quick Install
+
+### Home Server (Linux x86_64 / aarch64)
+
+Installs the standalone server bundle (backend, web UI, bundled FFmpeg 8.1, systemd service in `/opt/kinema`, data in `/var/lib/kinema`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-server.sh | sudo sh
+# ... | sudo sh -s -- --port 32400       custom port (default 3000; auto-falls back if taken)
+# ... | sudo sh -s -- --channel beta     beta builds (or alpha)
+# ... | sudo sh -s -- --uninstall        remove service (database & libraries kept in /var/lib/kinema)
+```
+
+### Desktop App (Linux x86_64)
+
+Installs the desktop player for the current user (AppImage in `~/.local/share/kinema`, desktop menu entry with icon, and `kinema` command):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-desktop.sh | sh
+# ... | sh -s -- --channel beta          beta builds (or alpha)
+# ... | sh -s -- --uninstall             remove app (settings kept in ~/.config/Kinema)
+```
+
+### Docker Compose
+
+```bash
+wget https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/docker-compose.yml
+MEDIA_DIR=/path/to/media docker compose up -d
+```
 
 ---
 

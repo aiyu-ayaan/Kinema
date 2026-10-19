@@ -1,10 +1,17 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization) // navigation keys are saved across process death
 }
 
-// The app's name and number follow the root package.json, so it always matches the server release it ships with.
+// Release signing from gitignored keystore.properties; without it the release build is unsigned.
+val keystoreProps = Properties().apply {
+    rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use(::load)
+}
+
+// The app's name (`version`) and number (`build`) follow the root package.json, bumped by the release PR.
 val rootManifest = groovy.json.JsonSlurper().parse(rootProject.file("../../package.json")) as Map<*, *>
 
 android {
@@ -15,7 +22,7 @@ android {
         applicationId = "com.aiyu.kinema"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
+        versionCode = rootManifest["build"] as Int
         versionName = rootManifest["version"] as String
     }
 
@@ -33,10 +40,22 @@ android {
         }
     }
 
+    signingConfigs {
+        keystoreProps.getProperty("storeFile")?.let { path ->
+            create("release") {
+                storeFile = rootProject.file(path)
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }
     }

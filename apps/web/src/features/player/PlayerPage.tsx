@@ -19,6 +19,7 @@ import {
 } from '@phosphor-icons/react'
 import { api, type PlayCaps } from '@/lib/api'
 import { cn } from '@/lib/cn'
+import { hasTopLeftWindowControls, hasTopRightWindowControls } from '@/lib/desktop'
 import { clock, isTextSub, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import type { ItemDetail, PlaybackPlan, Stream } from '@/lib/types'
@@ -412,7 +413,14 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
       )}
 
       {/* Top bar */}
-      <div className={cn('absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-black/80 to-transparent p-4 transition-opacity duration-slow', showChrome ? 'opacity-100' : 'pointer-events-none opacity-0')}>
+      <div
+        className={cn(
+          'absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-black/80 to-transparent p-4 transition-opacity duration-slow',
+          showChrome ? 'opacity-100' : 'pointer-events-none opacity-0',
+          hasTopRightWindowControls && 'pe-40 md:pe-44',
+          hasTopLeftWindowControls && 'ps-20',
+        )}
+      >
         <IconButton label={t('common.back')} onClick={stop}>
           <ArrowLeft size={22} />
         </IconButton>
