@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, ArrowSquareOut, CaretRight, GithubLogo, Globe } from '@phosphor-icons/react'
-import { Card, CardHeader, PageHeader } from '@/components/ui/Card'
+import { UpdateProgress, useDesktopUpdate } from '@/components/UpdatePrompt'
+import { Button } from '@/components/ui/Button'
+import { Card, CardHeader, ErrorText, PageHeader } from '@/components/ui/Card'
 import { useIsAdmin } from '@/lib/auth'
 import { DEVELOPER, REPO, REPO_URL, credits } from '@/lib/credits'
 import { isDesktop } from '@/lib/desktop'
@@ -82,6 +84,42 @@ function ServerUpdateCard() {
   )
 }
 
+/** Desktop app only: its own version and update, next to the server's. */
+function DesktopUpdateCard() {
+  const { info, check, install, progress, busy } = useDesktopUpdate()
+  if (!info) return null
+  const found = check.data
+  return (
+    <Card>
+      <CardHeader title={t('desktopUpdate.title')} />
+      <div className="grid gap-3 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className={found ? 'font-medium text-primary' : 'text-muted'}>
+            {check.isError
+              ? t('update.checkFailed')
+              : check.isFetching
+                ? t('update.checking')
+                : found
+                  ? t('desktopUpdate.available', { version: found.version })
+                  : t('desktopUpdate.upToDate', { version: info.version })}
+          </p>
+          {found ? (
+            <Button size="sm" variant="primary" loading={busy} onClick={() => install.mutate()}>
+              {info.selfInstall ? t('desktopUpdate.restart') : t('desktopUpdate.download')}
+            </Button>
+          ) : (
+            <Button size="sm" variant="ghost" disabled={check.isFetching} onClick={() => check.refetch()}>
+              {t('desktopUpdate.checkNow')}
+            </Button>
+          )}
+        </div>
+        {progress !== null && <UpdateProgress value={progress} />}
+        <ErrorText>{install.data}</ErrorText>
+      </div>
+    </Card>
+  )
+}
+
 export function AboutPage() {
   const { data: info } = useServerInfo()
   return (
@@ -108,6 +146,7 @@ export function AboutPage() {
         </Card>
 
         <ServerUpdateCard />
+        <DesktopUpdateCard />
 
         <Card>
           <CardHeader title={t('about.developer')} />

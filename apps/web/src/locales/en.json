@@ -322,5 +322,16 @@
   "update.release": "What’s new",
   "update.cmd.linux": "Linux server (install script)",
   "update.cmd.docker": "Docker Compose, from the folder with docker-compose.yml",
-  "update.commandHint": "Your settings, libraries and watch history are kept."
+  "update.commandHint": "Your settings, libraries and watch history are kept.",
+  "desktopUpdate.title": "Desktop app",
+  "desktopUpdate.available": "Kinema for desktop {version} is available",
+  "desktopUpdate.youHave": "You have {version}.",
+  "desktopUpdate.restartsWhenDone": "The app downloads it and restarts.",
+  "desktopUpdate.installerOpens": "The installer is saved to Downloads and opens.",
+  "desktopUpdate.restart": "Update and restart",
+  "desktopUpdate.download": "Download installer",
+  "desktopUpdate.later": "Later",
+  "desktopUpdate.downloading": "Downloading the update",
+  "desktopUpdate.checkNow": "Check now",
+  "desktopUpdate.upToDate": "Kinema for desktop {version} is up to date."
 }

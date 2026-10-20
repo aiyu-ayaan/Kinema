@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowCircleUp, GearSix, HardDrives, House, Info, List, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
 import { Avatar } from './ui/Avatar'
 import { SettingsNav } from '@/features/settings/SettingsNav'
+import { UpdatePrompt } from './UpdatePrompt'
 import { libraryIcon } from './media/libraryIcon'
 import { Button } from './ui/Button'
 import { api } from '@/lib/api'
@@ -232,6 +233,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
+        <UpdatePrompt />
       </div>
     </div>
   )

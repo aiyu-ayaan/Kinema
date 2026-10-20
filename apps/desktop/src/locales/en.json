@@ -19,5 +19,10 @@
   "connect.subtitle": "Your movies and shows, from your own server.",
   "connect.title": "Connect to Kinema",
   "connect.thisComputer": "This computer",
-  "connect.changeServer": "Use another server"
+  "connect.changeServer": "Use another server",
+  "update.githubAnswered": "GitHub answered {status}.",
+  "update.downloadAnswered": "The download answered {status}.",
+  "update.notAppImage": "The download is not an AppImage.",
+  "update.none": "No update to install.",
+  "update.failed": "Update failed: {reason}"
 }

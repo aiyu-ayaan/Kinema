@@ -8,8 +8,11 @@ const https = require('https')
 const net = require('net')
 const os = require('os')
 const path = require('path')
+const { Readable } = require('stream')
+const { pipeline } = require('stream/promises')
 const { pathToFileURL } = require('url')
 const { t, setLanguage, getLanguage, messages } = require('./i18n')
+const updates = require('./updates')
 
 // The window shows the web UI served by the Kinema server itself.
 // The server is chosen on the connect page (connect.html) and remembered.
@@ -384,6 +387,100 @@ if (ipcMain) {
     config.language = tag
     save()
     applyLanguage()
+  })
+}
+
+// --- Updates: GitHub releases on the running version's channel (alpha / beta / stable).
+// An AppImage replaces its own file and restarts; a .deb or Windows installer is downloaded and opened.
+// The page offers it at start and shows the progress (apps/web/src/components/UpdatePrompt.tsx).
+let offer = null // the last check's answer; install takes it from here, never from the page
+
+async function checkForUpdate() {
+  // A dev build updates by rebuilding it.
+  if (!app.isPackaged || isDev) return (offer = null)
+  const res = await fetch(updates.RELEASES, { headers: { Accept: 'application/vnd.github+json' } })
+  if (!res.ok) throw new Error(t('update.githubAnswered', { status: res.status }))
+  const suffix = updates.suffixFor(process.platform, process.env.APPIMAGE)
+  offer = updates.pick(await res.json(), app.getVersion(), updates.channelOf(app.getVersion()), suffix)
+  return offer
+}
+
+/** Download progress for the page and the taskbar: 0..1, null once it is over. */
+function report(fraction) {
+  if (!win || win.isDestroyed()) return
+  win.setProgressBar(fraction ?? -1)
+  win.webContents.send('update:progress', fraction)
+}
+
+let installing = false
+/** Returns the reason it failed, or '' (the app restarts, or the installer was opened from Downloads). */
+async function installUpdate() {
+  if (!offer) return t('update.none')
+  if (installing) return ''
+  installing = true
+  const appImage = process.env.APPIMAGE
+  const target = appImage ?? path.join(app.getPath('downloads'), path.basename(new URL(offer.url).pathname))
+  const part = `${target}.part`
+  try {
+    report(0)
+    const res = await fetch(offer.url)
+    if (!res.ok) throw new Error(t('update.downloadAnswered', { status: res.status }))
+    // shortcut: without a Content-Length the bar stays at 0; GitHub's release assets always send one.
+    const total = Number(res.headers.get('content-length')) || 0
+    let done = 0
+    let shown = 0
+    await pipeline(
+      Readable.fromWeb(res.body),
+      async function* (chunks) {
+        for await (const chunk of chunks) {
+          done += chunk.length
+          const percent = total ? Math.floor((done * 100) / total) : 0
+          if (percent !== shown) report((shown = percent) / 100)
+          yield chunk
+        }
+      },
+      fs.createWriteStream(part, { mode: appImage ? 0o755 : 0o644 }),
+    )
+    if (appImage) {
+      // An error page saved under the right name must not become the app.
+      const head = Buffer.alloc(4)
+      const fd = fs.openSync(part, 'r')
+      fs.readSync(fd, head, 0, 4, 0)
+      fs.closeSync(fd)
+      if (head.toString('latin1') !== '\x7fELF') throw new Error(t('update.notAppImage'))
+    }
+    // A rename within one directory: a failure before it leaves the old build in place.
+    fs.renameSync(part, target)
+  } catch (error) {
+    fs.rmSync(part, { force: true })
+    return t('update.failed', { reason: error.message })
+  } finally {
+    installing = false
+    report(null)
+  }
+  if (appImage) {
+    app.relaunch({ execPath: target })
+    app.quit()
+  } else if (await shell.openPath(target)) {
+    // Nothing on this computer opens the installer: show where it is.
+    shell.showItemInFolder(target)
+  }
+  return ''
+}
+
+if (ipcMain) {
+  ipcMain.handle('update:info', (event) =>
+    trusted(event)
+      ? { version: app.getVersion(), channel: updates.channelOf(app.getVersion()), selfInstall: !!process.env.APPIMAGE, skipped: config.skipped ?? null }
+      : null,
+  )
+  ipcMain.handle('update:check', (event) => (trusted(event) ? checkForUpdate() : null))
+  ipcMain.handle('update:install', (event) => (trusted(event) ? installUpdate() : ''))
+  // "Later" on the offer at start (the web UI's UpdatePrompt) is remembered for that version.
+  ipcMain.handle('update:skip', (event) => {
+    if (!trusted(event) || !offer) return
+    config.skipped = offer.version
+    save()
   })
 }
 
