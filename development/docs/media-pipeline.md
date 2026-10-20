@@ -80,6 +80,26 @@ Goal: no Plex-style stall on multi-GB files, on seek, or on caption change.
 - A seek inside an active HLS session first checks for existing segments; only a seek outside the cut range restarts ffmpeg, and it uses input seeking (`-ss` before `-i`) to the nearest keyframe.
 - Idle sessions are kept 60 s so a quick seek back does not pay startup again.
 
-## 7. Chapters and intro skip
+## 7. Intro and credits markers (skip intro, up next)
 
-Chapters from ffprobe are stored. A chapter titled "Intro", "Opening" or "OP" drives the skip button. Audio fingerprint intro detection is a later feature.
+A background job (`backend/src/markers.rs`, detection in `kinema-media/src/markers.rs`) runs after every scan, after thumbnails, and looks at each movie, episode and video once per file version (`files.markers_mtime`). Every ffmpeg run shares the one background media slot (`thumb_slots`) at low priority. Results go to the `markers` table and out with each file in `GET /items/{id}` as `markers: [{kind, start_s, end_s, source}]`.
+
+```mermaid
+flowchart TD
+  Scan[scan finished] --> Job[marker job, per library]
+  Job --> Ch{chapter named<br/>Intro/Opening/OP or<br/>Credits/Ending/ED/Outro?}
+  Ch -- yes --> Save
+  Ch -- no, episode --> FP[audio fingerprint<br/>first 10 min / last 8 min<br/>8 kHz mono, cached in cache/prints]
+  FP --> Cmp[compare with the 2 nearest<br/>episodes of the season]
+  Cmp -- shared 15 s or more --> Save
+  Cmp -- nothing, or a movie --> Black[blackdetect on keyframes<br/>of the last 8 min]
+  Black -- black run of 30 s or more<br/>reaching the end --> Save[(markers)]
+  Admin[admin PUT /items/id/markers/kind] --> Save
+```
+
+- **Chapters** first: free and exact when the release has them. "Opening Credits" counts as the intro.
+- **Audio** for episodes: the theme song and the end song repeat across a season while the story does not. Our own fingerprint (no chromaprint needed): 33 log-spaced bands from 300 Hz to 2 kHz over 256 ms frames every 32 ms, one bit per band-energy change, silence hashed as 0 and never matched. Two prints are aligned by voting on exact hash hits, then the best alignments are walked for the longest run of near-equal hashes (8 bits or fewer differ, gaps up to 1 s, starting and ending on a near-exact hit). Intros are 15 to 200 s; credits must start after the episode's midpoint. Prints are cached per file version, so a new episode decodes only itself.
+- **Black frames** for credits still missing: white text on black reads as black at 92 % (`pic_th`), and decoding keyframes only keeps a 4K file to a few hundred frames. The run must last 30 s and reach the last 20 s. Credits over lit footage are not found; the player then falls back to the last minute.
+- **Manual**: an admin's marker wins and is kept; deleting it looks for the marker again.
+
+Players: **Skip intro** shows while the intro plays and seeks to its end. From the credits start (or the last 60 s without credits) the up-next card offers the next episode; a movie shows **Skip credits**, which leaves the player.

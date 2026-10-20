@@ -65,7 +65,18 @@ CREATE TABLE files (
   duration_s REAL,
   bitrate INTEGER,
   probe_json TEXT,                 -- raw ffprobe output
-  probe_status TEXT NOT NULL DEFAULT 'pending'  -- pending|ok|failed
+  probe_status TEXT NOT NULL DEFAULT 'pending',  -- pending|ok|failed
+  markers_mtime INTEGER            -- file version markers were last looked for (migration 7)
+);
+
+-- Intro and end credits per file, for Skip intro and the up-next card (media-pipeline.md §7).
+CREATE TABLE markers (
+  file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('intro','credits')),
+  start_s REAL NOT NULL,
+  end_s REAL NOT NULL,
+  source TEXT NOT NULL,            -- chapter|audio|black|manual; detection never replaces manual
+  PRIMARY KEY (file_id, kind)
 );
 
 CREATE TABLE streams (

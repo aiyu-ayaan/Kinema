@@ -28,5 +28,6 @@
   "media.transcode_busy": "The server is already converting as many videos as allowed. Try again when another stream stops, or raise the limit in Settings → Transcoder.",
   "settings.cache_unknown": "Unknown cache.",
   "common.not_found": "Not found.",
-  "common.internal": "Something went wrong on the server. Check the server log."
+  "common.internal": "Something went wrong on the server. Check the server log.",
+  "markers.invalid": "A marker must start before it ends, inside the video."
 }

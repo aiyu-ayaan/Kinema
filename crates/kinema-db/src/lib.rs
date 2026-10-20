@@ -1,6 +1,7 @@
 pub mod error;
 pub mod items;
 pub mod libraries;
+pub mod markers;
 pub mod settings;
 pub mod users;
 

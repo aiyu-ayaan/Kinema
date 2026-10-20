@@ -16,6 +16,7 @@ mod discovery;
 mod error;
 mod i18n;
 mod jobs;
+mod markers;
 mod routes;
 mod scan;
 mod server_settings;
@@ -86,6 +87,7 @@ async fn main() -> anyhow::Result<()> {
         settings: Arc::new(RwLock::new(server_settings::load(&pool).await?)),
         scans: jobs::Jobs::new("scan"),
         thumb_jobs: jobs::Jobs::new("thumbnails"),
+        marker_jobs: jobs::Jobs::new("skip markers"),
         watchers: Arc::new(Mutex::new(HashMap::new())),
         changes,
         probe_slots: Arc::new(Semaphore::new(2)),

@@ -20,6 +20,7 @@ pub struct AppState {
     pub settings: Arc<RwLock<ServerSettings>>,
     pub scans: Jobs,
     pub thumb_jobs: Jobs,
+    pub marker_jobs: Jobs,
     pub watchers: Arc<Mutex<HashMap<i64, RecommendedWatcher>>>,
     /// Library ids with filesystem changes, debounced into scans.
     pub changes: UnboundedSender<i64>,
