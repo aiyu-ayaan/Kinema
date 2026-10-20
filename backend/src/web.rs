@@ -48,12 +48,16 @@ mod tests {
 
     #[test]
     fn fills_every_placeholder_escaped() {
-        let html = r#"<title>__KINEMA_SERVER_NAME__</title><meta content="__KINEMA_SERVER_NAME__">"#;
+        let html =
+            r#"<title>__KINEMA_SERVER_NAME__</title><meta content="__KINEMA_SERVER_NAME__">"#;
         assert_eq!(
             fill(html, r#"Tom's "<Media>" & more"#),
             "<title>Tom&#39;s &quot;&lt;Media&gt;&quot; &amp; more</title>\
              <meta content=\"Tom&#39;s &quot;&lt;Media&gt;&quot; &amp; more\">"
         );
-        assert_eq!(fill(html, "Home"), r#"<title>Home</title><meta content="Home">"#);
+        assert_eq!(
+            fill(html, "Home"),
+            r#"<title>Home</title><meta content="Home">"#
+        );
     }
 }

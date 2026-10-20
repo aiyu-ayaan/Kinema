@@ -35,7 +35,11 @@ async fn server_info(State(state): State<AppState>) -> Json<ServerInfoResponse> 
     Json(ServerInfoResponse {
         name: settings.server_name,
         public_url: settings.public_url,
-        tls_fingerprint: state.tls_fingerprint.as_deref().unwrap_or_default().to_string(),
+        tls_fingerprint: state
+            .tls_fingerprint
+            .as_deref()
+            .unwrap_or_default()
+            .to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         capabilities: vec![
             "direct_play".to_string(),
