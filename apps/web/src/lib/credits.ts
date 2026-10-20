@@ -10,7 +10,7 @@ export interface Credit {
   license: string
 }
 
-/** Keep in sync with apps/web/package.json, the Cargo.toml files and apps/android/gradle/libs.versions.toml. */
+/** Keep in sync with apps/web/package.json and the Cargo.toml files. The Android app keeps its own list (ui/AboutScreens.kt). */
 export const credits: { group: string; items: Credit[] }[] = [
   {
     group: t('credits.group.interface'),
@@ -48,18 +48,6 @@ export const credits: { group: string; items: Credit[] }[] = [
       { name: 'chrono', url: 'https://github.com/chronotope/chrono', license: 'MIT / Apache-2.0' },
       { name: 'tracing', url: 'https://github.com/tokio-rs/tracing', license: 'MIT' },
       { name: 'FFmpeg', url: 'https://ffmpeg.org', license: 'GPL (bundled build, run as a separate program)' },
-    ],
-  },
-  {
-    group: t('credits.group.android'),
-    items: [
-      { name: 'Kotlin', url: 'https://github.com/JetBrains/kotlin', license: 'Apache-2.0' },
-      { name: 'Jetpack Compose and Material 3', url: 'https://developer.android.com/jetpack/compose', license: 'Apache-2.0' },
-      { name: 'Navigation 3', url: 'https://developer.android.com/guide/navigation/navigation-3', license: 'Apache-2.0' },
-      { name: 'Media3 ExoPlayer', url: 'https://github.com/androidx/media', license: 'Apache-2.0' },
-      { name: 'Coil', url: 'https://github.com/coil-kt/coil', license: 'Apache-2.0' },
-      { name: 'OkHttp', url: 'https://github.com/square/okhttp', license: 'Apache-2.0' },
-      { name: 'kotlinx.serialization', url: 'https://github.com/Kotlin/kotlinx.serialization', license: 'Apache-2.0' },
     ],
   },
   {

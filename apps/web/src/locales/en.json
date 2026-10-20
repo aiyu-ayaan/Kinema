@@ -305,7 +305,6 @@
   "about.acknowledgementsDescription": "Kinema is built on these open-source projects and services.",
   "credits.group.interface": "Web and desktop",
   "credits.group.server": "Server",
-  "credits.group.android": "Android",
   "credits.group.data": "Data and services",
   "credits.group.inspiration": "Inspiration",
   "credits.tmdb": "Movie and show metadata and artwork. This product uses the TMDB API but is not endorsed or certified by TMDB.",
