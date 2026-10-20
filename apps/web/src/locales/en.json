@@ -116,6 +116,7 @@
   "player.mute": "Mute",
   "player.unmute": "Unmute",
   "player.volume": "Volume",
+  "player.boost": "Volume boost: louder than the file's own level",
   "player.seek": "Seek",
   "player.tracks": "Audio and subtitles",
   "player.audio": "Audio",

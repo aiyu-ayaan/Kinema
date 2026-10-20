@@ -26,6 +26,9 @@ import type { ItemDetail, PlaybackPlan, Stream } from '@/lib/types'
 import { parseVtt, type Cue } from '@/lib/vtt'
 
 
+/** Loudest volume: 200 %, the upper 100 % being boost (as in MX Player). */
+const MAX_LEVEL = 2
+
 /** What the browser decodes beyond the baseline; the server picks direct play, remux or transcode from it. */
 function detectCaps(): PlayCaps {
   const ms = typeof MediaSource !== 'undefined' ? MediaSource : null
@@ -117,6 +120,9 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   const [waiting, setWaiting] = useState(true)
   const [muted, setMuted] = useState(false)
   const [volume, setVolume] = useState(1)
+  // Gain above 100 % (MX Player style boost) through Web Audio; 1 means the element's own volume only.
+  const [boost, setBoost] = useState(1)
+  const audioGraph = useRef<{ ctx: AudioContext; gain: GainNode } | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const [menu, setMenu] = useState(false)
   const [chrome, setChrome] = useState(true)
@@ -215,6 +221,41 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     else v.pause()
   }, [])
 
+  const level = muted ? 0 : volume * boost
+
+  /** 0..MAX_LEVEL: up to 1 is the element's volume, above it a gain node boosts quiet files. */
+  const setLevel = useCallback((to: number) => {
+    const v = videoRef.current
+    if (!v) return
+    const l = Math.min(MAX_LEVEL, Math.max(0, Math.round(to * 100) / 100))
+    v.volume = Math.min(1, l)
+    v.muted = l === 0
+    const gain = Math.max(1, l)
+    // Built on first boost only: once an element feeds Web Audio it can never go back, and the context needs a user gesture.
+    if (gain > 1 && !audioGraph.current) {
+      try {
+        const ctx = new AudioContext()
+        const node = ctx.createGain()
+        // A limiter so the boost gets louder instead of clipping into distortion.
+        const limiter = ctx.createDynamicsCompressor()
+        limiter.threshold.value = -1
+        limiter.ratio.value = 20
+        ctx.createMediaElementSource(v).connect(node).connect(limiter).connect(ctx.destination)
+        audioGraph.current = { ctx, gain: node }
+      } catch {
+        setBoost(1)
+        return
+      }
+    }
+    const graph = audioGraph.current
+    if (graph) {
+      graph.gain.gain.value = gain
+      graph.ctx.resume().catch(() => {})
+    }
+    setBoost(gain)
+  }, [])
+  useEffect(() => () => void audioGraph.current?.ctx.close().catch(() => {}), [])
+
   const toggleFullscreen = useCallback(() => {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
     else shellRef.current?.requestFullscreen().catch(() => {})
@@ -298,6 +339,9 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
       } else if (e.key === 'ArrowRight') {
         e.preventDefault()
         seek(absTime() + 10)
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        setLevel(level + (e.key === 'ArrowUp' ? 0.05 : -0.05))
       } else if (e.key === 'f') toggleFullscreen()
       else if (e.key === 'm') v.muted = !v.muted
       else if (e.key === 's' || e.key === 'x') {
@@ -308,7 +352,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [absTime, poke, seek, stop, toggleFullscreen, togglePlay])
+  }, [absTime, level, poke, seek, setLevel, stop, toggleFullscreen, togglePlay])
 
   useEffect(() => {
     const onChange = () => setFullscreen(!!document.fullscreenElement)
@@ -516,24 +560,25 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
                 if (v) v.muted = !v.muted
               }}
             >
-              {muted || volume === 0 ? <SpeakerSlash size={22} /> : <SpeakerHigh size={22} />}
+              {level === 0 ? <SpeakerSlash size={22} /> : <SpeakerHigh size={22} />}
             </IconButton>
             <input
               type="range"
-              className="range w-0 opacity-0 transition-all duration-base group-hover:w-24 group-hover:opacity-100 focus:w-24 focus:opacity-100"
+              className="range w-0 opacity-0 transition-all duration-base group-hover:w-32 group-hover:opacity-100 focus:w-32 focus:opacity-100"
               min={0}
-              max={1}
+              max={MAX_LEVEL}
               step={0.05}
-              value={muted ? 0 : volume}
-              style={{ ['--fill' as string]: `${(muted ? 0 : volume) * 100}%` }}
+              value={level}
+              style={{ ['--fill' as string]: `${(level / MAX_LEVEL) * 100}%` }}
               aria-label={t('player.volume')}
-              onChange={(e) => {
-                const v = videoRef.current
-                if (!v) return
-                v.volume = Number(e.target.value)
-                v.muted = v.volume === 0
-              }}
+              aria-valuetext={`${Math.round(level * 100)}%`}
+              onChange={(e) => setLevel(Number(e.target.value))}
             />
+            {level > 1 && (
+              <span className="ms-2 rounded bg-primary px-1.5 py-0.5 text-caption font-semibold tabular text-on-primary" title={t('player.boost')}>
+                {Math.round(level * 100)}%
+              </span>
+            )}
           </div>
           <div className="ms-auto flex items-center gap-1">
             {(audios.length > 1 || subs.length > 0) && (
