@@ -646,7 +646,7 @@ private fun TrackSheet(audios: List<Stream>, subs: List<Stream>, audio: Int?, su
 internal fun TrackRow(label: String, selected: Boolean, enabled: Boolean = true, note: String? = null, onClick: () -> Unit) {
     val c = MaterialTheme.colorScheme
     ListItem(
-        headlineContent = { Text(label, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        headlineContent = { Text(label, maxLines = 4, overflow = TextOverflow.Ellipsis) },
         supportingContent = note?.let { { Text(it) } },
         leadingContent = { Icon(Icons.Rounded.Check, null, tint = if (selected) c.primary else Color.Transparent) },
         colors = ListItemDefaults.colors(containerColor = if (selected) c.secondaryContainer else Color.Transparent),
