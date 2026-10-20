@@ -10,7 +10,6 @@ import {
   ClockClockwise,
   Pause,
   Play,
-  SkipForward,
   SpeakerHigh,
   SpeakerSlash,
   Stop,
@@ -25,6 +24,7 @@ import { clock, isTextSub, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import type { ItemDetail, PlaybackPlan, Stream } from '@/lib/types'
 import { parseVtt, type Cue } from '@/lib/vtt'
+import { UpNextCard, UpNextList, WatchDetails } from './WatchPanels'
 
 
 /** Loudest volume: 200 %, the upper 100 % being boost (as in MX Player). */
@@ -369,236 +369,259 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     api.setTrackChoice(item.id, a >= 0 ? a : null, s).catch(() => {})
   }
 
+  // Beside the video (wide windows) the list opens on the playing episode; under it, the details come first.
+  const wide = useMemo(() => window.matchMedia('(min-width: 1024px)').matches, [])
   const shown = scrub ?? time
   const fill = duration ? `${(shown / duration) * 100}%` : '0%'
   const title = item.kind === 'episode' ? (item.show_title ?? item.title) : item.title
   const subtitle = item.kind === 'episode' ? `${subtitleOf(item)} · ${item.title}` : item.year ? String(item.year) : null
 
+  const onTracks = audios.length > 1 || subs.length > 0 ? () => setMenu((m) => !m) : null
+
+  // The watch page, after YouTube's: the video with its details under it and the up-next list beside it on a wide
+  // window or under it on a narrow one. Full screen shows the video alone.
   return (
-    <div
-      ref={shellRef}
-      onMouseMove={poke}
-      onClick={() => menu && setMenu(false)}
-      className={cn('fixed inset-0 z-sheet bg-black text-white', !showChrome && 'cursor-none')}
-    >
-      <video
-        ref={videoRef}
-        src={src ?? undefined}
-        autoPlay
-        playsInline
-        className="h-full w-full object-contain"
-        onClick={togglePlay}
-        onDoubleClick={toggleFullscreen}
-        onLoadedMetadata={(e) => {
-          // A new stream: remux/transcode seeks are done once it has loaded.
-          if (pendingSeek.current) e.currentTarget.currentTime = pendingSeek.current
-          else seekTarget.current = null
-          pendingSeek.current = null
-          e.currentTarget.play().catch(() => {})
-        }}
-        onSeeked={() => {
-          seekTarget.current = null
-        }}
-        onTimeUpdate={() => {
-          // Until a seek lands, the old stream's clock must not pull the slider back.
-          if (seekTarget.current != null) return
-          const now = absTime()
-          setTime(now)
-          if (!watchedSent.current && duration && now / duration > 0.92) {
-            watchedSent.current = true
-            report(true)
-          }
-        }}
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onWaiting={() => setWaiting(true)}
-        onPlaying={() => setWaiting(false)}
-        onCanPlay={() => setWaiting(false)}
-        onVolumeChange={(e) => {
-          setMuted(e.currentTarget.muted)
-          setVolume(e.currentTarget.volume)
-        }}
-        onEnded={() => {
-          if (!watchedSent.current) {
-            watchedSent.current = true
-            report(true)
-          }
-          if (detail.next_id) navigate(`/play/${detail.next_id}?t=0`, { replace: true })
-        }}
-        onError={() => {
-          seekTarget.current = null
-          setWaiting(false)
-          setError(t('player.error'))
-        }}
-      />
+    <div className="fixed inset-0 z-sheet overflow-y-auto bg-bg text-fg">
+      <div className={cn('flex flex-col lg:flex-row lg:items-start lg:gap-6 lg:p-6', (hasTopRightWindowControls || hasTopLeftWindowControls) && 'pt-10 lg:pt-12')}>
+        <div className="min-w-0 flex-1">
+          <div
+            ref={shellRef}
+            onMouseMove={poke}
+            onClick={() => menu && setMenu(false)}
+            className={cn('relative aspect-video max-h-[calc(100dvh-140px)] w-full overflow-hidden bg-black text-white lg:rounded-lg', !showChrome && 'cursor-none')}
+          >
+            <video
+              ref={videoRef}
+              src={src ?? undefined}
+              autoPlay
+              playsInline
+              className="h-full w-full object-contain"
+              onClick={togglePlay}
+              onDoubleClick={toggleFullscreen}
+              onLoadedMetadata={(e) => {
+                // A new stream: remux/transcode seeks are done once it has loaded.
+                if (pendingSeek.current) e.currentTarget.currentTime = pendingSeek.current
+                else seekTarget.current = null
+                pendingSeek.current = null
+                e.currentTarget.play().catch(() => {})
+              }}
+              onSeeked={() => {
+                seekTarget.current = null
+              }}
+              onTimeUpdate={() => {
+                // Until a seek lands, the old stream's clock must not pull the slider back.
+                if (seekTarget.current != null) return
+                const now = absTime()
+                setTime(now)
+                if (!watchedSent.current && duration && now / duration > 0.92) {
+                  watchedSent.current = true
+                  report(true)
+                }
+              }}
+              onPlay={() => setPlaying(true)}
+              onPause={() => setPlaying(false)}
+              onWaiting={() => setWaiting(true)}
+              onPlaying={() => setWaiting(false)}
+              onCanPlay={() => setWaiting(false)}
+              onVolumeChange={(e) => {
+                setMuted(e.currentTarget.muted)
+                setVolume(e.currentTarget.volume)
+              }}
+              onEnded={() => {
+                if (!watchedSent.current) {
+                  watchedSent.current = true
+                  report(true)
+                }
+                if (detail.next_id) navigate(`/play/${detail.next_id}?t=0`, { replace: true })
+              }}
+              onError={() => {
+                seekTarget.current = null
+                setWaiting(false)
+                setError(t('player.error'))
+              }}
+            />
 
-      {activeCues.length > 0 && (
-        <div className={cn('pointer-events-none absolute inset-x-0 flex flex-col items-center gap-1 px-6 text-center transition-all duration-slow', showChrome ? 'bottom-28' : 'bottom-12')}>
-          {activeCues.map((c, i) => (
-            <p key={i} className="text-over-media max-w-4xl whitespace-pre-line rounded bg-black/40 px-2 py-0.5 text-[clamp(16px,2.4vw,32px)] font-semibold leading-snug">
-              {c.text}
-            </p>
-          ))}
-        </div>
-      )}
+            {activeCues.length > 0 && (
+              <div className={cn('pointer-events-none absolute inset-x-0 flex flex-col items-center gap-1 px-6 text-center transition-all duration-slow', showChrome ? 'bottom-28' : 'bottom-12')}>
+                {activeCues.map((c, i) => (
+                  <p key={i} className="text-over-media max-w-4xl whitespace-pre-line rounded bg-black/40 px-2 py-0.5 text-[clamp(16px,2.4vw,32px)] font-semibold leading-snug">
+                    {c.text}
+                  </p>
+                ))}
+              </div>
+            )}
 
-      {waiting && !error && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <CircleNotch size={48} className="animate-spin text-primary" aria-label={t('common.loading')} />
-        </div>
-      )}
+            {waiting && !error && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <CircleNotch size={48} className="animate-spin text-primary" aria-label={t('common.loading')} />
+              </div>
+            )}
 
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center p-6">
-          <div className="max-w-md rounded-lg border border-white/10 bg-black/80 p-6 text-center">
-            <p className="text-title font-semibold">{t('player.errorTitle')}</p>
-            <p className="mt-2 text-body text-white/70">{error}</p>
+            {error && (
+              <div className="absolute inset-0 flex items-center justify-center p-6">
+                <div className="max-w-md rounded-lg border border-white/10 bg-black/80 p-6 text-center">
+                  <p className="text-title font-semibold">{t('player.errorTitle')}</p>
+                  <p className="mt-2 text-body text-white/70">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Top bar */}
+            <div
+              className={cn(
+                'absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-black/80 to-transparent p-4 transition-opacity duration-slow',
+                showChrome ? 'opacity-100' : 'pointer-events-none opacity-0',
+                fullscreen && hasTopRightWindowControls && 'pe-40 md:pe-44',
+                fullscreen && hasTopLeftWindowControls && 'ps-20',
+              )}
+            >
+              <IconButton label={t('common.back')} onClick={stop}>
+                <ArrowLeft size={22} />
+              </IconButton>
+              {/* On the watch page the title sits under the video. */}
+              <div className={cn('min-w-0', !fullscreen && 'invisible')}>
+                <p className="truncate text-title font-semibold">{title}</p>
+                {item.kind === 'episode' && item.episode_no != null ? (
+                  <p className="truncate text-label text-white/70">
+                    <EpisodeLinks item={item} className="hover:text-white hover:underline" />
+                    {` · ${item.title}`}
+                  </p>
+                ) : (
+                  subtitle && <p className="truncate text-label text-white/70">{subtitle}</p>
+                )}
+              </div>
+              {plan && (
+                <span className="ms-auto rounded border border-white/20 px-2 py-0.5 text-caption font-medium text-white/70" title={t(`player.mode.${plan.mode}.hint`)}>
+                  {t(`player.mode.${plan.mode}`)}
+                </span>
+              )}
+            </div>
+
+            {menu && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <TrackMenu
+                  audios={audios}
+                  subs={subs}
+                  audio={audio}
+                  sub={subId}
+                  onAudio={(idx) => {
+                    setMenu(false)
+                    if (idx === audio) return
+                    setAudio(idx)
+                    saveTracks(idx, subId)
+                    load(idx, absTime())
+                  }}
+                  onSub={(id) => {
+                    setSubId(id)
+                    setMenu(false)
+                    saveTracks(audio, id)
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Bottom controls */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className={cn('absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 pb-3 pt-12 transition-opacity duration-slow', showChrome ? 'opacity-100' : 'pointer-events-none opacity-0')}
+            >
+              {duration ? (
+                <div className="flex items-center gap-3 px-2">
+                  <span className="w-16 text-end text-label tabular text-white/80">{clock(shown)}</span>
+                  <input
+                    type="range"
+                    className="range flex-1"
+                    min={0}
+                    max={duration}
+                    step={1}
+                    value={shown}
+                    style={{ ['--fill' as string]: fill }}
+                    aria-label={t('player.seek')}
+                    onChange={(e) => setScrub(Number(e.target.value))}
+                    onPointerUp={(e) => {
+                      const target = Number(e.currentTarget.value)
+                      seek(target)
+                      setScrub(null)
+                    }}
+                    onKeyUp={(e) => {
+                      const target = Number(e.currentTarget.value)
+                      seek(target)
+                      setScrub(null)
+                    }}
+                  />
+                  <span className="w-16 text-label tabular text-white/60">{clock(duration)}</span>
+                </div>
+              ) : null}
+              <div className="mt-1 flex items-center gap-1">
+                <IconButton label={t('player.back10')} onClick={() => seek(absTime() - 10)}>
+                  <ClockCounterClockwise size={22} />
+                </IconButton>
+                <IconButton label={playing ? t('player.pause') : t('player.play')} onClick={togglePlay} className="h-12 w-12">
+                  {playing ? <Pause size={28} weight="fill" /> : <Play size={28} weight="fill" />}
+                </IconButton>
+                <IconButton label={t('player.forward10')} onClick={() => seek(absTime() + 10)}>
+                  <ClockClockwise size={22} />
+                </IconButton>
+                <IconButton label={t('player.stop')} onClick={stop}>
+                  <Stop size={22} weight="fill" />
+                </IconButton>
+                <div className="group ms-2 flex items-center">
+                  <IconButton
+                    label={muted ? t('player.unmute') : t('player.mute')}
+                    onClick={() => {
+                      const v = videoRef.current
+                      if (v) v.muted = !v.muted
+                    }}
+                  >
+                    {level === 0 ? <SpeakerSlash size={22} /> : <SpeakerHigh size={22} />}
+                  </IconButton>
+                  <input
+                    type="range"
+                    className="range w-0 opacity-0 transition-all duration-base group-hover:w-32 group-hover:opacity-100 focus:w-32 focus:opacity-100"
+                    min={0}
+                    max={MAX_LEVEL}
+                    step={0.05}
+                    value={level}
+                    style={{ ['--fill' as string]: `${(level / MAX_LEVEL) * 100}%` }}
+                    aria-label={t('player.volume')}
+                    aria-valuetext={`${Math.round(level * 100)}%`}
+                    onChange={(e) => setLevel(Number(e.target.value))}
+                  />
+                  {level > 1 && (
+                    <span className="ms-2 rounded bg-primary px-1.5 py-0.5 text-caption font-semibold tabular text-on-primary" title={t('player.boost')}>
+                      {Math.round(level * 100)}%
+                    </span>
+                  )}
+                </div>
+                <div className="ms-auto flex items-center gap-1">
+                  {onTracks && (
+                    <IconButton label={t('player.tracks')} onClick={onTracks} className={menu ? 'bg-white/15' : undefined}>
+                      <Subtitles size={22} weight={subId != null ? 'fill' : 'regular'} />
+                    </IconButton>
+                  )}
+                  <IconButton label={fullscreen ? t('player.exitFullscreen') : t('player.fullscreen')} onClick={toggleFullscreen}>
+                    {fullscreen ? <ArrowsIn size={22} /> : <ArrowsOut size={22} />}
+                  </IconButton>
+                </div>
+              </div>
+            </div>
+
+            {!error && <UpNextCard nextId={detail.next_id} remaining={duration ? duration - time : null} lifted={showChrome} compact={!wide} />}
           </div>
-        </div>
-      )}
-
-      {/* Top bar */}
-      <div
-        className={cn(
-          'absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-black/80 to-transparent p-4 transition-opacity duration-slow',
-          showChrome ? 'opacity-100' : 'pointer-events-none opacity-0',
-          hasTopRightWindowControls && 'pe-40 md:pe-44',
-          hasTopLeftWindowControls && 'ps-20',
-        )}
-      >
-        <IconButton label={t('common.back')} onClick={stop}>
-          <ArrowLeft size={22} />
-        </IconButton>
-        <div className="min-w-0">
-          <p className="truncate text-title font-semibold">{title}</p>
-          {item.kind === 'episode' && item.episode_no != null ? (
-            <p className="truncate text-label text-white/70">
-              <EpisodeLinks item={item} className="hover:text-white hover:underline" />
-              {` · ${item.title}`}
-            </p>
-          ) : (
-            subtitle && <p className="truncate text-label text-white/70">{subtitle}</p>
-          )}
-        </div>
-        {plan && (
-          <span className="ms-auto rounded border border-white/20 px-2 py-0.5 text-caption font-medium text-white/70" title={t(`player.mode.${plan.mode}.hint`)}>
-            {t(`player.mode.${plan.mode}`)}
-          </span>
-        )}
-      </div>
-
-      {menu && (
-        <div onClick={(e) => e.stopPropagation()}>
-          <TrackMenu
-            audios={audios}
-            subs={subs}
-            audio={audio}
-            sub={subId}
-            onAudio={(idx) => {
-              setMenu(false)
-              if (idx === audio) return
-              setAudio(idx)
-              saveTracks(idx, subId)
-              load(idx, absTime())
-            }}
-            onSub={(id) => {
-              setSubId(id)
-              setMenu(false)
-              saveTracks(audio, id)
-            }}
+          <WatchDetails
+            detail={detail}
+            onTracks={
+              onTracks &&
+              (() => {
+                shellRef.current?.scrollIntoView({ block: 'nearest' })
+                setMenu(true)
+              })
+            }
           />
         </div>
-      )}
-
-      {/* Bottom controls */}
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className={cn('absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 pb-3 pt-12 transition-opacity duration-slow', showChrome ? 'opacity-100' : 'pointer-events-none opacity-0')}
-      >
-        {duration ? (
-          <div className="flex items-center gap-3 px-2">
-            <span className="w-16 text-end text-label tabular text-white/80">{clock(shown)}</span>
-            <input
-              type="range"
-              className="range flex-1"
-              min={0}
-              max={duration}
-              step={1}
-              value={shown}
-              style={{ ['--fill' as string]: fill }}
-              aria-label={t('player.seek')}
-              onChange={(e) => setScrub(Number(e.target.value))}
-              onPointerUp={(e) => {
-                const target = Number(e.currentTarget.value)
-                seek(target)
-                setScrub(null)
-              }}
-              onKeyUp={(e) => {
-                const target = Number(e.currentTarget.value)
-                seek(target)
-                setScrub(null)
-              }}
-            />
-            <span className="w-16 text-label tabular text-white/60">{clock(duration)}</span>
-          </div>
-        ) : null}
-        <div className="mt-1 flex items-center gap-1">
-          <IconButton label={t('player.back10')} onClick={() => seek(absTime() - 10)}>
-            <ClockCounterClockwise size={22} />
-          </IconButton>
-          <IconButton label={playing ? t('player.pause') : t('player.play')} onClick={togglePlay} className="h-12 w-12">
-            {playing ? <Pause size={28} weight="fill" /> : <Play size={28} weight="fill" />}
-          </IconButton>
-          <IconButton label={t('player.forward10')} onClick={() => seek(absTime() + 10)}>
-            <ClockClockwise size={22} />
-          </IconButton>
-          <IconButton label={t('player.stop')} onClick={stop}>
-            <Stop size={22} weight="fill" />
-          </IconButton>
-          {detail.next_id && (
-            <IconButton label={t('player.next')} onClick={() => navigate(`/play/${detail.next_id}?t=0`, { replace: true })}>
-              <SkipForward size={22} weight="fill" />
-            </IconButton>
-          )}
-          <div className="group ms-2 flex items-center">
-            <IconButton
-              label={muted ? t('player.unmute') : t('player.mute')}
-              onClick={() => {
-                const v = videoRef.current
-                if (v) v.muted = !v.muted
-              }}
-            >
-              {level === 0 ? <SpeakerSlash size={22} /> : <SpeakerHigh size={22} />}
-            </IconButton>
-            <input
-              type="range"
-              className="range w-0 opacity-0 transition-all duration-base group-hover:w-32 group-hover:opacity-100 focus:w-32 focus:opacity-100"
-              min={0}
-              max={MAX_LEVEL}
-              step={0.05}
-              value={level}
-              style={{ ['--fill' as string]: `${(level / MAX_LEVEL) * 100}%` }}
-              aria-label={t('player.volume')}
-              aria-valuetext={`${Math.round(level * 100)}%`}
-              onChange={(e) => setLevel(Number(e.target.value))}
-            />
-            {level > 1 && (
-              <span className="ms-2 rounded bg-primary px-1.5 py-0.5 text-caption font-semibold tabular text-on-primary" title={t('player.boost')}>
-                {Math.round(level * 100)}%
-              </span>
-            )}
-          </div>
-          <div className="ms-auto flex items-center gap-1">
-            {(audios.length > 1 || subs.length > 0) && (
-              <IconButton label={t('player.tracks')} onClick={() => setMenu((m) => !m)} className={menu ? 'bg-white/15' : undefined}>
-                <Subtitles size={22} weight={subId != null ? 'fill' : 'regular'} />
-              </IconButton>
-            )}
-            <IconButton label={fullscreen ? t('player.exitFullscreen') : t('player.fullscreen')} onClick={toggleFullscreen}>
-              {fullscreen ? <ArrowsIn size={22} /> : <ArrowsOut size={22} />}
-            </IconButton>
-          </div>
-        </div>
+        <aside className="shrink-0 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-48px)] lg:w-[402px] lg:overflow-y-auto">
+          <UpNextList detail={detail} scrollToCurrent={wide} />
+        </aside>
       </div>
     </div>
   )
