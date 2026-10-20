@@ -118,6 +118,8 @@
   "player.upNextIn": "Up next in {time}",
   "player.playNow": "Play now",
   "player.hide": "Hide",
+  "player.skipIntro": "Skip intro",
+  "player.skipCredits": "Skip credits",
   "watch.details": "Details",
   "watch.episodes": "Episodes",
   "watch.moreToWatch": "More to watch",

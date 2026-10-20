@@ -3,6 +3,9 @@ package com.aiyu.kinema.ui
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
@@ -30,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
 import androidx.navigationevent.NavigationEvent
 import com.aiyu.kinema.core.KinemaApi
@@ -111,8 +115,21 @@ fun AppNavigation() {
     }
 }
 
+/** A leaving page rounds its corners, so one shrinking under the back gesture reads as a card lifting off. */
 @Composable
-private fun Page(content: @Composable () -> Unit) = Surface(Modifier.fillMaxSize(), content = content)
+private fun Page(content: @Composable () -> Unit) {
+    val corner = LocalNavAnimatedContentScope.current.transition.animateDp(
+        transitionSpec = { tween(PREDICTIVE_MS, easing = LinearEasing) },
+        label = "corner",
+    ) { if (it == EnterExitState.PostExit) 28.dp else 0.dp }
+    Surface(
+        Modifier.fillMaxSize().graphicsLayer {
+            shape = RoundedCornerShape(corner.value)
+            clip = corner.value > 0.dp
+        },
+        content = content,
+    )
+}
 
 /** Shared axis X: the new page slides in from the end (or back from the start) while the old one fades out. */
 fun <T> AnimatedContentTransitionScope<T>.sharedAxisX(forward: Boolean, motion: MotionScheme): ContentTransform =
@@ -120,14 +137,16 @@ fun <T> AnimatedContentTransitionScope<T>.sharedAxisX(forward: Boolean, motion: 
         .togetherWith(slideOutHorizontally(motion.fastSpatialSpec()) { if (forward) -it / 4 else it / 4 } + fadeOut(motion.fastEffectsSpec()))
 
 /**
- * Material predictive back: the page shrinks to 85 % toward the swiped edge and stays opaque until near the end, while
- * the page beneath rises from 94 %. Tween specs, because the gesture seeks the transition by time. The page beneath is
- * drawn under the leaving one, not over it.
+ * Material predictive back: the page shrinks to 90 % toward the swiped edge and stays opaque until near the end, while
+ * the page beneath rises from 95 %. NavDisplay seeks the transition with the gesture progress (already eased by the
+ * system), so the specs are linear tweens: an eased curve would make the page lag the finger, then lurch. The page
+ * beneath is drawn under the leaving one, not over it.
  */
 private fun <T> AnimatedContentTransitionScope<T>.predictivePop(edge: Int): ContentTransform {
     val pivot = if (edge == NavigationEvent.EDGE_LEFT) TransformOrigin(1f, 0.5f) else TransformOrigin(0f, 0.5f)
-    val enter = scaleIn(tween(PREDICTIVE_MS), initialScale = 0.94f) + fadeIn(tween(PREDICTIVE_MS), initialAlpha = 0.5f)
-    val exit = scaleOut(tween(PREDICTIVE_MS), targetScale = 0.85f, transformOrigin = pivot) +
+    val linear = tween<Float>(PREDICTIVE_MS, easing = LinearEasing)
+    val enter = scaleIn(linear, initialScale = 0.95f) + fadeIn(linear, initialAlpha = 0.5f)
+    val exit = scaleOut(linear, targetScale = 0.9f, transformOrigin = pivot) +
         fadeOut(keyframes { durationMillis = PREDICTIVE_MS; 1f at PREDICTIVE_MS * 3 / 4 })
     return (enter togetherWith exit).apply { targetContentZIndex = -1f }
 }
@@ -136,7 +155,8 @@ private const val PREDICTIVE_MS = 320
 
 /**
  * Back gesture with a live preview inside one screen (tabs, sheets). While the user drags, the returned progress runs
- * 0..1 for [predictiveBackEffect]; [onBack] runs when the gesture is committed, and a cancelled gesture springs back.
+ * 0..1 for [predictiveBackEffect]; [onBack] runs when the gesture is committed, and either way the content springs
+ * back to full size instead of snapping.
  */
 @Composable
 fun rememberPredictiveBack(enabled: Boolean, onBack: () -> Unit): State<Float> {
@@ -145,7 +165,7 @@ fun rememberPredictiveBack(enabled: Boolean, onBack: () -> Unit): State<Float> {
         try {
             events.collect { progress.floatValue = it.progress }
             onBack()
-            progress.floatValue = 0f
+            animate(progress.floatValue, 0f) { value, _ -> progress.floatValue = value }
         } catch (e: CancellationException) {
             withContext(NonCancellable) { animate(progress.floatValue, 0f) { value, _ -> progress.floatValue = value } }
             throw e

@@ -47,6 +47,10 @@ Matches the target reference screen:
 - Poster cards: 2:3 art, title, year or `S1 · E5`, watched check, partial-progress bar.
 - Dark theme default, light theme optional.
 
+## Watch page
+
+`/play/{id}` is a YouTube-style watch page (`features/player/PlayerPage.tsx`, `WatchPanels.tsx`): the video across the window with the title, links and story under it, and the up-next list beside it from 1024 px (under it below that). The list is the season's episodes with pinned season chips, or more titles from the library for a movie. `t` toggles theater mode (video across the full width, details and list under it, kept per browser), `f` full screen. Skip intro, Skip credits and the Up next card follow the markers (media-pipeline.md §7).
+
 ## Data flow
 
 ```

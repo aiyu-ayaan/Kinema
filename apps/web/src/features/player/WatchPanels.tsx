@@ -10,8 +10,8 @@ import { clock, progressOf, runtime, subtitleOf } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import type { ItemCard, ItemDetail } from '@/lib/types'
 
-/** How long before the end the next episode is offered. */
-const UP_NEXT_S = 60
+/** How long before the end the next episode is offered when the credits were not found. */
+export const UP_NEXT_S = 60
 
 /** Opens another title in the player; replaces this one so Back still leads out of the player. */
 function usePlayNext() {
@@ -20,19 +20,35 @@ function usePlayNext() {
 }
 
 /**
- * The next episode, offered only in the last minute of this one (YouTube's end card). It slides in from the end edge
- * and out again; the shade over its still draws back as the countdown runs out, and the video ending plays it.
+ * The next episode, offered once this one is [due] to end: from the credits, else its last minute (YouTube's end
+ * card). It slides in from the end edge and out again; the shade over its still draws back as the countdown runs
+ * out, and the video ending plays it.
  */
-export function UpNextCard({ nextId, remaining, lifted, compact }: { nextId: number | null; remaining: number | null; lifted: boolean; compact: boolean }) {
+export function UpNextCard({
+  nextId,
+  due,
+  remaining,
+  span,
+  lifted,
+  compact,
+}: {
+  nextId: number | null
+  due: boolean
+  remaining: number | null
+  /** Seconds the countdown covers: from the credits or the last minute to the end. */
+  span: number
+  lifted: boolean
+  compact: boolean
+}) {
   const playNext = usePlayNext()
   const [hidden, setHidden] = useState(false)
   // A small video has no room for the card and the controls at once: it waits for them to fade.
-  const visible = nextId != null && remaining != null && remaining >= 0 && remaining <= UP_NEXT_S && !hidden && !(compact && lifted)
+  const visible = nextId != null && due && !hidden && !(compact && lifted)
   // Fetched once the card is due, so a title watched only part way costs no extra request.
   const { data } = useQuery({ queryKey: ['item', nextId], queryFn: () => api.item(nextId as number), enabled: visible })
   if (nextId == null) return null
   const next = data?.item
-  const shade = Math.min(1, Math.max(0, (remaining ?? 0) / UP_NEXT_S))
+  const shade = Math.min(1, Math.max(0, (remaining ?? 0) / Math.max(1, span)))
   return (
     <div
       onClick={(e) => e.stopPropagation()}
@@ -72,6 +88,29 @@ export function UpNextCard({ nextId, remaining, lifted, compact }: { nextId: num
         <X size={16} />
       </button>
     </div>
+  )
+}
+
+/** Netflix's Skip intro / Skip credits: a pill at the end edge for as long as [visible]. */
+export function SkipPill({ label, visible, lifted, onClick }: { label: string; visible: boolean; lifted: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      tabIndex={visible ? 0 : -1}
+      aria-hidden={!visible}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      className={cn(
+        'absolute end-4 z-10 inline-flex h-11 cursor-pointer items-center gap-2 rounded-full border border-white/40 bg-black/70 px-5 text-label font-semibold text-white shadow-overlay backdrop-blur-md transition-[opacity,transform,bottom] duration-500 ease-std hover:bg-white hover:text-black',
+        lifted ? 'bottom-28' : 'bottom-6',
+        visible ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-12 opacity-0',
+      )}
+    >
+      <SkipForward size={16} weight="fill" aria-hidden />
+      {label}
+    </button>
   )
 }
 

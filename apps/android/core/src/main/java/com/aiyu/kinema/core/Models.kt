@@ -104,6 +104,19 @@ data class MediaFile(
     val container: String? = null,
     @SerialName("duration_s") val durationS: Double? = null,
     val streams: List<Stream> = emptyList(),
+    /** Intro and end credits, found by the server or set by an admin. */
+    val markers: List<Marker> = emptyList(),
+) {
+    val intro get() = markers.firstOrNull { it.kind == "intro" }
+    val credits get() = markers.firstOrNull { it.kind == "credits" }
+}
+
+@Serializable
+data class Marker(
+    val kind: String,
+    @SerialName("start_s") val startS: Double,
+    @SerialName("end_s") val endS: Double,
+    val source: String = "",
 )
 
 @Serializable

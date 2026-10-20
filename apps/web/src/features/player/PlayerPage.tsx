@@ -26,7 +26,7 @@ import { clock, isTextSub, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import type { ItemDetail, PlaybackPlan, Stream } from '@/lib/types'
 import { parseVtt, type Cue } from '@/lib/vtt'
-import { UpNextCard, UpNextList, WatchDetails } from './WatchPanels'
+import { SkipPill, UP_NEXT_S, UpNextCard, UpNextList, WatchDetails } from './WatchPanels'
 
 
 /** Loudest volume: 200 %, the upper 100 % being boost (as in MX Player). */
@@ -393,6 +393,14 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   // Beside the video (wide windows) the list opens on the playing episode; under it, the details come first.
   const wide = useMemo(() => window.matchMedia('(min-width: 1024px)').matches, [])
   const shown = scrub ?? time
+  // Skip intro while it plays; at the credits (else the last minute) the next episode, or Skip credits for a movie.
+  const intro = file.markers?.find((m) => m.kind === 'intro')
+  const credits = file.markers?.find((m) => m.kind === 'credits')
+  const remaining = duration ? duration - time : null
+  const inIntro = !!intro && time >= intro.start_s && time < intro.end_s - 2
+  const inCredits = !!credits && time >= credits.start_s && (remaining ?? 0) > 2
+  const upNextDue = remaining != null && remaining >= 0 && (credits ? time >= credits.start_s : remaining <= UP_NEXT_S)
+  const upNextSpan = credits && duration ? duration - credits.start_s : UP_NEXT_S
   const fill = duration ? `${(shown / duration) * 100}%` : '0%'
   const title = item.kind === 'episode' ? (item.show_title ?? item.title) : item.title
   const subtitle = item.kind === 'episode' ? `${subtitleOf(item)} · ${item.title}` : item.year ? String(item.year) : null
@@ -649,7 +657,13 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
               </div>
             </div>
 
-            {!error && <UpNextCard nextId={detail.next_id} remaining={duration ? duration - time : null} lifted={showChrome} compact={!wide} />}
+            {!error && (
+        <>
+          <SkipPill label={t('player.skipIntro')} visible={inIntro} lifted={showChrome} onClick={() => intro && seek(intro.end_s)} />
+          <SkipPill label={t('player.skipCredits')} visible={inCredits && !detail.next_id} lifted={showChrome} onClick={stop} />
+          <UpNextCard nextId={detail.next_id} due={upNextDue} remaining={remaining} span={upNextSpan} lifted={showChrome} compact={!wide} />
+        </>
+      )}
           </div>
           {!theater && details}
         </div>

@@ -480,7 +480,18 @@ private fun Player(detail: ItemDetail, startAt: Double, large: Boolean, fullscre
                 )
             }
         }
-        if (error == null) NextEpisodeCard(detail.nextId, duration?.let { it - time }, lifted = showChrome, compact = !immersive) { detail.nextId?.let { nav.play(it, 0.0) } }
+        if (error == null) {
+            // Skip intro while it plays; at the credits (else the last minute) the next episode, or Skip credits for a movie.
+            val intro = file.intro
+            val credits = file.credits
+            val remaining = duration?.let { it - time }
+            val inCredits = credits != null && time >= credits.startS && (remaining ?: 0.0) > 2
+            val due = remaining != null && remaining >= 0 && if (credits != null) time >= credits.startS else remaining <= UP_NEXT_S
+            val span = if (credits != null && duration != null) duration - credits.startS else UP_NEXT_S
+            SkipPill(stringResource(R.string.player_skip_intro), intro != null && time >= intro.startS && time < intro.endS - 2, lifted = showChrome) { intro?.let { seek(it.endS) } }
+            SkipPill(stringResource(R.string.player_skip_credits), inCredits && detail.nextId == null, lifted = showChrome) { player.pause(); nav.back() }
+            NextEpisodeCard(detail.nextId, due, remaining, span, lifted = showChrome, compact = !immersive) { detail.nextId?.let { nav.play(it, 0.0) } }
+        }
     } }
 
     if (immersive) {

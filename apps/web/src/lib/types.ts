@@ -86,6 +86,15 @@ export interface MediaFile {
   bitrate: number | null
   probe_status: 'pending' | 'ok' | 'failed'
   streams: Stream[]
+  /** Intro and end credits, found by the server or set by an admin. */
+  markers?: Marker[]
+}
+
+export interface Marker {
+  kind: 'intro' | 'credits'
+  start_s: number
+  end_s: number
+  source: 'chapter' | 'audio' | 'black' | 'manual'
 }
 
 export interface CastMember {

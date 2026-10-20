@@ -19,6 +19,8 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.LocalContentColor
@@ -81,20 +83,21 @@ import androidx.compose.ui.unit.dp
 import com.aiyu.kinema.R
 import com.aiyu.kinema.core.ItemCard
 
-/** How long before the end the next episode is offered. */
-private const val UP_NEXT_S = 60.0
+/** How long before the end the next episode is offered when the credits were not found. */
+internal const val UP_NEXT_S = 60.0
 
 /**
- * The next episode, offered only in the last minute of this one (YouTube's end card). It slides in from the edge on
- * a spring; the shade over its thumbnail draws back as the countdown runs out, and the video ending plays it.
+ * The next episode, offered once this one is [due] to end: from the credits, else its last minute (YouTube's end
+ * card). It slides in from the edge on a spring; the shade over its thumbnail draws back over [span] seconds as the
+ * countdown runs out, and the video ending plays it.
  */
 @Composable
-internal fun BoxScope.NextEpisodeCard(nextId: Long?, remaining: Double?, lifted: Boolean, compact: Boolean, onPlay: () -> Unit) {
+internal fun BoxScope.NextEpisodeCard(nextId: Long?, due: Boolean, remaining: Double?, span: Double, lifted: Boolean, compact: Boolean, onPlay: () -> Unit) {
     val api = LocalApi.current
     val repository = LocalRepository.current
     var hidden by remember(nextId) { mutableStateOf(false) }
     // A video inside the watch page is too short for the card and the controls at once: it waits for them to fade.
-    val visible = nextId != null && remaining != null && remaining in 0.0..UP_NEXT_S && !hidden && !(compact && lifted)
+    val visible = nextId != null && due && !hidden && !(compact && lifted)
     // Fetched once the card is due, so a title watched only part way costs no extra request.
     var next by remember(nextId) { mutableStateOf<ItemCard?>(null) }
     LaunchedEffect(nextId, visible) {
@@ -102,7 +105,7 @@ internal fun BoxScope.NextEpisodeCard(nextId: Long?, remaining: Double?, lifted:
     }
     val motion = MaterialTheme.motionScheme
     val bottom by animateDpAsState(if (lifted) 108.dp else 24.dp, motion.defaultSpatialSpec(), label = "upNextLift")
-    val shade by animateFloatAsState(((remaining ?: 0.0) / UP_NEXT_S).toFloat().coerceIn(0f, 1f), motion.slowEffectsSpec(), label = "upNextShade")
+    val shade by animateFloatAsState(((remaining ?: 0.0) / span.coerceAtLeast(1.0)).toFloat().coerceIn(0f, 1f), motion.slowEffectsSpec(), label = "upNextShade")
     AnimatedVisibility(
         visible,
         Modifier.align(Alignment.BottomEnd).navigationBarsPadding().displayCutoutPadding().padding(end = 24.dp, bottom = bottom),
@@ -133,6 +136,30 @@ internal fun BoxScope.NextEpisodeCard(nextId: Long?, remaining: Double?, lifted:
                     Icon(Icons.Rounded.Close, stringResource(R.string.player_dismiss), Modifier.size(20.dp))
                 }
             }
+        }
+    }
+}
+
+/** Netflix's Skip intro / Skip credits: a pill at the end edge for as long as [visible], above the controls when shown. */
+@Composable
+internal fun BoxScope.SkipPill(label: String, visible: Boolean, lifted: Boolean, onClick: () -> Unit) {
+    val motion = MaterialTheme.motionScheme
+    val bottom by animateDpAsState(if (lifted) 108.dp else 24.dp, motion.defaultSpatialSpec(), label = "skipLift")
+    AnimatedVisibility(
+        visible,
+        Modifier.align(Alignment.BottomEnd).navigationBarsPadding().displayCutoutPadding().padding(end = 24.dp, bottom = bottom),
+        enter = slideInHorizontally(motion.defaultSpatialSpec()) { it / 2 } + fadeIn(motion.defaultEffectsSpec()),
+        exit = slideOutHorizontally(motion.fastSpatialSpec()) { it / 2 } + fadeOut(motion.fastEffectsSpec()),
+    ) {
+        OutlinedButton(
+            onClick,
+            colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.Black.copy(alpha = 0.7f), contentColor = Color.White),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+            contentPadding = ButtonDefaults.MediumContentPadding,
+        ) {
+            Icon(Icons.Rounded.SkipNext, null, Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Text(label, style = MaterialTheme.typography.titleSmall)
         }
     }
 }

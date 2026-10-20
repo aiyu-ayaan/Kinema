@@ -86,11 +86,12 @@ Same contract as the web player (`apps/web/src/features/player/PlayerPage.tsx`):
 1. `GET /files/{id}/plan` with `hevc` / `av1` from `MediaCodecList` decoders.
 2. `direct`: stream the file with Range from 0 and seek locally. `remux` / `transcode`: stream from the requested time; `plan.start` is where the output really begins, so the title time is `start + player position`. Seeks outside the stream restart it.
 3. Text subtitles come as WebVTT from `/subtitles/{id}` and are drawn over the video at the title time; picture subtitles are listed but disabled.
-4. Progress every 10 s and on leaving; watched at 92 %; the end opens the next episode.
-5. Landscape, immersive, screen kept on while open; restored on close.
-6. Stop button (bottom bar): pauses, saves progress and leaves, like the web player's stop.
-7. Swipe gestures: a vertical swipe on the left half sets this window's brightness, on the right half the media volume. Volume goes to 200 %: above 100 % a `LoudnessEnhancer` on the player's audio session adds up to +12 dB (MX Player style). The player gets a fixed audio session id at creation because ExoPlayer leaves it unset. Swipes starting in the top or bottom 8 % are left to the system bars. Brightness goes back to the system level when the player closes; the volume stays.
-8. Background and picture-in-picture: see below.
+4. Progress every 10 s and on leaving; watched at 92 %; the end opens the next episode. **Skip intro** shows while a detected intro plays (media-pipeline.md §7). The **Up next** card (next episode's still, a countdown shade, Play now, hide) slides in from the credits start, or for the last 60 s without credits; a movie shows **Skip credits** instead.
+5. Phones: landscape, immersive, screen kept on while open; restored on close. Only the last player to close restores the window, because "next episode" opens the new player before the old one leaves.
+6. **Tablets and open foldables** (smallest width 600 dp or more) get a YouTube-style watch page (`WatchScreen.kt`): the video with its title, links and story under it and the up-next list beside it (840 dp or wider, landscape) or under it. The list is the season's episodes with pinned season chips and the playing one marked, or for a movie more titles of its kind from the library (in progress and unwatched first, then rating). A full screen button hides the page; phones are always full screen and open the same list as a side panel from the top bar. Controls shrink inside a short video.
+7. Stop button (bottom bar): pauses, saves progress and leaves, like the web player's stop.
+8. Swipe gestures: a vertical swipe on the left half sets this window's brightness, on the right half the media volume. Volume goes to 200 %: above 100 % a `LoudnessEnhancer` on the player's audio session adds up to +12 dB (MX Player style). The player gets a fixed audio session id at creation because ExoPlayer leaves it unset. Swipes starting in the top or bottom 8 % are left to the system bars. Brightness goes back to the system level when the player closes; the volume stays.
+9. Background and picture-in-picture: see below.
 
 ### Playback service, notification and picture-in-picture
 

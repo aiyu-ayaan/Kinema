@@ -66,3 +66,15 @@
 - [ ] AppImage self-update (zsync)
 
 See `docs/roadmap.md` for later milestones.
+
+## Watch page, tablets and skip markers (2026-10-20)
+- [x] Android: home hero and title page sized for tablets and foldables
+- [x] Android + web: Up next card only from the credits (else the last minute), with countdown and Play now
+- [x] Android: YouTube-style watch page on tablets / open foldables, episodes or suggestions list, full screen toggle; phone side panel
+- [x] Android: player opened from a player no longer comes back in portrait with bars showing
+- [x] Web: watch page with up-next list, theater mode (t), full window width
+- [x] Server: intro / credits markers from chapters, audio shared across a season, black frames; admin override API
+- [x] Android + web: Skip intro, Skip credits
+- [ ] Admin UI to set or clear a marker (API only for now)
+- [ ] Credits over lit footage (no black, no shared song) are not found; consider a text-overlay or loudness check
+- [ ] Android tablet keyboard shortcuts (f, t, space) like the web player
