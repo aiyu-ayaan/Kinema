@@ -1,3 +1,12 @@
+## v0.0.1-alpha.2 (2026-10-20)
+
+- !alpha: Media service, PiP, swipe gestures, volume boost, home-address roaming and updater scripts
+- feat(installers) : Install scripts double as safe updaters
+- feat(android) : Media service, picture-in-picture, swipe gestures, stop button and server languages
+- feat(web) : Volume boost up to 200% in the player
+- fix(android) : Sharper hero carousel and wide card artwork
+- feat(server) : Sync server name into the web page and prefer the home address
+
 ## v0.0.1-alpha.1 (2026-10-19)
 
 - !alpha : Initial alpha release with home server bundle, desktop app, and web player
