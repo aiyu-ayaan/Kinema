@@ -10,6 +10,7 @@ import android.os.Build
 import android.provider.Settings
 import com.aiyu.kinema.BuildConfig
 import com.aiyu.kinema.core.Releases
+import com.aiyu.kinema.core.UpdateChannel
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,14 +51,32 @@ object AppUpdates {
         _state.value = State.Idle
     }
 
-    suspend fun check(): State = withContext(Dispatchers.IO) {
+    /** Release notes of the installed version, from the last check; null when it was never released. */
+    private val _installedNotes = MutableStateFlow<String?>(null)
+    val installedNotes: StateFlow<String?> = _installedNotes.asStateFlow()
+
+    /** False for a `-dev` build: it is its own app, and a release APK would install beside it, not over it. */
+    val released: Boolean get() = Releases.versionKey(BuildConfig.VERSION_NAME) != null
+
+    /** The chosen channel, by default the installed build's. */
+    fun channel(context: Context): UpdateChannel =
+        prefs(context).getString("channel", null)?.let { runCatching { UpdateChannel.valueOf(it) }.getOrNull() }
+            ?: Releases.channelOf(BuildConfig.VERSION_NAME)
+
+    fun setChannel(context: Context, channel: UpdateChannel) {
+        prefs(context).edit().putString("channel", channel.name).apply()
+    }
+
+    suspend fun check(context: Context): State = withContext(Dispatchers.IO) {
         _state.value = State.Checking
+        val channel = channel(context)
         val next = runCatching {
             val request = Request.Builder().url(Releases.API).header("Accept", "application/vnd.github+json").build()
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) error("GitHub answered ${response.code}")
-                Releases.pickApk(response.body?.string().orEmpty(), BuildConfig.VERSION_NAME)
-                    ?.let { State.Available(it) } ?: State.UpToDate
+                val body = response.body?.string().orEmpty()
+                _installedNotes.value = Releases.notesOf(body, BuildConfig.VERSION_NAME)
+                Releases.pickApk(body, BuildConfig.VERSION_NAME, channel)?.let { State.Available(it) } ?: State.UpToDate
             }
         }.getOrElse { State.Failed(it.message ?: "") }
         _state.value = next
@@ -66,7 +85,7 @@ object AppUpdates {
 
     /** Streams the APK into the cache (an installed update has no further use for it) and starts the install. */
     suspend fun install(context: Context, apk: Releases.Apk) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
+        if (!context.packageManager.canRequestPackageInstalls()) {
             // "Install unknown apps" is a per-app setting, not a runtime permission: it can only be opened.
             context.startActivity(
                 Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))

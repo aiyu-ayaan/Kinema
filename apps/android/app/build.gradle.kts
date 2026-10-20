@@ -101,5 +101,7 @@ dependencies {
     implementation(libs.media3.session)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    implementation(libs.markdown.m3) // release notes on the Updates screen: headings, lists, tables
+    implementation(libs.markdown.coil3) // images in release notes
     debugImplementation(libs.compose.ui.tooling)
 }

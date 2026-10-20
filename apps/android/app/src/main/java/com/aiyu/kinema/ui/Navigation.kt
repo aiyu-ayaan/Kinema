@@ -44,8 +44,8 @@ val LocalRepository = staticCompositionLocalOf<KinemaRepository> { error("No rep
 /** The client of the address in use, for image and stream URLs. Null before a server is chosen. */
 val LocalApi = staticCompositionLocalOf<KinemaApi?> { null }
 
-/** Opens a title's page or plays it; screens get it instead of the back stack. */
-class Navigator(val open: (Long) -> Unit, val play: (Long, Double?) -> Unit, val back: () -> Unit)
+/** Opens a title's page, plays it or opens another page ([go]); screens get it instead of the back stack. */
+class Navigator(val open: (Long) -> Unit, val play: (Long, Double?) -> Unit, val back: () -> Unit, val go: (NavKey) -> Unit)
 
 val LocalNavigator = staticCompositionLocalOf<Navigator> { error("No navigator") }
 
@@ -58,6 +58,16 @@ data class ItemKey(val id: Long) : NavKey
 /** [start] null resumes where the viewer stopped. */
 @Serializable
 data class PlayerKey(val id: Long, val start: Double? = null) : NavKey
+
+/** Settings › Updates, About Kinema and its Acknowledgements (AboutScreens.kt). */
+@Serializable
+data object UpdatesKey : NavKey
+
+@Serializable
+data object AboutKey : NavKey
+
+@Serializable
+data object AcknowledgementsKey : NavKey
 
 /**
  * Signed-in navigation. Pages push with a shared-axis slide; the system back gesture previews the page below:
@@ -77,6 +87,7 @@ fun AppNavigation() {
                 stack.add(PlayerKey(id, start))
             },
             back = { if (stack.size > 1) stack.removeAt(stack.lastIndex) },
+            go = { stack.add(it) },
         )
     }
     androidx.compose.runtime.CompositionLocalProvider(LocalNavigator provides navigator) {
@@ -91,6 +102,9 @@ fun AppNavigation() {
                 entry<TabsKey> { Page { MainScreen() } }
                 entry<ItemKey> { Page { ItemScreen(it.id) } }
                 entry<PlayerKey> { PlayerScreen(it.id, it.start) }
+                entry<UpdatesKey> { Page { UpdatesScreen() } }
+                entry<AboutKey> { Page { AboutScreen() } }
+                entry<AcknowledgementsKey> { Page { AcknowledgementsScreen() } }
             },
         )
         com.aiyu.kinema.update.UpdatePrompt()

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
@@ -58,7 +59,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -126,7 +126,7 @@ fun SettingsTab() {
             }
             OutlinedButton({ confirmForget = true }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.connect_change_server), color = c.error) }
         }
-        UpdatesSection()
+        KinemaSection()
     }
 
     if (confirmForget) {
@@ -218,37 +218,21 @@ private fun ConnectionSection() {
     }
 }
 
-/** This app's own version and update (update/AppUpdates.kt); the launch check shows the same state. */
+/** Settings › Updates and About Kinema, each its own screen (AboutScreens.kt). */
 @Composable
-private fun UpdatesSection() {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+private fun KinemaSection() {
+    val navigator = LocalNavigator.current
     val state by AppUpdates.state.collectAsStateWithLifecycle()
-    Section(stringResource(R.string.settings_updates), 6) {
-        ListItem(
-            headlineContent = { Text(stringResource(R.string.settings_version, BuildConfig.VERSION_NAME)) },
-            supportingContent = {
-                Text(
-                    when (val s = state) {
-                        AppUpdates.State.Checking -> stringResource(R.string.update_checking)
-                        AppUpdates.State.UpToDate -> stringResource(R.string.update_up_to_date)
-                        is AppUpdates.State.Available -> stringResource(R.string.update_available, s.apk.version)
-                        is AppUpdates.State.Downloading -> stringResource(R.string.update_available, s.apk.version)
-                        is AppUpdates.State.Failed -> stringResource(R.string.update_failed, s.message)
-                        AppUpdates.State.Idle -> ""
-                    },
-                )
-            },
-            leadingContent = { Icon(Icons.Rounded.SystemUpdate, null) },
-            trailingContent = {
-                when (val s = state) {
-                    is AppUpdates.State.Available -> Button({ scope.launch { AppUpdates.install(context, s.apk) } }) { Text(stringResource(R.string.update_install)) }
-                    is AppUpdates.State.Downloading -> LoadingIndicator(Modifier.size(32.dp))
-                    else -> TextButton({ scope.launch { AppUpdates.check() } }, enabled = s != AppUpdates.State.Checking) { Text(stringResource(R.string.settings_update_check)) }
-                }
-            },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+    val version = BuildConfig.VERSION_NAME
+    Section(stringResource(R.string.settings_kinema), 6) {
+        val found = (state as? AppUpdates.State.Available)?.apk
+        RowCard(
+            stringResource(R.string.settings_updates),
+            found?.let { stringResource(R.string.update_available, it.version) } ?: stringResource(R.string.settings_updates_subtitle, version),
+            Icons.Rounded.SystemUpdate,
+            onClick = { navigator.go(UpdatesKey) },
         )
+        RowCard(stringResource(R.string.about_title), stringResource(R.string.settings_about_subtitle, version), Icons.Rounded.Info, onClick = { navigator.go(AboutKey) })
     }
 }
 
