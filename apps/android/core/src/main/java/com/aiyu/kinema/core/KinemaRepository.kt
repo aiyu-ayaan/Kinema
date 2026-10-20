@@ -95,10 +95,44 @@ class KinemaRepository(context: Context) {
         _route.value = if (server == _localUrl.value || _localUrl.value.isBlank()) Route.LOCAL else Route.PUBLIC
     }
 
+    /** [info] always comes over a verified connection (a public authority or the approved pin), so its fingerprint can be trusted. */
     private fun rememberInfo(info: ServerInfo) {
         _serverInfo.value = info
         _serverPublicUrl.value = info.publicUrl
         store.put(PUBLIC_SERVER, info.publicUrl.ifBlank { null })
+        findHome(info)
+    }
+
+    private var homeSearch: Job? = null
+
+    /**
+     * Connected only by the public address: look for the same server on this network, so at home the video goes
+     * straight over Wi-Fi instead of out through the proxy and back. "Same" means it shows the certificate the
+     * server named over the verified public connection; then that certificate is pinned without asking.
+     */
+    private fun findHome(info: ServerInfo) {
+        val fingerprint = info.tlsFingerprint.ifBlank { return }
+        val local = _localUrl.value
+        if (local.isNotBlank() && isLanHost(runCatching { URI(local).host }.getOrNull().orEmpty())) return
+        // Another certificate is already approved for this server: keep it rather than swap pins silently.
+        if (store.get(PIN).let { it != null && it != fingerprint }) return
+        if (homeSearch?.isActive == true) return
+        homeSearch = scope.launch {
+            val home = ServerDiscovery.scan().firstOrNull { found ->
+                val uri = runCatching { URI(found.url) }.getOrNull() ?: return@firstOrNull false
+                uri.scheme == "https" && uri.port != -1 &&
+                    runCatching { Tls.fetchFingerprint(uri.host.trim('[', ']'), uri.port) }.getOrNull() == fingerprint
+            } ?: return@launch
+            store.put(PIN, fingerprint)
+            store.put(LOCAL, home.url)
+            _localUrl.value = home.url
+            follow()
+        }
+    }
+
+    /** Re-reads the server's name and addresses, e.g. after the admin renamed it from another device. */
+    suspend fun refreshInfo() {
+        request { it.serverInfo() }.onSuccess(::rememberInfo)
     }
 
     /** The first address that answers now, home first, with its server info. */
@@ -184,6 +218,7 @@ class KinemaRepository(context: Context) {
             store.put(TOKEN, null)
             store.put(LOCAL, url)
             _localUrl.value = url
+            homeSearch?.cancel()
             rememberInfo(info)
             open(url)
             signedOut()
@@ -221,6 +256,7 @@ class KinemaRepository(context: Context) {
 
     /** Back to the connect screen. The saved server, its addresses and its approved certificate are dropped. */
     fun forgetServer() {
+        homeSearch?.cancel()
         listOf(SERVER, LOCAL, PUBLIC_OVERRIDE, PUBLIC_SERVER, PIN, TOKEN).forEach { store.put(it, null) }
         _localUrl.value = ""
         _publicOverride.value = ""

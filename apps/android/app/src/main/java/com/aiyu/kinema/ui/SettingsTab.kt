@@ -46,6 +46,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -88,6 +89,8 @@ fun SettingsTab() {
     val info by repository.serverInfo.collectAsStateWithLifecycle()
     val c = MaterialTheme.colorScheme
     var confirmForget by remember { mutableStateOf(false) }
+    // The name may have been changed from the web or another phone since the app connected.
+    LaunchedEffect(Unit) { repository.refreshInfo() }
 
     ScreenColumn {
         Text(stringResource(R.string.tab_settings), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(start = 4.dp, top = 16.dp).semantics { heading() })

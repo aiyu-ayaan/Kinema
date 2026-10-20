@@ -10,7 +10,11 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(root.version),
   },
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Built pages keep the placeholder for the Kinema server to fill (backend/src/web.rs); the dev server has no server name.
+    { name: 'kinema-server-name', apply: 'serve', transformIndexHtml: (html) => html.replaceAll('__KINEMA_SERVER_NAME__', 'Kinema') },
+  ],
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },

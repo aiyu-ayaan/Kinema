@@ -35,7 +35,8 @@ This is Kinema's own API. It is not Plex-compatible.
 | GET | `/items/{id}/thumb` | Video frame JPEG from the background thumbnail cache; 404 until made |
 | POST | `/libraries/{id}/thumbnails` | Admin: delete and regenerate a library's thumbnails |
 | POST | `/libraries/{id}/match` | Admin: look up unmatched titles again |
-| GET | `/server/info` | Public: `{name, version, public_url, capabilities}`; apps read `public_url` to stream away from home |
+| GET | `/server/info` | Public: `{name, version, public_url, tls_fingerprint, capabilities}`; apps read `public_url` to stream away from home and `tls_fingerprint` to recognise the same server on the LAN |
+| GET | `/`, `/index.html`, any client route | The web UI page with `__KINEMA_SERVER_NAME__` replaced by the HTML-escaped server name (`backend/src/web.rs`), so tab titles, bookmarks and link previews show it before scripts run |
 | GET | `/server/status` | Admin: dashboard data |
 | POST | `/server/cache/{thumbnails\|subtitles\|images}/clear` | Admin: clear a cache |
 | GET | `/items/{id}/match?q=&year=` | Admin: TMDB candidates for a movie or show |

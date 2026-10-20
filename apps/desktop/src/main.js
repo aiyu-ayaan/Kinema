@@ -111,21 +111,89 @@ function parseReply(text, host) {
   }
 }
 
-/** Asks `url` for its health. `authorized` is false for a certificate no public authority vouches for. */
+/**
+ * Asks `url` for its server info. `authorized` is false for a certificate no public authority vouches for;
+ * `info` is only to be believed when `accepts` says yes.
+ */
 function probe(url, timeout = 3000) {
   return new Promise((resolve) => {
     const secure = url.startsWith('https:')
     const request = (secure ? https : http).get(`${url}/api/server/info`, { rejectUnauthorized: false, timeout }, (res) => {
-      resolve({
+      const result = {
         ok: res.statusCode === 200,
         authorized: !secure || res.socket.authorized,
         fingerprint: secure && res.socket.getPeerCertificate ? res.socket.getPeerCertificate().fingerprint256 : null,
+        info: null,
+      }
+      let body = ''
+      res.setEncoding('utf8')
+      res.on('data', (chunk) => {
+        if (body.length < 16384) body += chunk
       })
-      res.resume()
+      res.on('end', () => {
+        try {
+          result.info = JSON.parse(body)
+        } catch {
+          // Not JSON: still a valid answer for health, just no info.
+        }
+        resolve(result)
+      })
+      res.on('error', () => resolve(result))
     })
     request.on('timeout', () => request.destroy())
     request.on('error', () => resolve({ ok: false }))
   })
+}
+
+const isLanUrl = (url) => {
+  try {
+    return isLanHost(new URL(url).hostname.replace(/^\[|\]$/g, ''))
+  } catch {
+    return false
+  }
+}
+
+/** `home` first, every other saved address after it, without duplicates. */
+const preferHome = (servers, home) => [home, ...servers.filter((u) => u !== home)]
+
+/**
+ * Reached through a public address: looks for the same server on this network and puts it first, so at home the
+ * video goes straight over the LAN instead of out through the proxy and back. "Same" means it shows the certificate
+ * the server named over the verified public connection, so that certificate is pinned without asking.
+ */
+async function findHome(fingerprint) {
+  if (!fingerprint) return null
+  for (const found of await discover()) {
+    if (!found.url.startsWith('https:') || config.servers.includes(found.url)) continue
+    const p = await probe(found.url, 1500)
+    if (p.ok && p.fingerprint === fingerprint) {
+      config.pins[found.url] = fingerprint
+      config.servers = preferHome(config.servers, found.url)
+      save()
+      return found.url
+    }
+  }
+  return null
+}
+
+/** After opening `url`: remember the server's other address, so the app works both at home and away. */
+async function learnAddresses(url, p) {
+  if (override || !p.info) return
+  if (isLanUrl(url)) {
+    const away = origin(p.info.public_url)
+    if (away && !config.servers.includes(away)) {
+      config.servers = [...config.servers, away]
+      save()
+    }
+    return
+  }
+  const home = await findHome(p.info.tls_fingerprint)
+  // Move over now unless something is playing; the session token is shared, so nobody signs in again.
+  const current = win && win.webContents.getURL()
+  if (home && current && origin(current) === origin(url) && !new URL(current).pathname.startsWith('/play')) {
+    const { pathname, search, hash } = new URL(current)
+    win.loadURL(home + pathname + search + hash).catch(() => {})
+  }
 }
 
 const accepts = (url, p) => p.ok && (p.authorized || (!!p.fingerprint && config.pins[url] === p.fingerprint))
@@ -175,16 +243,21 @@ async function start() {
   const urls = override ? [override] : config.servers
   if (!urls.length) return showConnect()
 
-  const url = await Promise.any(
+  // All addresses are asked at once; the first in the saved order that answers wins, so home beats public.
+  const answers = await Promise.all(
     urls.map(async (u) => {
-      const p = await probe(u)
-      if (!(override ? p.ok : accepts(u, p))) throw new Error(u)
-      return u
+      const p = await probe(u, isLanUrl(u) ? 1500 : 3000)
+      return (override ? p.ok : accepts(u, p)) ? { url: u, p } : null
     }),
-  ).catch(() => null)
+  )
+  const hit = answers.find(Boolean)
 
-  if (url) {
-    return win.loadURL(url).catch(() => showConnect(t('connect.cannotLoad', { url })))
+  if (hit) {
+    const { url } = hit
+    return win
+      .loadURL(url)
+      .then(() => learnAddresses(url, hit.p).catch(() => {}))
+      .catch(() => showConnect(t('connect.cannotLoad', { url })))
   }
   const tried = urls.map((u) => {
     try {
@@ -269,7 +342,10 @@ if (ipcMain) {
       config = { ...config, servers: [url], token: null }
     }
     save()
-    win.loadURL(url).catch(() => showConnect(t('connect.cannotLoad', { url })))
+    win
+      .loadURL(url)
+      .then(() => learnAddresses(url, p).catch(() => {}))
+      .catch(() => showConnect(t('connect.cannotLoad', { url })))
     return ''
   })
 
@@ -427,5 +503,7 @@ module.exports = {
   parseReply,
   accepts,
   chromiumFingerprint,
+  isLanUrl,
+  preferHome,
   removeDefaultMenu,
 }

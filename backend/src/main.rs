@@ -1,12 +1,13 @@
 use anyhow::Context;
 use axum::Router;
+use axum::routing::get;
 use kinema_core::Config;
 use kinema_db::{init_pool, run_migrations};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::Semaphore;
-use tower_http::services::{ServeDir, ServeFile};
+use tower_http::services::ServeDir;
 use tracing::{info, warn};
 
 mod access;
@@ -21,6 +22,7 @@ mod server_settings;
 mod state;
 mod thumbs;
 mod tls;
+mod web;
 
 use state::AppState;
 
@@ -107,6 +109,8 @@ async fn main() -> anyhow::Result<()> {
         scan::spawn_scan(state.clone(), lib.id);
     }
 
+    let page_state = state.clone();
+
     // Build router
     let mut app = Router::new()
         .nest("/api", routes::api_router())
@@ -139,9 +143,15 @@ async fn main() -> anyhow::Result<()> {
 
     if let Some(dist) = web_dist {
         info!("Serving static files from {}", dist.display());
-        app = app.fallback_service(
-            ServeDir::new(&dist).fallback(ServeFile::new(dist.join("index.html"))),
-        );
+        let index = dist.join("index.html");
+        let page = get(move || {
+            let (state, index) = (page_state.clone(), index.clone());
+            async move { web::index(state, &index).await }
+        });
+        app = app
+            .route("/", page.clone())
+            .route("/index.html", page.clone())
+            .fallback_service(ServeDir::new(&dist).fallback(page));
     } else {
         warn!("No web UI build found (apps/web/dist). Web routes will return 404.");
     }

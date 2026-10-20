@@ -32,3 +32,12 @@ test('normalize parses and normalizes server URLs', () => {
   assert.equal(normalize('not a url'), null)
   assert.equal(normalize('   '), null)
 })
+
+test('home address goes first, public ones after it', () => {
+  const { preferHome, isLanUrl } = require('../src/main')
+  assert.deepEqual(preferHome(['https://media.example.com'], 'https://192.168.1.10:3000'), ['https://192.168.1.10:3000', 'https://media.example.com'])
+  assert.deepEqual(preferHome(['https://media.example.com', 'https://192.168.1.10:3000'], 'https://192.168.1.10:3000'), ['https://192.168.1.10:3000', 'https://media.example.com'])
+  assert.equal(isLanUrl('https://192.168.1.10:3000'), true)
+  assert.equal(isLanUrl('https://media.example.com'), false)
+  assert.equal(isLanUrl('not a url'), false)
+})

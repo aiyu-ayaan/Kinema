@@ -10,6 +10,8 @@ data class ServerInfo(
     val name: String,
     val version: String,
     @SerialName("public_url") val publicUrl: String = "",
+    /** SHA-256 of the server's own certificate; lets an app that came in by the public address trust its home one. */
+    @SerialName("tls_fingerprint") val tlsFingerprint: String = "",
 )
 
 @Serializable

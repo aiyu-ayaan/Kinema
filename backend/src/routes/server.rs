@@ -15,6 +15,10 @@ pub struct ServerInfoResponse {
     pub version: String,
     /// The admin-set address for use away from home; "" when there is none.
     pub public_url: String,
+    /// SHA-256 of this server's own TLS certificate ("" without TLS). An app that reached the
+    /// server through the public address learns it over that verified channel, so it can
+    /// trust the same server's home address without asking.
+    pub tls_fingerprint: String,
     pub capabilities: Vec<String>,
 }
 
@@ -31,6 +35,7 @@ async fn server_info(State(state): State<AppState>) -> Json<ServerInfoResponse> 
     Json(ServerInfoResponse {
         name: settings.server_name,
         public_url: settings.public_url,
+        tls_fingerprint: state.tls_fingerprint.as_deref().unwrap_or_default().to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         capabilities: vec![
             "direct_play".to_string(),

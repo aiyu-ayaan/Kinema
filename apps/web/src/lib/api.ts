@@ -19,6 +19,9 @@ import type {
 export interface ServerInfo {
   name: string
   version: string
+  public_url: string
+  /** SHA-256 of the server's own certificate; '' without TLS. */
+  tls_fingerprint: string
   capabilities: string[]
 }
 

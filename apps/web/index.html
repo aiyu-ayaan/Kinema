@@ -5,7 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#1A110F" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>Kinema</title>
+    <!-- The server fills in its name on every request (backend/src/web.rs); the dev server uses "Kinema". -->
+    <meta name="application-name" content="__KINEMA_SERVER_NAME__" />
+    <meta name="apple-mobile-web-app-title" content="__KINEMA_SERVER_NAME__" />
+    <meta property="og:title" content="__KINEMA_SERVER_NAME__" />
+    <meta property="og:site_name" content="__KINEMA_SERVER_NAME__" />
+    <title>__KINEMA_SERVER_NAME__</title>
   </head>
   <body>
     <div id="root"></div>
