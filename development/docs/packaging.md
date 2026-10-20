@@ -90,6 +90,7 @@ Update checks. Every client asks the GitHub releases API of `aiyu-ayaan/Kinema` 
 
 - Server, in the web UI (`apps/web/src/lib/releases.ts`): admins only. A release counts when it ships a `kinema-server-*` bundle. The sidebar shows "Update available · <version>", and About Kinema shows the commands to run: the install script (with `--channel` for alpha and beta) and `docker compose pull && docker compose up -d`. The server is never updated from the browser.
 - Desktop app (`apps/desktop/src/updates.js`, IPC `update:*` in `main.js`, UI in `apps/web/src/components/UpdatePrompt.tsx`): packaged prod builds only. At start the page asks the app, which asks GitHub; a found version opens a dialog once ("Later" is remembered for that version in the app's config). An AppImage downloads the new AppImage next to itself as `.part`, checks the ELF header, renames it over itself and relaunches. Windows downloads `Kinema-Desktop-<version>-Setup.exe` (a `.deb` install the `.deb`) to Downloads and opens it. About Kinema shows the app's version, "Check now" and the download's progress.
+- Android (`apps/android/app/.../update/AppUpdates.kt`): checks on launch, downloads `Kinema-<version>.apk` and installs it through a `PackageInstaller` session, so Android asks first. See `android.md`.
 
 Planned (automatic):
 

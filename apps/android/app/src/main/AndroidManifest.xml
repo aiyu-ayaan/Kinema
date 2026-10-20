@@ -7,6 +7,8 @@
     <!-- Playback keeps going with the app in the background, with controls in the notification. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- The app updates itself from its GitHub releases; Android's installer still asks before anything changes. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- allowBackup off: the saved session is sealed with a Keystore key that a restore can't bring along.
          Cleartext off: the server speaks HTTPS (self-signed, pinned) or sits behind a TLS proxy. -->
@@ -45,6 +47,11 @@
                 <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
         </service>
+
+        <!-- The install session's answer (update/AppUpdates.kt). Only the platform sends it. -->
+        <receiver
+            android:name=".update.InstallReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

@@ -65,7 +65,7 @@ curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/in
 
 ### Updating
 
-Run the same install command again. Automatic updates are planned for later.
+The desktop app and the Android app check GitHub at start and offer the new version (an AppImage replaces itself and restarts; Windows and Android open the installer). For the server, admins see "Update available" in the web UI, and About Kinema lists the command to run. Or run the same install command again:
 
 - **Server**: `curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-server.sh | sudo sh`. It does nothing when already up to date. Otherwise it stops the service, backs up the database to `/var/lib/kinema/backup-<old version>`, swaps `/opt/kinema` in one step and restarts. If the new version does not start, it puts back the previous version and the database backup. The port, settings, library, the service's user and a `--channel` chosen earlier are kept.
 - **Desktop (Linux)**: `curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-desktop.sh | sh`, then restart the app if it was open. Settings and the saved server are kept.

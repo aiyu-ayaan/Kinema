@@ -93,6 +93,7 @@ fun AppNavigation() {
                 entry<PlayerKey> { PlayerScreen(it.id, it.start) }
             },
         )
+        com.aiyu.kinema.update.UpdatePrompt()
     }
 }
 

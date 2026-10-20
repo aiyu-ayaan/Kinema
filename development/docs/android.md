@@ -134,6 +134,12 @@ sequenceDiagram
 - Audio and subtitle pick: `track_choice`, kept on the movie or on the show (all its episodes), applied by `/plan` before the show's admin choice and the server's Languages settings.
 - The app reloads lists when it returns to the foreground; the web app refetches when its tab regains focus.
 
+## App updates
+
+`update/AppUpdates.kt`, with the version rules in `core/Releases.kt` (tested in `ReleasesTest`). On launch (signed in) the app asks GitHub's releases API for the newest release with an `.apk` that is newer than its own version, on its channel (alpha takes alpha, beta and stable; beta takes beta and stable; stable takes stable). A dialog offers it; "Later" is remembered for that version. Settings › App updates shows the version, the state and "Check now".
+
+Update downloads the APK into the cache with a plain OkHttp client (the app's own client pins the Kinema server's certificate) and commits it to a `PackageInstaller` session. Android's confirmation screen always shows; `InstallReceiver` starts it and reports a refusal, such as an APK signed with another key. Without "Install unknown apps" for Kinema, the app opens that setting first. `-dev` builds never parse as a version, so they are never offered an update.
+
 ## Strings
 
 Every user-facing string is in `app/src/main/res/values/strings.xml` (English). A translation is a `values-<lang>/strings.xml`.

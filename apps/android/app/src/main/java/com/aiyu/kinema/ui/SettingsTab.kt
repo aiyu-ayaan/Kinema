@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.SettingsBrightness
+import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
@@ -57,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -70,6 +72,7 @@ import com.aiyu.kinema.R
 import com.aiyu.kinema.core.Route
 import com.aiyu.kinema.core.Session
 import com.aiyu.kinema.core.normalizeServerUrl
+import com.aiyu.kinema.update.AppUpdates
 import kotlinx.coroutines.launch
 
 @Composable
@@ -123,11 +126,7 @@ fun SettingsTab() {
             }
             OutlinedButton({ confirmForget = true }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.connect_change_server), color = c.error) }
         }
-        Text(
-            stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
-            style = MaterialTheme.typography.labelMedium, color = c.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-        )
+        UpdatesSection()
     }
 
     if (confirmForget) {
@@ -216,6 +215,40 @@ private fun ConnectionSection() {
                 enabled = draft.trim() != override,
             ) { Text(stringResource(R.string.action_save)) }
         }
+    }
+}
+
+/** This app's own version and update (update/AppUpdates.kt); the launch check shows the same state. */
+@Composable
+private fun UpdatesSection() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val state by AppUpdates.state.collectAsStateWithLifecycle()
+    Section(stringResource(R.string.settings_updates), 6) {
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_version, BuildConfig.VERSION_NAME)) },
+            supportingContent = {
+                Text(
+                    when (val s = state) {
+                        AppUpdates.State.Checking -> stringResource(R.string.update_checking)
+                        AppUpdates.State.UpToDate -> stringResource(R.string.update_up_to_date)
+                        is AppUpdates.State.Available -> stringResource(R.string.update_available, s.apk.version)
+                        is AppUpdates.State.Downloading -> stringResource(R.string.update_available, s.apk.version)
+                        is AppUpdates.State.Failed -> stringResource(R.string.update_failed, s.message)
+                        AppUpdates.State.Idle -> ""
+                    },
+                )
+            },
+            leadingContent = { Icon(Icons.Rounded.SystemUpdate, null) },
+            trailingContent = {
+                when (val s = state) {
+                    is AppUpdates.State.Available -> Button({ scope.launch { AppUpdates.install(context, s.apk) } }) { Text(stringResource(R.string.update_install)) }
+                    is AppUpdates.State.Downloading -> LoadingIndicator(Modifier.size(32.dp))
+                    else -> TextButton({ scope.launch { AppUpdates.check() } }, enabled = s != AppUpdates.State.Checking) { Text(stringResource(R.string.settings_update_check)) }
+                }
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        )
     }
 }
 
