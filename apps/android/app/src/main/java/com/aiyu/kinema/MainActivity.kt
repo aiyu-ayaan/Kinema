@@ -2,11 +2,15 @@ package com.aiyu.kinema
 
 import android.app.Application
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
+import android.view.animation.PathInterpolator
+import android.window.SplashScreenView
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -37,6 +41,8 @@ import com.aiyu.kinema.ui.ProfilesScreen
 import com.aiyu.kinema.ui.UnreachableScreen
 import com.aiyu.kinema.ui.theme.KinemaTheme
 import okhttp3.Call
+import java.time.Duration
+import java.time.Instant
 import okhttp3.OkHttpClient
 
 class KinemaApp : Application(), SingletonImageLoader.Factory {
@@ -58,6 +64,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) splashScreen.setOnExitAnimationListener(::exitSplash)
         enableEdgeToEdge()
         setContent {
             val appearance by repository.appearance.collectAsStateWithLifecycle()
@@ -82,6 +89,17 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /** Lets the projector animation finish, then the beam floods forward as the splash fades into the app. */
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun exitSplash(view: SplashScreenView) {
+        val end = view.iconAnimationStart?.plus(view.iconAnimationDuration ?: Duration.ZERO)
+        val wait = end?.let { Duration.between(Instant.now(), it).toMillis().coerceIn(0, 1000) } ?: 0
+        val emphasized = PathInterpolator(0.3f, 0f, 0.8f, 0.15f)
+        view.iconView?.animate()?.setStartDelay(wait)?.setDuration(320)?.setInterpolator(emphasized)
+            ?.scaleX(1.6f)?.scaleY(1.6f)?.alpha(0f)
+        view.animate().setStartDelay(wait + 80).setDuration(280).alpha(0f).withEndAction(view::remove)
     }
 }
 

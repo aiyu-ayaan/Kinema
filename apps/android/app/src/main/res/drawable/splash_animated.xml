@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ splash: the projector switches on. The stem rises, the lens lights with a
+  flare, then the beam throws open into the K's arms. Keep the total under 1000 ms: the
+  system caps splash icon animations there.
+-->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="108dp"
+            android:height="108dp"
+            android:viewportWidth="108"
+            android:viewportHeight="108">
+            <group
+                android:scaleX="0.174"
+                android:scaleY="0.174"
+                android:translateX="31.73"
+                android:translateY="31.73">
+                <group
+                    android:name="flare"
+                    android:pivotX="66"
+                    android:pivotY="128"
+                    android:scaleX="0"
+                    android:scaleY="0">
+                    <path
+                        android:name="flarePath"
+                        android:fillAlpha="0"
+                        android:fillColor="@color/ic_launcher_mark"
+                        android:pathData="M66,110A18,18 0,1 0,66 146A18,18 0,1 0,66 110Z" />
+                </group>
+                <group
+                    android:name="stem"
+                    android:pivotX="66"
+                    android:pivotY="224"
+                    android:scaleY="0">
+                    <path
+                        android:fillColor="@color/ic_launcher_mark"
+                        android:pathData="M52,32H80A12,12 0,0 1,92 44V212A12,12 0,0 1,80 224H52A12,12 0,0 1,40 212V44A12,12 0,0 1,52 32Z" />
+                </group>
+                <!-- The lens is drawn in the icon background colour, so it reads as the hole in the stem. -->
+                <group
+                    android:name="lens"
+                    android:pivotX="66"
+                    android:pivotY="128"
+                    android:scaleX="0"
+                    android:scaleY="0">
+                    <path
+                        android:fillColor="@color/ic_launcher_background"
+                        android:pathData="M66,110A18,18 0,1 0,66 146A18,18 0,1 0,66 110Z" />
+                </group>
+                <group
+                    android:name="beam"
+                    android:pivotX="92"
+                    android:pivotY="128"
+                    android:scaleX="0"
+                    android:scaleY="0.2">
+                    <path
+                        android:fillColor="@color/ic_launcher_mark"
+                        android:pathData="M92,128L216,32V92L168,128L216,164V224Z" />
+                </group>
+            </group>
+        </vector>
+    </aapt:attr>
+
+    <target android:name="stem">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="360"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="scaleY"
+                android:valueFrom="0"
+                android:valueTo="1" />
+        </aapt:attr>
+    </target>
+
+    <target android:name="lens">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="300"
+                    android:interpolator="@android:anim/overshoot_interpolator"
+                    android:propertyName="scaleX"
+                    android:startOffset="260"
+                    android:valueFrom="0"
+                    android:valueTo="1" />
+                <objectAnimator
+                    android:duration="300"
+                    android:interpolator="@android:anim/overshoot_interpolator"
+                    android:propertyName="scaleY"
+                    android:startOffset="260"
+                    android:valueFrom="0"
+                    android:valueTo="1" />
+            </set>
+        </aapt:attr>
+    </target>
+
+    <target android:name="flare">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="500"
+                    android:interpolator="@android:interpolator/linear_out_slow_in"
+                    android:propertyName="scaleX"
+                    android:startOffset="380"
+                    android:valueFrom="0.6"
+                    android:valueTo="4" />
+                <objectAnimator
+                    android:duration="500"
+                    android:interpolator="@android:interpolator/linear_out_slow_in"
+                    android:propertyName="scaleY"
+                    android:startOffset="380"
+                    android:valueFrom="0.6"
+                    android:valueTo="4" />
+            </set>
+        </aapt:attr>
+    </target>
+
+    <target android:name="flarePath">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="500"
+                android:interpolator="@android:interpolator/linear_out_slow_in"
+                android:propertyName="fillAlpha"
+                android:startOffset="380"
+                android:valueFrom="0.45"
+                android:valueTo="0" />
+        </aapt:attr>
+    </target>
+
+    <target android:name="beam">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="480"
+                    android:interpolator="@android:anim/overshoot_interpolator"
+                    android:propertyName="scaleX"
+                    android:startOffset="420"
+                    android:valueFrom="0"
+                    android:valueTo="1" />
+                <objectAnimator
+                    android:duration="480"
+                    android:interpolator="@android:interpolator/fast_out_slow_in"
+                    android:propertyName="scaleY"
+                    android:startOffset="420"
+                    android:valueFrom="0.2"
+                    android:valueTo="1" />
+            </set>
+        </aapt:attr>
+    </target>
+</animated-vector>

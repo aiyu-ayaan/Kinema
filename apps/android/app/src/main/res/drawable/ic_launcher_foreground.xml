@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The web favicon's play mark, centred in the adaptive icon's 66dp safe zone. -->
+<!-- Projector K (design-system/brand/logo-mark.svg), 256 grid scaled into the adaptive icon's 66dp safe zone (scale 0.174 matches the desktop tile: mark at 62 % of the 72dp visible area). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="@color/ic_launcher_mark"
-        android:pathData="M44,36.5C44,34.6 46.1,33.4 47.7,34.4L74.1,51.4C75.6,52.4 75.6,54.6 74.1,55.6L47.7,72.6C46.1,73.6 44,72.4 44,70.5Z" />
+    <group
+        android:scaleX="0.174"
+        android:scaleY="0.174"
+        android:translateX="31.73"
+        android:translateY="31.73">
+        <path
+            android:fillColor="@color/ic_launcher_mark"
+            android:fillType="evenOdd"
+            android:pathData="M52,32H80A12,12 0,0 1,92 44V212A12,12 0,0 1,80 224H52A12,12 0,0 1,40 212V44A12,12 0,0 1,52 32ZM66,110A18,18 0,1 0,66 146A18,18 0,1 0,66 110Z" />
+        <path
+            android:fillColor="@color/ic_launcher_mark"
+            android:pathData="M92,128L216,32V92L168,128L216,164V224Z" />
+    </group>
 </vector>

@@ -9,6 +9,19 @@ Implementation:
 - Tailwind mapping in `apps/web/tailwind.config.js`
 - Theme choice in `kinema.theme` / `kinema.dev.theme` (`apps/web/src/lib/theme.ts`)
 
+## Logo
+
+The mark is the **Projector K**: the K's arms are a light cone thrown from a lens in the stem. It replaces the old play-triangle tile, which read as YouTube.
+
+- Master (one colour, 256 grid): `design-system/brand/logo-mark.svg`. Stem `x 40–92`, lens `r 18` at `(66, 128)`, beam apex `(92, 128)`, tips at `x 216`.
+- App tile: `design-system/brand/app-icon.svg` (mark at 62 % on a `rx 64` tile). Prod `#802A15` / `#FFDAD2`, dev `#6D5E2F` / `#FAE1A6`.
+- Copies: web `apps/web/public/favicon.svg` and `favicon-dev.svg`, desktop `apps/desktop/build/icon.png` and `icon-dev.png` (512 px renders of the tiles) plus the inline mark in `apps/desktop/src/connect.html`, Android `drawable/ic_launcher_foreground.xml` (scale 0.174 in the 108 dp canvas, the same 62 % of the visible 72 dp as the desktop tile).
+- Never put the mark back inside a play triangle or add a play glyph next to it.
+
+### Android splash motion
+
+Android 12+ plays `drawable/splash_animated.xml` (1000 ms, the system cap): the stem rises from the bottom (0–360 ms), the lens pops in with overshoot (260–560 ms) and flares outward, then the beam throws open from the lens (420–900 ms). `MainActivity.exitSplash` waits for the icon animation to finish, then the mark scales up and fades as the splash dissolves into the app (~360 ms). Android 8–11 show the same mark still, via `drawable/splash_static.xml` as the window background.
+
 ## Principles
 
 1. **Content first**: posters, backdrops and video carry the colour. Chrome is warm-neutral and quiet.
