@@ -3,6 +3,7 @@ export const isDev = import.meta.env.MODE === 'development' || import.meta.env.D
 export const storageKeys = {
   token: isDev ? 'kinema.dev.token' : 'kinema.token',
   theme: isDev ? 'kinema.dev.theme' : 'kinema.theme',
+  theater: isDev ? 'kinema.dev.theater' : 'kinema.theater',
 }
 
 export function initializeFlavor(): void {

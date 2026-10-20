@@ -137,6 +137,8 @@
   "player.subtitleImage": "Image format",
   "player.fullscreen": "Full screen",
   "player.exitFullscreen": "Exit full screen",
+  "player.theater": "Theater mode (t)",
+  "player.defaultView": "Default view (t)",
   "player.errorTitle": "Playback stopped",
   "player.error": "This video could not be played in this browser.",
   "player.noFile": "This title has no playable file.",

@@ -10,6 +10,7 @@ import {
   ClockClockwise,
   Pause,
   Play,
+  Rectangle,
   SpeakerHigh,
   SpeakerSlash,
   Stop,
@@ -20,6 +21,7 @@ import { EpisodeLinks } from '@/components/media/EpisodeLinks'
 import { api, type PlayCaps } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { hasTopLeftWindowControls, hasTopRightWindowControls } from '@/lib/desktop'
+import { storageKeys } from '@/lib/flavor'
 import { clock, isTextSub, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import type { ItemDetail, PlaybackPlan, Stream } from '@/lib/types'
@@ -125,6 +127,24 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   const [boost, setBoost] = useState(1)
   const audioGraph = useRef<{ ctx: AudioContext; gain: GainNode } | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
+  // YouTube's theater mode: the video across the window, details and list under it. Kept per browser.
+  const [theater, setTheater] = useState(() => {
+    try {
+      return localStorage.getItem(storageKeys.theater) === '1'
+    } catch {
+      return false
+    }
+  })
+  const toggleTheater = useCallback(() => {
+    setTheater((on) => {
+      try {
+        localStorage.setItem(storageKeys.theater, on ? '0' : '1')
+      } catch {
+        // Private windows may refuse storage; the mode still applies for this visit.
+      }
+      return !on
+    })
+  }, [])
   const [menu, setMenu] = useState(false)
   const [chrome, setChrome] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -344,6 +364,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
         e.preventDefault()
         setLevel(level + (e.key === 'ArrowUp' ? 0.05 : -0.05))
       } else if (e.key === 'f') toggleFullscreen()
+      else if (e.key === 't') toggleTheater()
       else if (e.key === 'm') v.muted = !v.muted
       else if (e.key === 's' || e.key === 'x') {
         e.preventDefault()
@@ -353,7 +374,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [absTime, level, poke, seek, setLevel, stop, toggleFullscreen, togglePlay])
+  }, [absTime, level, poke, seek, setLevel, stop, toggleFullscreen, toggleTheater, togglePlay])
 
   useEffect(() => {
     const onChange = () => setFullscreen(!!document.fullscreenElement)
@@ -377,18 +398,35 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   const subtitle = item.kind === 'episode' ? `${subtitleOf(item)} · ${item.title}` : item.year ? String(item.year) : null
 
   const onTracks = audios.length > 1 || subs.length > 0 ? () => setMenu((m) => !m) : null
+  const details = (
+    <WatchDetails
+      detail={detail}
+      onTracks={
+        onTracks &&
+        (() => {
+          shellRef.current?.scrollIntoView({ block: 'nearest' })
+          setMenu(true)
+        })
+      }
+    />
+  )
+  const upNext = (
+    <aside className="shrink-0 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-48px)] lg:w-[402px] lg:overflow-y-auto">
+      <UpNextList detail={detail} scrollToCurrent={wide && !theater} />
+    </aside>
+  )
 
   // The watch page, after YouTube's: the video with its details under it and the up-next list beside it on a wide
   // window or under it on a narrow one. Full screen shows the video alone.
   return (
     <div className="fixed inset-0 z-sheet overflow-y-auto bg-bg text-fg">
-      <div className={cn('flex flex-col lg:flex-row lg:items-start lg:gap-6 lg:p-6', (hasTopRightWindowControls || hasTopLeftWindowControls) && 'pt-10 lg:pt-12')}>
+      <div className={cn('flex flex-col', !theater && 'lg:flex-row lg:items-start lg:gap-6 lg:p-6', (hasTopRightWindowControls || hasTopLeftWindowControls) && 'pt-10 lg:pt-12')}>
         <div className="min-w-0 flex-1">
           <div
             ref={shellRef}
             onMouseMove={poke}
             onClick={() => menu && setMenu(false)}
-            className={cn('relative aspect-video max-h-[calc(100dvh-140px)] w-full overflow-hidden bg-black text-white lg:rounded-lg', !showChrome && 'cursor-none')}
+            className={cn('relative aspect-video w-full overflow-hidden bg-black text-white', theater ? 'max-h-[calc(100dvh-120px)]' : 'max-h-[calc(100dvh-140px)] lg:rounded-lg', !showChrome && 'cursor-none')}
           >
             <video
               ref={videoRef}
@@ -599,7 +637,12 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
                       <Subtitles size={22} weight={subId != null ? 'fill' : 'regular'} />
                     </IconButton>
                   )}
-                  <IconButton label={fullscreen ? t('player.exitFullscreen') : t('player.fullscreen')} onClick={toggleFullscreen}>
+                  {!fullscreen && (
+              <IconButton label={theater ? t('player.defaultView') : t('player.theater')} onClick={toggleTheater} className="hidden lg:flex">
+                <Rectangle size={22} weight={theater ? 'fill' : 'regular'} />
+              </IconButton>
+            )}
+            <IconButton label={fullscreen ? t('player.exitFullscreen') : t('player.fullscreen')} onClick={toggleFullscreen}>
                     {fullscreen ? <ArrowsIn size={22} /> : <ArrowsOut size={22} />}
                   </IconButton>
                 </div>
@@ -608,20 +651,16 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
 
             {!error && <UpNextCard nextId={detail.next_id} remaining={duration ? duration - time : null} lifted={showChrome} compact={!wide} />}
           </div>
-          <WatchDetails
-            detail={detail}
-            onTracks={
-              onTracks &&
-              (() => {
-                shellRef.current?.scrollIntoView({ block: 'nearest' })
-                setMenu(true)
-              })
-            }
-          />
+          {!theater && details}
         </div>
-        <aside className="shrink-0 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-48px)] lg:w-[402px] lg:overflow-y-auto">
-          <UpNextList detail={detail} scrollToCurrent={wide} />
-        </aside>
+        {theater ? (
+          <div className="flex flex-col lg:flex-row lg:items-start lg:gap-6 lg:px-6 lg:pb-6">
+            <div className="min-w-0 flex-1">{details}</div>
+            {upNext}
+          </div>
+        ) : (
+          upNext
+        )}
       </div>
     </div>
   )
