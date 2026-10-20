@@ -137,6 +137,13 @@
     <string name="player_up_next_in">Up next in %1$s</string>
     <string name="player_play_now">Play now</string>
     <string name="player_dismiss">Hide</string>
+    <string name="player_fullscreen">Full screen</string>
+    <string name="player_exit_fullscreen">Exit full screen</string>
+    <string name="player_up_next_list">Episodes and more</string>
+    <string name="watch_episodes">Episodes</string>
+    <string name="watch_more">More to watch</string>
+    <string name="watch_now_playing">Now playing</string>
+    <string name="watch_nothing">Nothing else to watch here yet</string>
     <string name="player_tracks">Audio and subtitles</string>
     <string name="player_audio">Audio</string>
     <string name="player_subtitles">Subtitles</string>

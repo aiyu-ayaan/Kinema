@@ -302,7 +302,7 @@ private fun Modifier.bleed(gutter: Dp) = layout { measurable, constraints ->
 
 /** The story, three lines until tapped. */
 @Composable
-private fun Summary(text: String) {
+internal fun Summary(text: String) {
     var open by rememberSaveable { mutableStateOf(false) }
     Text(
         text,
