@@ -88,6 +88,34 @@ Same contract as the web player (`apps/web/src/features/player/PlayerPage.tsx`):
 3. Text subtitles come as WebVTT from `/subtitles/{id}` and are drawn over the video at the title time; picture subtitles are listed but disabled.
 4. Progress every 10 s and on leaving; watched at 92 %; the end opens the next episode.
 5. Landscape, immersive, screen kept on while open; restored on close.
+6. Stop button (bottom bar): pauses, saves progress and leaves, like the web player's stop.
+7. Swipe gestures: a vertical swipe on the left half sets this window's brightness, on the right half the media volume. Volume goes to 200 %: above 100 % a `LoudnessEnhancer` on the player's audio session adds up to +12 dB (MX Player style). The player gets a fixed audio session id at creation because ExoPlayer leaves it unset. Swipes starting in the top or bottom 8 % are left to the system bars. Brightness goes back to the system level when the player closes; the volume stays.
+8. Background and picture-in-picture: see below.
+
+### Playback service, notification and picture-in-picture
+
+```mermaid
+flowchart LR
+  Screen[PlayerScreen<br/>owns ExoPlayer, seek logic] -->|attach / detach| Hand[Playback object<br/>player + Controls]
+  Hand -->|startService / stopService| Svc[PlaybackService<br/>MediaSessionService]
+  Svc --> Session[MediaSession]
+  Session --> Notif[Media notification<br/>-10 s · play/pause · +10 s · next · stop]
+  Session --> Sys[Lock screen · Bluetooth · headset]
+  Notif -->|custom commands| Hand
+  Hand -->|Controls.seekBy / next / stop| Screen
+  Screen --> PiP[Picture-in-picture<br/>auto-enter on leave · play/pause action]
+```
+
+- The player screen creates the ExoPlayer (audio focus, pause on headphones unplugged) and hands it to `Playback` (`playback/PlaybackService.kt`), which starts `PlaybackService`. The service wraps it in a `MediaSession`; Media3 then runs the service in the foreground (`mediaPlayback` type) while something plays and posts the system media notification. Its buttons are Media3 `CommandButton`s: back and forward 10 s in the compact view, next episode and stop when expanded. They are custom session commands that call back into the screen, so a seek in a remuxed stream restarts it the same way the on-screen buttons do.
+- The next episode's screen attaches before the previous one detaches; `detach` ignores a player that is no longer current, and the service swaps the session's player (`MediaSession.setPlayer`).
+- The notification and lock screen show the title and the poster (fetched once through the server client, so pin and session apply).
+- Picture-in-picture (Settings › Playback, on by default): leaving the app while a video plays shrinks it into a window (auto-enter on Android 12+, `onUserLeaveHint` before). The window shows only video and subtitles, with a play/pause action. Closing the window pauses playback (the activity is stopped when it leaves picture-in-picture). With the setting off, leaving the app keeps the sound playing with the notification.
+- Swiping the app away from recents pauses and stops the service.
+- Known limit: Compose does not recompose while the activity is stopped, so "next episode" or the end of an episode pressed from the notification with the app fully in the background (not in picture-in-picture) takes effect when the app comes back. Stop pauses right away.
+
+### Server languages (admins)
+
+Settings › Languages · whole server: the server-wide starting audio language, subtitle language and when subtitles show (`off`, `always`, `foreign` audio), the same options as the web app's Settings › Languages. The app reads `GET /settings` and sends the whole `server` object back on `PUT /settings/server`, so options it does not show keep their values.
 
 ## Sync with the web app
 

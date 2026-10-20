@@ -4,6 +4,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Notice Wi-Fi coming and going, to move between the home and the public address. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Playback keeps going with the app in the background, with controls in the notification. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <!-- allowBackup off: the saved session is sealed with a Keystore key that a restore can't bring along.
          Cleartext off: the server speaks HTTPS (self-signed, pinned) or sits behind a TLS proxy. -->
@@ -18,18 +21,30 @@
         android:theme="@style/Theme.Kinema"
         android:usesCleartextTraffic="false">
 
-        <!-- Rotation is handled in Compose so the player keeps its stream when the phone turns. -->
+        <!-- Rotation and picture-in-picture are handled in Compose so the player keeps its stream. -->
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="true"
             android:launchMode="singleTop"
+            android:resizeableActivity="true"
+            android:supportsPictureInPicture="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Exported so the system media controls (notification, lock screen, Bluetooth) can connect. -->
+        <service
+            android:name=".playback.PlaybackService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

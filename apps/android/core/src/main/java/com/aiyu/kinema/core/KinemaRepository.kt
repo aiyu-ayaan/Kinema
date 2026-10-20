@@ -70,6 +70,15 @@ class KinemaRepository(context: Context) {
     private val _appearance = MutableStateFlow(Appearance(store.get(THEME) ?: "system", store.get(DYNAMIC) == "true"))
     val appearance: StateFlow<Appearance> = _appearance
 
+    private val _pictureInPicture = MutableStateFlow(store.get(PIP) != "false")
+    /** Leaving the app while a video plays shrinks it into a floating window; on by default. Off: it plays on in the background. */
+    val pictureInPicture: StateFlow<Boolean> = _pictureInPicture
+
+    fun setPictureInPicture(on: Boolean) {
+        store.put(PIP, on.toString())
+        _pictureInPicture.value = on
+    }
+
     private val _changes = MutableSharedFlow<Unit>(extraBufferCapacity = 4)
     /** Watch state changed (played, marked watched): screens that show it reload. */
     val changes: SharedFlow<Unit> = _changes
@@ -327,5 +336,6 @@ class KinemaRepository(context: Context) {
         const val TOKEN = "token"
         const val THEME = "theme"
         const val DYNAMIC = "dynamic_color"
+        const val PIP = "picture_in_picture"
     }
 }

@@ -2,6 +2,7 @@ package com.aiyu.kinema.ui
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.media.AudioManager
 import android.media.MediaCodecList
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -40,6 +41,7 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay10
 import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material.icons.rounded.SubtitlesOff
 import androidx.compose.material3.Button
@@ -97,7 +99,11 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.graphics.shapes.Morph
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.datasource.okhttp.OkHttpDataSource
@@ -111,10 +117,13 @@ import com.aiyu.kinema.core.PlayCaps
 import com.aiyu.kinema.core.PlaybackPlan
 import com.aiyu.kinema.core.Stream
 import com.aiyu.kinema.core.parseVtt
+import com.aiyu.kinema.playback.Playback
 import com.aiyu.kinema.ui.theme.PlayerTheme
 import java.util.Locale
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** What this phone decodes in hardware or software beyond H.264; the server remuxes or transcodes the rest. */
 private val deviceCaps: PlayCaps by lazy {
@@ -203,7 +212,20 @@ private fun Player(detail: ItemDetail, startAt: Double) {
 
     val player = remember(api) {
         // Streams go through the server client: its certificate pin and the session header.
-        ExoPlayer.Builder(context).setMediaSourceFactory(DefaultMediaSourceFactory(OkHttpDataSource.Factory(api.client))).build()
+        ExoPlayer.Builder(context).setMediaSourceFactory(DefaultMediaSourceFactory(OkHttpDataSource.Factory(api.client)))
+            // Pauses for calls and other apps' audio, and when headphones are unplugged, like any media app.
+            .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
+            .setHandleAudioBecomingNoisy(true)
+            .build()
+            .apply {
+                // A fixed audio session from the start, so the volume boost can attach to it without a glitch.
+                context.getSystemService(AudioManager::class.java)?.generateAudioSessionId()?.takeIf { it > 0 }?.let { audioSessionId = it }
+            }
+    }
+    val pipEnabled by repository.pictureInPicture.collectAsStateWithLifecycle()
+    // The notification and lock screen show the title and poster; the poster is fetched once, off the critical path.
+    val artwork = remember(item.id) {
+        scope.async { withTimeoutOrNull(1_500) { item.poster?.let { key -> repository.request { it.bytes(it.url("/images/$key")) }.getOrNull() } } }
     }
 
     var plan by remember { mutableStateOf<PlaybackPlan?>(null) }
@@ -253,13 +275,22 @@ private fun Player(detail: ItemDetail, startAt: Double) {
                     if (plan == null && p.subtitle != null) subId = p.subtitle
                     plan = p
                     audio = p.audio
+                    val art = artwork.await()
+                    if (seq != loadSeq) return@onSuccess
+                    fun media(url: String) = MediaItem.Builder().setUri(url).setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(if (item.kind == "episode") item.showTitle ?: item.title else item.title)
+                            .setArtist(if (item.kind == "episode") item.title else item.year?.toString())
+                            .apply { if (art != null) setArtworkData(art, MediaMetadata.PICTURE_TYPE_FRONT_COVER) }
+                            .build(),
+                    ).build()
                     if (p.mode == "direct") {
                         offset = 0.0
-                        player.setMediaItem(MediaItem.fromUri(api.streamUrl(file.id, audioIdx, caps, 0.0)), (at * 1000).toLong())
+                        player.setMediaItem(media(api.streamUrl(file.id, audioIdx, caps, 0.0)), (at * 1000).toLong())
                     } else {
                         // ffmpeg gets the requested time; p.start is where its output really begins.
                         offset = p.start
-                        player.setMediaItem(MediaItem.fromUri(api.streamUrl(file.id, audioIdx, caps, at)))
+                        player.setMediaItem(media(api.streamUrl(file.id, audioIdx, caps, at)))
                     }
                     player.prepare()
                     player.play()
@@ -299,9 +330,19 @@ private fun Player(detail: ItemDetail, startAt: Double) {
         }
         player.addListener(listener)
         load(null, startAt)
+        // The media service keeps this playing with the app in the background, with notification and lock screen controls.
+        Playback.attach(
+            context, player,
+            Playback.Controls(
+                stop = { player.pause(); nav.back() },
+                seekBy = { seek(now() + it) },
+                next = detail.nextId?.let { next -> { nav.play(next, 0.0) } },
+            ),
+        )
         onDispose {
             if (!watchedSent) report(notify = true) else repository.notifyChanged()
             player.removeListener(listener)
+            Playback.detach(context, player)
             player.release()
         }
     }
@@ -328,26 +369,40 @@ private fun Player(detail: ItemDetail, startAt: Double) {
     LaunchedEffect(poke, playing, tracks) {
         if (playing && !tracks) { delay(3_000); chrome = false }
     }
+    val inPip = rememberPictureInPicture(player, enabled = pipEnabled, playing = playing)
+    val levels = rememberSwipeLevels(player)
+    var swipe by remember { mutableStateOf<Swipe?>(null) }
+    // The floating window is too small for controls: video and subtitles only.
+    if (inPip) {
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            ContentFrame(player, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+            Subtitles(cues, time, lifted = false, small = true)
+        }
+        return
+    }
     val showChrome = chrome || !playing || error != null
 
     var seekHint by remember { mutableStateOf<Pair<Boolean, Int>?>(null) }
     Box(
-        Modifier.fillMaxSize().background(Color.Black).pointerTaps(
-            onTap = { chrome = !chrome; poke++ },
-            onDoubleTap = { forward ->
-                if (forward == null) { if (player.isPlaying) player.pause() else player.play() }
-                else {
-                    seek(now() + if (forward) 10 else -10)
-                    seekHint = forward to ((seekHint?.second ?: 0) + 1)
-                }
-                poke++
-            },
-        ),
+        Modifier.fillMaxSize().background(Color.Black)
+            .then(if (levels != null) Modifier.swipeLevels(levels) { swipe = it } else Modifier)
+            .pointerTaps(
+                onTap = { chrome = !chrome; poke++ },
+                onDoubleTap = { forward ->
+                    if (forward == null) { if (player.isPlaying) player.pause() else player.play() }
+                    else {
+                        seek(now() + if (forward) 10 else -10)
+                        seekHint = forward to ((seekHint?.second ?: 0) + 1)
+                    }
+                    poke++
+                },
+            ),
     ) {
         ContentFrame(player, Modifier.fillMaxSize(), contentScale = if (fill) ContentScale.Crop else ContentScale.Fit)
 
         Subtitles(cues, time, lifted = showChrome)
         SeekHint(seekHint)
+        if (levels != null) SwipeIndicator(swipe, levels)
 
         if (buffering && error == null) LoadingIndicator(Modifier.align(Alignment.Center).size(80.dp))
 
@@ -379,6 +434,7 @@ private fun Player(detail: ItemDetail, startAt: Double) {
                     onScrub = { scrub = it; poke++ },
                     onScrubEnd = { scrub?.let { seek(it.toDouble()) }; scrub = null },
                     next = detail.nextId?.let { next -> { nav.play(next, 0.0) } },
+                    onStop = { player.pause(); nav.back() },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
@@ -440,12 +496,12 @@ private fun androidx.compose.foundation.layout.BoxScope.SeekHint(hint: Pair<Bool
 }
 
 @Composable
-private fun androidx.compose.foundation.layout.BoxScope.Subtitles(cues: List<Cue>, time: Double, lifted: Boolean) {
+private fun androidx.compose.foundation.layout.BoxScope.Subtitles(cues: List<Cue>, time: Double, lifted: Boolean, small: Boolean = false) {
     val active = cues.filter { it.start <= time && time < it.end }
     if (active.isEmpty()) return
     val lift by animateFloatAsState(if (lifted) 1f else 0f, MaterialTheme.motionScheme.defaultSpatialSpec(), label = "subLift")
     Column(
-        Modifier.align(Alignment.BottomCenter).padding(horizontal = 48.dp).padding(bottom = (28 + 84 * lift).dp),
+        Modifier.align(Alignment.BottomCenter).padding(horizontal = if (small) 8.dp else 48.dp).padding(bottom = if (small) 6.dp else (28 + 84 * lift).dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -453,7 +509,7 @@ private fun androidx.compose.foundation.layout.BoxScope.Subtitles(cues: List<Cue
             Text(
                 it.text,
                 color = Color.White,
-                fontSize = 20.sp,
+                fontSize = if (small) 11.sp else 20.sp,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.titleLarge.copy(shadow = Shadow(Color.Black, blurRadius = 8f)),
@@ -530,7 +586,7 @@ private class MorphShape(private val morph: Morph, private val progress: () -> F
 }
 
 @Composable
-private fun BottomBar(time: Double, duration: Double?, onScrub: (Float) -> Unit, onScrubEnd: () -> Unit, next: (() -> Unit)?, modifier: Modifier = Modifier) {
+private fun BottomBar(time: Double, duration: Double?, onScrub: (Float) -> Unit, onScrubEnd: () -> Unit, next: (() -> Unit)?, onStop: () -> Unit, modifier: Modifier = Modifier) {
     val motion = MaterialTheme.motionScheme
     Column(modifier.fillMaxWidth().navigationBarsPadding().displayCutoutPadding().padding(horizontal = 24.dp, vertical = 12.dp)) {
         AnimatedVisibility(next != null, enter = slideInVertically(motion.defaultSpatialSpec()) { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
@@ -543,6 +599,8 @@ private fun BottomBar(time: Double, duration: Double?, onScrub: (Float) -> Unit,
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            // Stop: saves where you are and leaves the player (the web player's stop button).
+            IconButton(onStop) { Icon(Icons.Rounded.Stop, stringResource(R.string.player_stop), tint = Color.White) }
             Text(clock(time), style = MaterialTheme.typography.labelLarge, color = Color.White)
             if (duration != null && duration > 0) {
                 Slider(
