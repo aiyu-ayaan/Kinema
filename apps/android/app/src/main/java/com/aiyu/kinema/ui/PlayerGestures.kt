@@ -85,14 +85,14 @@ class SwipeLevels(private val activity: Activity, private val player: ExoPlayer)
         }
     }
 
-    fun setVolume(to: Float) {
+    fun changeVolume(to: Float) {
         val level = to.coerceIn(0f, MAX_VOLUME)
         volume = level
         runCatching { audio?.setStreamVolume(AudioManager.STREAM_MUSIC, (level.coerceAtMost(1f) * steps).roundToInt(), 0) }
         boost(((level - 1f).coerceAtLeast(0f) * BOOST_MB).roundToInt())
     }
 
-    fun setBrightness(to: Float) {
+    fun changeBrightness(to: Float) {
         brightness = to.coerceIn(0f, 1f)
         // 0 turns some screens fully off; keep a sliver of light.
         activity.window.attributes = activity.window.attributes.apply { screenBrightness = brightness.coerceAtLeast(0.01f) }
@@ -143,8 +143,8 @@ fun Modifier.swipeLevels(levels: SwipeLevels, onSwipe: (Swipe?) -> Unit) = point
             // A swipe the full height of the screen moves a level by 100 %.
             val delta = -dy / size.height
             when (kind) {
-                Swipe.BRIGHTNESS -> levels.setBrightness(levels.brightness + delta)
-                Swipe.VOLUME -> levels.setVolume(levels.volume + delta)
+                Swipe.BRIGHTNESS -> levels.changeBrightness(levels.brightness + delta)
+                Swipe.VOLUME -> levels.changeVolume(levels.volume + delta)
                 null -> return@detectVerticalDragGestures
             }
             change.consume()
