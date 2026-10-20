@@ -11,8 +11,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -40,7 +38,6 @@ import androidx.compose.material.icons.rounded.Forward10
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay10
-import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material.icons.rounded.SubtitlesOff
@@ -57,7 +54,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.toPath
 import androidx.compose.material3.toShape
@@ -433,12 +429,12 @@ private fun Player(detail: ItemDetail, startAt: Double) {
                     duration = duration,
                     onScrub = { scrub = it; poke++ },
                     onScrubEnd = { scrub?.let { seek(it.toDouble()) }; scrub = null },
-                    next = detail.nextId?.let { next -> { nav.play(next, 0.0) } },
                     onStop = { player.pause(); nav.back() },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
         }
+        if (error == null) NextEpisodeCard(detail.nextId, duration?.let { it - time }, lifted = showChrome) { detail.nextId?.let { nav.play(it, 0.0) } }
     }
 
     // A pick is saved for this profile, so the web app and other phones start the title the same way.
@@ -589,18 +585,8 @@ private class MorphShape(private val morph: Morph, private val progress: () -> F
 }
 
 @Composable
-private fun BottomBar(time: Double, duration: Double?, onScrub: (Float) -> Unit, onScrubEnd: () -> Unit, next: (() -> Unit)?, onStop: () -> Unit, modifier: Modifier = Modifier) {
-    val motion = MaterialTheme.motionScheme
+private fun BottomBar(time: Double, duration: Double?, onScrub: (Float) -> Unit, onScrubEnd: () -> Unit, onStop: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth().navigationBarsPadding().displayCutoutPadding().padding(horizontal = 24.dp, vertical = 12.dp)) {
-        AnimatedVisibility(next != null, enter = slideInVertically(motion.defaultSpatialSpec()) { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                TextButton({ next?.invoke() }) {
-                    Text(stringResource(R.string.player_next), color = Color.White)
-                    Spacer(Modifier.width(6.dp))
-                    Icon(Icons.Rounded.SkipNext, null, tint = Color.White)
-                }
-            }
-        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             // Stop: saves where you are and leaves the player (the web player's stop button).
             IconButton(onStop) { Icon(Icons.Rounded.Stop, stringResource(R.string.player_stop), tint = Color.White) }

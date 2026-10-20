@@ -134,6 +134,9 @@
     <string name="player_forward10">Forward 10 seconds</string>
     <string name="player_seconds">%1$d s</string>
     <string name="player_next">Next episode</string>
+    <string name="player_up_next_in">Up next in %1$s</string>
+    <string name="player_play_now">Play now</string>
+    <string name="player_dismiss">Hide</string>
     <string name="player_tracks">Audio and subtitles</string>
     <string name="player_audio">Audio</string>
     <string name="player_subtitles">Subtitles</string>
