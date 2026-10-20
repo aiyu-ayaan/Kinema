@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { GearSix, HardDrives, House, Info, List, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
+import { ArrowCircleUp, GearSix, HardDrives, House, Info, List, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
 import { Avatar } from './ui/Avatar'
 import { SettingsNav } from '@/features/settings/SettingsNav'
 import { libraryIcon } from './media/libraryIcon'
@@ -13,6 +13,7 @@ import { hasTopLeftWindowControls, hasTopRightWindowControls } from '@/lib/deskt
 import { isDev } from '@/lib/flavor'
 import { t } from '@/lib/i18n'
 import { useLibraries, useServerInfo } from '@/lib/queries'
+import { useServerUpdate } from '@/lib/releases'
 import { setTheme, useTheme } from '@/lib/theme'
 import type { Library } from '@/lib/types'
 
@@ -113,6 +114,7 @@ function Brand() {
 function Nav({ onNavigate }: { onNavigate?: () => void }) {
   const { data: libraries } = useLibraries()
   const admin = useIsAdmin()
+  const update = useServerUpdate(admin).data
   return (
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3">
       <NavItem to="/" end icon={House} label={t('nav.home')} onClick={onNavigate} />
@@ -123,6 +125,12 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
         <LibraryNav key={l.id} library={l} onNavigate={onNavigate} />
       ))}
       <div className="mt-auto flex flex-col gap-0.5 pt-4">
+        {update && (
+          <Link to="/about" onClick={onNavigate} className="mb-1 flex h-9 items-center gap-3 rounded-md bg-primary/10 px-3 text-body font-medium text-primary hover:bg-primary/15">
+            <ArrowCircleUp size={18} weight="fill" aria-hidden />
+            <span className="truncate">{t('nav.updateAvailable', { version: update.version })}</span>
+          </Link>
+        )}
         <NavItem to="/about" icon={Info} label={t('nav.about')} onClick={onNavigate} />
         {admin && <NavItem to="/settings" icon={GearSix} label={t('nav.settings')} onClick={onNavigate} />}
       </div>

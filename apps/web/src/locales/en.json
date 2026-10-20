@@ -311,5 +311,16 @@
   "credits.group.inspiration": "Inspiration",
   "credits.tmdb": "Movie and show metadata and artwork. This product uses the TMDB API but is not endorsed or certified by TMDB.",
   "credits.github": "Update checks",
-  "credits.plex": "The idea of a personal media server. No Plex code or assets are used."
+  "credits.plex": "The idea of a personal media server. No Plex code or assets are used.",
+  "nav.updateAvailable": "Update available · {version}",
+  "update.title": "Server updates",
+  "update.checking": "Checking for updates…",
+  "update.checkFailed": "Couldn’t check for updates.",
+  "update.upToDate": "Kinema {version} is the newest version.",
+  "update.available": "Update available: Kinema {version}",
+  "update.youHave": "This server runs {version}. Run the command for how it was installed:",
+  "update.release": "What’s new",
+  "update.cmd.linux": "Linux server (install script)",
+  "update.cmd.docker": "Docker Compose, from the folder with docker-compose.yml",
+  "update.commandHint": "Your settings, libraries and watch history are kept."
 }

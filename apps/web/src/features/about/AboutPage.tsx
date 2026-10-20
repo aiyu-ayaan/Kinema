@@ -2,10 +2,12 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, ArrowSquareOut, CaretRight, GithubLogo, Globe } from '@phosphor-icons/react'
 import { Card, CardHeader, PageHeader } from '@/components/ui/Card'
+import { useIsAdmin } from '@/lib/auth'
 import { DEVELOPER, REPO, REPO_URL, credits } from '@/lib/credits'
 import { isDesktop } from '@/lib/desktop'
 import { isDev } from '@/lib/flavor'
 import { useServerInfo } from '@/lib/queries'
+import { updateCommands, useServerUpdate } from '@/lib/releases'
 import { t } from '@/lib/i18n'
 
 const row = 'flex min-h-12 items-center justify-between gap-3 px-4 py-2 transition-colors duration-fast hover:bg-raised'
@@ -33,6 +35,53 @@ function BackLink({ to, label }: { to: string; label: string }) {
   )
 }
 
+/** Admins only: whether GitHub has a newer server release, and the command that installs it. */
+function ServerUpdateCard() {
+  const admin = useIsAdmin()
+  const running = useServerInfo().data?.version ?? __APP_VERSION__
+  const check = useServerUpdate(admin)
+  const found = check.data
+  if (!admin) return null
+  return (
+    <Card>
+      <CardHeader
+        title={t('update.title')}
+        action={
+          found && (
+            <a href={found.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-label text-primary hover:underline">
+              {t('update.release')} <ArrowSquareOut size={14} aria-hidden />
+            </a>
+          )
+        }
+      />
+      <div className="grid gap-3 p-4">
+        <p className={found ? 'font-medium text-primary' : 'text-muted'}>
+          {check.isError
+            ? t('update.checkFailed')
+            : check.isPending
+              ? t('update.checking')
+              : found
+                ? t('update.available', { version: found.version })
+                : t('update.upToDate', { version: running })}
+        </p>
+        {found && (
+          <>
+            <p className="text-label text-muted">{t('update.youHave', { version: running })}</p>
+            {updateCommands(found.channel).map((c) => (
+              <div key={c.key}>
+                <p className="mb-1 text-label font-medium">{t(`update.cmd.${c.key}`)}</p>
+                {/* select-all: one click selects the whole command for copying. */}
+                <pre className="select-all overflow-x-auto rounded-md border border-border bg-raised px-3 py-2 font-mono text-label">{c.command}</pre>
+              </div>
+            ))}
+            <p className="text-label text-muted">{t('update.commandHint')}</p>
+          </>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 export function AboutPage() {
   const { data: info } = useServerInfo()
   return (
@@ -57,6 +106,8 @@ export function AboutPage() {
             <Ext href={REPO_URL} icon={<GithubLogo size={18} aria-hidden />} title={t('about.sourceCode')} subtitle={`github.com/${REPO}`} />
           </div>
         </Card>
+
+        <ServerUpdateCard />
 
         <Card>
           <CardHeader title={t('about.developer')} />

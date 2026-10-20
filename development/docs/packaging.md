@@ -86,11 +86,14 @@ Now (manual): re-running the install scripts updates.
 - `scripts/install-server.sh`: records the installed version in `/opt/kinema/VERSION` and does nothing when the newest release matches (`--force` reinstalls, `--check` only reports). An update keeps the service's existing `User=` (so the media stays readable whoever runs the update), stops the service, copies `kinema.db` (+ WAL/SHM) to `/var/lib/kinema/backup-<old version>` (only the latest backup is kept), swaps `/opt/kinema` as a whole folder and restarts. If the service is not active about 20 s later, the previous folder and the database backup are put back: a newer build may have migrated the database, which the older binary cannot open. A `--channel` given once is saved in `/var/lib/kinema/.channel`.
 - `scripts/install-desktop.sh`: records the version in `~/.local/share/kinema/VERSION`, skips when up to date, saves a chosen channel, and says to restart the app when it is open.
 
+Update checks. Every client asks the GitHub releases API of `aiyu-ayaan/Kinema` itself (unauthenticated, 60 requests an hour per address), so the server never phones home. The channel is the running version's: an alpha takes alphas, betas and stable; a beta takes betas and stable; stable takes stable. Only versions newer than the running one count, compared by version, never by date.
+
+- Server, in the web UI (`apps/web/src/lib/releases.ts`): admins only. A release counts when it ships a `kinema-server-*` bundle. The sidebar shows "Update available · <version>", and About Kinema shows the commands to run: the install script (with `--channel` for alpha and beta) and `docker compose pull && docker compose up -d`. The server is never updated from the browser.
+
 Planned (automatic):
 
 - AppImage: embedded zsync info, `appimageupdatetool`.
 - Windows: installer checks the GitHub release feed and downloads the new installer after the user confirms; portable zip shows a notice only.
-- Docker: pull a new tag. The app only shows "update available".
 - All signed: release assets carry SHA-256 sums and a minisign signature.
 
 ## Build and CI
