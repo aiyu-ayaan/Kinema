@@ -5,10 +5,14 @@
 #   ... | sh -s -- --channel beta     beta builds (and stable ones)
 #   ... | sh -s -- --version 0.0.1    a specific release
 #   ... | sh -s -- --uninstall        remove it (settings stay in ~/.config/Kinema)
+#   ... | sh -s -- --check            show the installed and the newest version, change nothing
+#   ... | sh -s -- --force            reinstall even when already up to date
+#
+# Updating: run the same command again. It replaces the AppImage, keeps the settings and the saved
+# server, and remembers a --channel given before. Restart the app afterwards if it was open.
 #
 # The AppImage goes to ~/.local/share/kinema, a place this user owns, because the app updates
 # itself by replacing that file. It also gets a menu entry with the app's own icon and a `kinema` command.
-# Re-running it updates.
 #
 # POSIX sh: it is piped into whatever `sh` is, which on Debian and Ubuntu is dash.
 set -eu
@@ -18,6 +22,8 @@ DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 APP="$DATA_HOME/kinema/Kinema.AppImage"
 BIN="$HOME/.local/bin/kinema"
 BIN_DESKTOP="$HOME/.local/bin/kinema-desktop"
+VERSION_FILE="$DATA_HOME/kinema/VERSION"
+CHANNEL_FILE="$DATA_HOME/kinema/channel"
 DESKTOP_FILE="$DATA_HOME/applications/kinema.desktop"
 ICON_PATH="usr/share/icons/hicolor/512x512/apps/kinema-desktop.png"
 ICON_FILE="$DATA_HOME/icons/hicolor/512x512/apps/kinema.png"
@@ -26,20 +32,29 @@ CHANNEL=auto
 VERSION=""
 FROM_FILE=""
 UNINSTALL=0
+CHANNEL_SET=0
+CHECK=0
+FORCE=0
 
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --channel) CHANNEL="${2:?--channel needs a value}"; shift 2 ;;
+    --channel) CHANNEL="${2:?--channel needs a value}"; CHANNEL_SET=1; shift 2 ;;
     --version) VERSION="${2:?--version needs a value}"; VERSION="${VERSION#v}"; shift 2 ;;
     --from-file) FROM_FILE="${2:?--from-file needs a path}"; shift 2 ;;
     --uninstall) UNINSTALL=1; shift ;;
-    -h | --help) sed -n '2,7p' "$0" 2>/dev/null || true; echo "  --from-file PATH   install a local AppImage"; exit 0 ;;
+    --check) CHECK=1; shift ;;
+    --force) FORCE=1; shift ;;
+    -h | --help) sed -n '2,13p' "$0" 2>/dev/null || true; echo "  --from-file PATH   install a local AppImage"; exit 0 ;;
     *) die "unknown option: $1" ;;
   esac
 done
+# An update follows the channel chosen at install unless told otherwise.
+if [ "$CHANNEL_SET" -eq 0 ] && [ -z "$VERSION" ] && [ -f "$CHANNEL_FILE" ]; then CHANNEL="$(cat "$CHANNEL_FILE")"; fi
 case "$CHANNEL" in auto | stable | beta | alpha) ;; *) die "--channel must be auto, stable, beta or alpha" ;; esac
+INSTALLED=""
+[ ! -f "$APP" ] || INSTALLED="$(cat "$VERSION_FILE" 2>/dev/null || true)"
 [ "$(id -u)" -ne 0 ] || die "run this as the user who will use Kinema, not as root."
 
 refresh_menus() {
@@ -48,7 +63,7 @@ refresh_menus() {
 }
 
 if [ "$UNINSTALL" -eq 1 ]; then
-  rm -f "$APP" "$APP.part" "$DESKTOP_FILE" "$ICON_FILE"
+  rm -f "$APP" "$APP.part" "$VERSION_FILE" "$CHANNEL_FILE" "$DESKTOP_FILE" "$ICON_FILE"
   if [ -L "$BIN" ] && [ "$(readlink "$BIN")" = "$APP" ]; then rm -f "$BIN"; fi
   if [ -L "$BIN_DESKTOP" ] && [ "$(readlink "$BIN_DESKTOP")" = "$APP" ]; then rm -f "$BIN_DESKTOP"; fi
   rmdir "$DATA_HOME/kinema" 2>/dev/null || true
@@ -63,8 +78,10 @@ mkdir -p "$DATA_HOME/kinema"
 trap 'rm -f "$APP.part"' EXIT INT TERM
 
 if [ -n "$FROM_FILE" ]; then
+  [ "$CHECK" -eq 0 ] || die "--check looks up GitHub releases; it does not go with --from-file."
   cp "$FROM_FILE" "$APP.part" || die "cannot read $FROM_FILE"
-  label="$(basename "$FROM_FILE")"
+  label="$(basename "$FROM_FILE" .AppImage)"
+  label="${label#Kinema-}"
 else
   if command -v curl >/dev/null 2>&1; then
     fetch() { curl -fsSL --retry 3 "$1"; }
@@ -114,7 +131,16 @@ else
     ' | sort | tail -n 1)"
   [ -n "$newest" ] || die "no Linux desktop build found${VERSION:+ for $VERSION}. See the releases page."
   label="$(printf '%s' "$newest" | cut -d' ' -f2)"
-  echo "Downloading Kinema $label..."
+  if [ "$CHECK" -eq 1 ]; then
+    echo "Installed: ${INSTALLED:-none}    Newest ($CHANNEL): $label"
+    [ "$INSTALLED" = "$label" ] && echo "Kinema desktop is up to date." || echo "Update with: curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-desktop.sh | sh"
+    exit 0
+  fi
+  if [ "$INSTALLED" = "$label" ] && [ "$FORCE" -eq 0 ]; then
+    echo "Kinema desktop $label is already installed and up to date. Use --force to reinstall it."
+    exit 0
+  fi
+  if [ -n "$INSTALLED" ]; then echo "Updating Kinema desktop $INSTALLED to $label..."; else echo "Downloading Kinema $label..."; fi
   fetch_to "$(printf '%s' "$newest" | cut -d' ' -f3)" "$APP.part" || die "the download failed. Nothing was changed."
 fi
 
@@ -123,6 +149,10 @@ fi
 chmod 755 "$APP.part"
 mv -f "$APP.part" "$APP"
 trap - EXIT INT TERM
+printf '%s
+' "$label" >"$VERSION_FILE"
+[ "$CHANNEL_SET" -eq 0 ] || printf '%s
+' "$CHANNEL" >"$CHANNEL_FILE"
 
 # Extract and install the icon
 tmp="$(mktemp -d)"
@@ -161,6 +191,10 @@ if [ ! -e "$BIN" ] || [ -L "$BIN" ]; then ln -sf "$APP" "$BIN"; fi
 if [ ! -e "$BIN_DESKTOP" ] || [ -L "$BIN_DESKTOP" ]; then ln -sf "$APP" "$BIN_DESKTOP"; fi
 
 echo "Kinema desktop $label is installed: find it in your applications menu, or run 'kinema'."
+# A running copy keeps the old version in memory until it is closed.
+if command -v pgrep >/dev/null 2>&1 && pgrep -u "$(id -u)" -f "$APP" >/dev/null 2>&1; then
+  echo "Kinema is open: quit it and start it again to use $label."
+fi
 if [ ! -e /dev/fuse ]; then
   echo "warning: FUSE is not available, so Kinema unpacks itself on every start (slower). Install fuse3 with your package manager." >&2
 fi

@@ -6,11 +6,17 @@
 #   ... | sudo sh -s -- --version 0.0.1    a specific release
 #   ... | sudo sh -s -- --port 32400       the port to try first (default 3000)
 #   ... | sudo sh -s -- --uninstall        remove it (the library in /var/lib/kinema stays)
+#   ... | sudo sh -s -- --check            show the installed and the newest version, change nothing
+#   ... | sudo sh -s -- --force            reinstall even when already up to date
+#
+# Updating: run the same command again. It keeps the port, settings, library and the user the
+# service runs as, remembers a --channel given before, backs up the database, and goes back to the
+# previous version (and that backup) if the new one does not start.
 #
 # Like Plex: the server, web UI and ffmpeg go to /opt/kinema, a systemd service starts it at boot,
 # and the database and caches live in /var/lib/kinema. It runs as the user who ran sudo, so it can
 # read that user's media folders; as plain root it runs as a `kinema` system user. If the port is
-# taken, the next free one is used. Re-running it updates and keeps the settings.
+# taken, the next free one is used.
 #
 # POSIX sh: it is piped into whatever `sh` is, which on Debian and Ubuntu is dash.
 set -eu
@@ -25,23 +31,31 @@ VERSION=""
 FROM_FILE=""
 PORT=3000
 UNINSTALL=0
+CHANNEL_SET=0
+CHECK=0
+FORCE=0
 
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --channel) CHANNEL="${2:?--channel needs a value}"; shift 2 ;;
+    --channel) CHANNEL="${2:?--channel needs a value}"; CHANNEL_SET=1; shift 2 ;;
     --version) VERSION="${2:?--version needs a value}"; VERSION="${VERSION#v}"; shift 2 ;;
     --port) PORT="${2:?--port needs a value}"; shift 2 ;;
     --from-file) FROM_FILE="${2:?--from-file needs a path}"; shift 2 ;;
     --uninstall) UNINSTALL=1; shift ;;
-    -h | --help) sed -n '2,8p' "$0" 2>/dev/null || true; echo "  --from-file PATH   install a local kinema-server tarball"; exit 0 ;;
+    --check) CHECK=1; shift ;;
+    --force) FORCE=1; shift ;;
+    -h | --help) sed -n '2,15p' "$0" 2>/dev/null || true; echo "  --from-file PATH   install a local kinema-server tarball"; exit 0 ;;
     *) die "unknown option: $1" ;;
   esac
 done
+# An update follows the channel chosen at install unless told otherwise.
+if [ "$CHANNEL_SET" -eq 0 ] && [ -z "$VERSION" ] && [ -f "$DATA/.channel" ]; then CHANNEL="$(cat "$DATA/.channel")"; fi
 case "$CHANNEL" in auto | stable | beta | alpha) ;; *) die "--channel must be auto, stable, beta or alpha" ;; esac
 case "$PORT" in '' | *[!0-9]*) die "--port must be a number" ;; esac
-[ "$(id -u)" -eq 0 ] || die "run this with sudo: it installs a system service."
+[ "$CHECK" -eq 1 ] || [ "$(id -u)" -eq 0 ] || die "run this with sudo: it installs a system service."
+INSTALLED="$(cat "$APP/VERSION" 2>/dev/null || true)"
 HAS_SYSTEMD=0
 [ -d /run/systemd/system ] && command -v systemctl >/dev/null 2>&1 && HAS_SYSTEMD=1
 
@@ -51,7 +65,7 @@ if [ "$UNINSTALL" -eq 1 ]; then
     rm -f "$UNIT"
     systemctl daemon-reload
   fi
-  rm -rf "$APP" "$APP.new"
+  rm -rf "$APP" "$APP.new" "$APP.old"
   echo "Kinema is removed. Its library and settings are kept in $DATA; delete that folder to forget them."
   exit 0
 fi
@@ -66,8 +80,11 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK" "$APP.new"' EXIT INT TERM
 
 if [ -n "$FROM_FILE" ]; then
+  [ "$CHECK" -eq 0 ] || die "--check looks up GitHub releases; it does not go with --from-file."
   cp "$FROM_FILE" "$WORK/kinema.tar.gz" || die "cannot read $FROM_FILE"
-  label="$(basename "$FROM_FILE")"
+  label="$(basename "$FROM_FILE" .tar.gz)"
+  label="${label#kinema-server-}"
+  label="${label%-linux-*}"
 else
   if command -v curl >/dev/null 2>&1; then
     fetch() { curl -fsSL --retry 3 "$1"; }
@@ -120,7 +137,16 @@ else
     ' | sort | tail -n 1)"
   [ -n "$newest" ] || die "no $ARCH server build found${VERSION:+ for $VERSION}. See the releases page."
   label="$(printf '%s' "$newest" | cut -d' ' -f2)"
-  echo "Downloading Kinema $label..."
+  if [ "$CHECK" -eq 1 ]; then
+    echo "Installed: ${INSTALLED:-none}    Newest ($CHANNEL): $label"
+    [ "$INSTALLED" = "$label" ] && echo "Kinema is up to date." || echo "Update with: curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-server.sh | sudo sh"
+    exit 0
+  fi
+  if [ "$INSTALLED" = "$label" ] && [ "$FORCE" -eq 0 ] && [ -f "$APP/kinema" ]; then
+    echo "Kinema $label is already installed and up to date. Use --force to reinstall it."
+    exit 0
+  fi
+  if [ -n "$INSTALLED" ]; then echo "Updating Kinema $INSTALLED to $label..."; else echo "Downloading Kinema $label..."; fi
   fetch_to "$(printf '%s' "$newest" | cut -d' ' -f3)" "$WORK/kinema.tar.gz" || die "the download failed. Nothing was changed."
 fi
 
@@ -129,8 +155,10 @@ tar -xzf "$WORK/kinema.tar.gz" -C "$WORK/x" || die "that is not a Kinema server 
 src="$(find "$WORK/x" -mindepth 2 -maxdepth 2 -name kinema -type f | head -n 1)"
 [ -n "$src" ] || die "that is not a Kinema server tarball. Nothing was changed."
 
-# The user the service runs as: whoever ran sudo, so their media is readable.
-RUN_AS="${SUDO_USER:-}"
+# The user the service runs as: whoever ran sudo, so their media is readable. An update keeps the
+# installed service's user, whoever runs it, so the media folders stay readable.
+RUN_AS="$(sed -n 's/^User=//p' "$UNIT" 2>/dev/null | head -n 1)"
+[ -n "$RUN_AS" ] && id "$RUN_AS" >/dev/null 2>&1 || RUN_AS="${SUDO_USER:-}"
 if [ -z "$RUN_AS" ] || [ "$RUN_AS" = root ]; then
   RUN_AS=kinema
   id kinema >/dev/null 2>&1 || useradd --system --home-dir "$DATA" --shell /usr/sbin/nologin kinema 2>/dev/null ||
@@ -157,16 +185,36 @@ if [ ! -f "$DATA/kinema.toml" ]; then
 fi
 chown -R "$RUN_AS" "$DATA"
 
-# Swap the whole folder, so an update never leaves old and new files mixed.
+# An update stops the server first, so the database is quiet while it is copied and swapped.
+BACKUP=""
+if [ -f "$APP/kinema" ]; then
+  [ "$HAS_SYSTEMD" -eq 0 ] || systemctl stop kinema 2>/dev/null || true
+  db="$(find "$DATA" -maxdepth 3 -name kinema.db -type f ! -path "$DATA/backup-*" 2>/dev/null | head -n 1)"
+  if [ -n "$db" ]; then
+    BACKUP="$DATA/backup-${INSTALLED:-previous}"
+    # One backup is kept: the one taken before the latest update.
+    rm -rf "$DATA"/backup-*
+    mkdir -p "$BACKUP"
+    cp -p "$db" "$db-wal" "$db-shm" "$BACKUP/" 2>/dev/null || cp -p "$db" "$BACKUP/" || die "cannot back up $db. Nothing was changed."
+    echo "Database backed up to $BACKUP"
+  fi
+fi
+
+# Swap the whole folder, so an update never leaves old and new files mixed. The old one stays
+# until the new one is known to start.
 rm -rf "$APP.new"
 mv "$(dirname "$src")" "$APP.new"
 chmod 755 "$APP.new" "$APP.new/kinema" "$APP.new/ffmpeg" "$APP.new/ffprobe"
+printf '%s
+' "$label" >"$APP.new/VERSION"
 rm -rf "$APP.old"
 [ ! -d "$APP" ] || mv "$APP" "$APP.old"
 mv "$APP.new" "$APP"
-rm -rf "$APP.old"
+[ "$CHANNEL_SET" -eq 0 ] || printf '%s
+' "$CHANNEL" >"$DATA/.channel"
 
 if [ "$HAS_SYSTEMD" -eq 0 ]; then
+  rm -rf "$APP.old"
   echo "Kinema $label is installed in $APP. This system has no systemd, so start it yourself:"
   echo "  cd $DATA && sudo -u $RUN_AS $APP/kinema"
   exit 0
@@ -203,6 +251,26 @@ while [ -z "$port" ] && [ $i -lt 20 ]; do
   i=$((i + 1))
   port="$(journalctl _SYSTEMD_INVOCATION_ID="$(systemctl show -p InvocationID --value kinema)" -o cat 2>/dev/null | sed -n 's/.*listening on https\{0,1\}:\/\/[^ ]*:\([0-9][0-9]*\).*/\1/p' | tail -n 1)"
 done
+if [ -z "$port" ] && ! systemctl is-active --quiet kinema; then
+  if [ -d "$APP.old" ]; then
+    echo "Kinema $label did not start; going back to ${INSTALLED:-the previous version}." >&2
+    systemctl stop kinema 2>/dev/null || true
+    rm -rf "$APP.failed"
+    mv "$APP" "$APP.failed"
+    mv "$APP.old" "$APP"
+    rm -rf "$APP.failed"
+    # The new version may have migrated the database; the old one needs it as it was.
+    if [ -n "$BACKUP" ] && [ -n "${db:-}" ]; then
+      rm -f "$db-wal" "$db-shm"
+      cp -p "$BACKUP"/* "$(dirname "$db")/"
+      chown "$RUN_AS" "$db"*
+    fi
+    systemctl restart kinema
+    die "the update was undone. See why with: journalctl -u kinema -e"
+  fi
+  die "Kinema did not start. See why with: journalctl -u kinema -e"
+fi
+rm -rf "$APP.old"
 [ -n "$port" ] || port="$(sed -n 's/^port = //p' "$DATA/kinema.toml")"
 ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
 echo "Kinema $label is running as $RUN_AS. Open https://${ip:-localhost}:$port in a browser to set it up."
