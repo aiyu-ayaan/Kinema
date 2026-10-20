@@ -1,4 +1,4 @@
-import { Books, CalendarCheck, Database, FilmSlate, FolderSimple, Gauge, SlidersHorizontal, Translate, UsersThree, WifiHigh, Wrench, type Icon } from '@phosphor-icons/react'
+import { ArrowCircleUp, Books, CalendarCheck, Database, FilmSlate, FolderSimple, Gauge, Info, SlidersHorizontal, Translate, UsersThree, WifiHigh, Wrench, type Icon } from '@phosphor-icons/react'
 import type { MessageKey } from '@/lib/i18n'
 
 export type SectionPath =
@@ -13,6 +13,8 @@ export type SectionPath =
   | 'libraries'
   | 'users'
   | 'troubleshooting'
+  | 'updates'
+  | 'about'
 
 export const settingsGroups: { label: MessageKey; sections: { path: SectionPath; label: MessageKey; icon: Icon }[] }[] = [
   { label: 'settings.group.status', sections: [{ path: 'dashboard', label: 'settings.nav.dashboard', icon: Gauge }] },
@@ -34,6 +36,13 @@ export const settingsGroups: { label: MessageKey; sections: { path: SectionPath;
       { path: 'libraries', label: 'settings.nav.libraries', icon: FolderSimple },
       { path: 'users', label: 'settings.nav.users', icon: UsersThree },
       { path: 'troubleshooting', label: 'settings.nav.troubleshooting', icon: Wrench },
+    ],
+  },
+  {
+    label: 'settings.group.kinema',
+    sections: [
+      { path: 'updates', label: 'settings.nav.updates', icon: ArrowCircleUp },
+      { path: 'about', label: 'settings.nav.about', icon: Info },
     ],
   },
 ]

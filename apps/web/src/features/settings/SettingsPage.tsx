@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/Card'
 import { t } from '@/lib/i18n'
+import { AboutSection, AcknowledgementsSection, UpdatesSection } from '@/features/about/AboutPage'
 import { LibrariesSection } from './LibrariesSection'
 import { GeneralSection, LanguagesSection, LibrarySection, MetadataSection, ScheduledSection, TranscoderSection } from './ServerSections'
 import { settingsGroups, type SectionPath } from './sections'
@@ -19,6 +20,8 @@ const elements: Record<SectionPath, JSX.Element> = {
   libraries: <LibrariesSection />,
   users: <UsersSection />,
   troubleshooting: <TroubleshootingSection />,
+  updates: <UpdatesSection />,
+  about: <AboutSection />,
 }
 
 const sections = settingsGroups.flatMap((g) => g.sections)
@@ -40,6 +43,7 @@ export function SettingsPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <Routes>
+        <Route path="about/acknowledgements" element={<AcknowledgementsSection />} />
         <Route path=":section" element={<Section />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Routes>

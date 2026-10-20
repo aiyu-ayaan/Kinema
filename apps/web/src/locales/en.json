@@ -282,7 +282,6 @@
   "users.lockPin": "PIN",
   "users.lockPassword": "Password",
   "users.editingSelf": "This is your own profile.",
-  "nav.about": "About Kinema",
   "about.title": "About Kinema",
   "about.description": "Your own media server: movies and shows from your folders, streamed to every screen in the house.",
   "about.app": "App",
@@ -333,5 +332,8 @@
   "desktopUpdate.later": "Later",
   "desktopUpdate.downloading": "Downloading the update",
   "desktopUpdate.checkNow": "Check now",
-  "desktopUpdate.upToDate": "Kinema for desktop {version} is up to date."
+  "desktopUpdate.upToDate": "Kinema for desktop {version} is up to date.",
+  "settings.group.kinema": "Kinema",
+  "settings.nav.updates": "Updates",
+  "settings.nav.about": "About Kinema"
 }

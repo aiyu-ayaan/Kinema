@@ -120,11 +120,22 @@ function DesktopUpdateCard() {
   )
 }
 
-export function AboutPage() {
+/** Settings › Updates: the server's update and, in the desktop app, the app's own. */
+export function UpdatesSection() {
+  return (
+    <div className="grid max-w-2xl gap-6">
+      <ServerUpdateCard />
+      <DesktopUpdateCard />
+    </div>
+  )
+}
+
+/** Settings › About Kinema. */
+export function AboutSection() {
   const { data: info } = useServerInfo()
   return (
-    <div className="mx-auto max-w-2xl">
-      <PageHeader title={t('about.title')} description={t('about.description')} />
+    <div className="max-w-2xl">
+      <p className="mb-6 text-body text-muted">{t('about.description')}</p>
       <div className="grid gap-6">
         <Card>
           <CardHeader title={t('about.app')} />
@@ -145,9 +156,6 @@ export function AboutPage() {
           </div>
         </Card>
 
-        <ServerUpdateCard />
-        <DesktopUpdateCard />
-
         <Card>
           <CardHeader title={t('about.developer')} />
           <div className="flex flex-col items-center gap-1 px-4 py-6">
@@ -163,7 +171,7 @@ export function AboutPage() {
 
         <Card>
           <CardHeader title={t('about.openSource')} />
-          <Link to="/about/acknowledgements" className={row}>
+          <Link to="/settings/about/acknowledgements" className={row}>
             <span>
               <span className="block">{t('about.acknowledgements')}</span>
               <span className="block text-label text-muted">{t('about.acknowledgementsHint')}</span>
@@ -176,10 +184,10 @@ export function AboutPage() {
   )
 }
 
-export function AcknowledgementsPage() {
+export function AcknowledgementsSection() {
   return (
-    <div className="mx-auto max-w-2xl">
-      <BackLink to="/about" label={t('about.title')} />
+    <div className="anim-enter max-w-2xl">
+      <BackLink to="/settings/about" label={t('about.title')} />
       <PageHeader title={t('about.acknowledgements')} description={t('about.acknowledgementsDescription')} />
       <div className="grid gap-6">
         {credits.map((g) => (
