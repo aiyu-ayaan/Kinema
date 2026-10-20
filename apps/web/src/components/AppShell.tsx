@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { GearSix, HardDrives, House, List, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
+import { GearSix, HardDrives, House, Info, List, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
 import { Avatar } from './ui/Avatar'
 import { SettingsNav } from '@/features/settings/SettingsNav'
 import { libraryIcon } from './media/libraryIcon'
@@ -122,11 +122,10 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
       {libraries?.map((l) => (
         <LibraryNav key={l.id} library={l} onNavigate={onNavigate} />
       ))}
-      {admin && (
-        <div className="mt-auto pt-4">
-          <NavItem to="/settings" icon={GearSix} label={t('nav.settings')} onClick={onNavigate} />
-        </div>
-      )}
+      <div className="mt-auto flex flex-col gap-0.5 pt-4">
+        <NavItem to="/about" icon={Info} label={t('nav.about')} onClick={onNavigate} />
+        {admin && <NavItem to="/settings" icon={GearSix} label={t('nav.settings')} onClick={onNavigate} />}
+      </div>
     </nav>
   )
 }

@@ -41,7 +41,7 @@ design-system/       tokens and page specs (dark theme first)
 
 Matches the target reference screen:
 
-- Left sidebar: Home, one entry per library, pinned shows, "More".
+- Left sidebar: Home, one entry per library, pinned shows, "More"; at the bottom About Kinema (everyone) and Settings (admins).
 - Top bar: search, profile menu.
 - Home: "Continue Watching" row (poster, title, subtitle, progress bar), "Recently Added in <library>" rows, genre shelves.
 - Poster cards: 2:3 art, title, year or `S1 · E5`, watched check, partial-progress bar.
@@ -63,7 +63,7 @@ Query keys follow `['libraries']`, `['items', libraryId, filters]`, `['home']`. 
 
 ## MVP screens
 
-Sign-in / first-run setup, Home, Library grid, Item (movie, show, season, episode), Search, Settings (admin: libraries, folder picker, TMDB key), Player (route-split chunk). Strings live in `src/locales/en.json` and go through `t()` in `src/lib/i18n.ts`. UI kit mirrors Domus: `components/ui/{Button,Field,Card,Modal}`.
+Sign-in / first-run setup, Home, Library grid, Item (movie, show, season, episode), Search, Settings (admin: libraries, folder picker, TMDB key), About (`/about`: version, developer, link to `/about/acknowledgements`, the credits in `src/lib/credits.ts`), Player (route-split chunk). Strings live in `src/locales/en.json` and go through `t()` in `src/lib/i18n.ts`. UI kit mirrors Domus: `components/ui/{Button,Field,Card,Modal}`.
 
 ## Flavors
 

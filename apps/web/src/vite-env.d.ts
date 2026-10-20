@@ -13,6 +13,9 @@ export interface DesktopBridge {
 }
 
 declare global {
+  /** From the root package.json (vite.config.ts). */
+  const __APP_VERSION__: string
+  const __APP_BUILD__: number
   interface Window {
     kinema?: DesktopBridge
     desktop?: DesktopBridge

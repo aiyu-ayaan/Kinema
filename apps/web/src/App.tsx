@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { CircleNotch } from '@phosphor-icons/react'
 import { AppShell } from './components/AppShell'
+import { AboutPage, AcknowledgementsPage } from './features/about/AboutPage'
 import { AuthScreen } from './features/auth/AuthScreen'
 import { HomePage } from './features/home/HomePage'
 import { ItemPage } from './features/item/ItemPage'
@@ -45,6 +46,8 @@ export function App() {
               <Route path="/library/:id" element={<LibraryPage />} />
               <Route path="/item/:id" element={<ItemPage />} />
               <Route path="/search" element={<SearchPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/about/acknowledgements" element={<AcknowledgementsPage />} />
               {user.is_admin && <Route path="/settings/*" element={<SettingsPage />} />}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

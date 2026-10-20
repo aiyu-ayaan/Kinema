@@ -9,6 +9,7 @@ const root = JSON.parse(readFileSync(path.resolve(__dirname, '../../package.json
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(root.version),
+    __APP_BUILD__: JSON.stringify(root.build),
   },
   plugins: [
     react(),
