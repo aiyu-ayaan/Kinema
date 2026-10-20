@@ -1,3 +1,26 @@
+## v0.0.1-alpha.3 (2026-10-20)
+
+- !alpha(all) : YouTube watch page, skip intro and credits, and in-app updates
+- feat(player) : Skip intro and skip credits controls for Android and Web
+- feat(server) : Find intro and end credits for Skip intro and Up next
+- feat(web) : Add theater mode to the watch page on the t key
+- feat(web) : Add a YouTube-style watch page with an up-next list
+- feat(android) : Add a YouTube-style watch page with episodes and suggestions
+- feat(android) : Offer the next episode only in the last minute
+- fix(android) : Size the home hero and title page for tablets and foldables
+- feat(android): implement animated splash screen and update app icons
+- feat(android) : Add Updates and About Kinema screens with channel, release notes and acknowledgements
+- fix(web) : Keep only web, desktop and server credits in Acknowledgements
+- refactor(web) : Move About Kinema into Settings and add an Updates section
+- feat(android) : Auto-update the Android app from GitHub releases
+- feat(desktop) : Auto-update the desktop app from GitHub releases
+- feat(web) : Check GitHub for a newer server release and show the update commands
+- feat(web) : Add About Kinema page with developer and acknowledgements
+- refactor(android) : Remove server-wide Languages section from Settings
+- fix(android) : Show up to 4 lines per track label so subtitle titles are readable
+- feat(android) : Add dev gateway script that forwards ports and probes server from devices
+- feat(ui) : Network tab owns public address, series tracks on Android, S/E links, sharper hero art
+
 ## v0.0.1-alpha.2 (2026-10-20)
 
 - !alpha: Fix Android release build (SwipeLevels JVM signature clash) and rustfmt
