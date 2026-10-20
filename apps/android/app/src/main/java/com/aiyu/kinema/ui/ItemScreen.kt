@@ -229,7 +229,8 @@ private fun Header(detail: ItemDetail, list: LazyListState) {
                 alpha = 1f - (scrolled / size.height).coerceIn(0f, 1f)
             },
         ) {
-            Artwork(api?.imageUrl(item.backdrop ?: item.poster), api?.frameUrl(item.id), title, Modifier.fillMaxSize(), poster = false)
+            // An episode's backdrop is its 300 px still; full width needs the larger copy.
+            Artwork(api?.imageUrl(item.backdrop ?: item.poster), api?.frameUrl(item.id), title, Modifier.fillMaxSize(), poster = false, sharp = api?.sharperImageUrl(item.backdrop ?: item.poster, 780))
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to c.surface.copy(alpha = 0.4f), 0.3f to Color.Transparent, 1f to c.surface)))
         }
         Row(

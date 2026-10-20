@@ -168,10 +168,11 @@ private fun placeholderBrush(seed: String): Brush {
 /**
  * Server art first, then [frame] (a video frame from the server's thumbnail cache), then a gradient with the title.
  * A frame carries no title, so a poster built from one gets the title printed over it.
+ * [sharp] is a larger copy of [image] for art shown big; when it fails the stored size is used.
  */
 @Composable
-fun Artwork(image: String?, frame: String?, title: String, modifier: Modifier = Modifier, poster: Boolean = true) {
-    val sources = remember(image, frame) { listOfNotNull(image, frame) }
+fun Artwork(image: String?, frame: String?, title: String, modifier: Modifier = Modifier, poster: Boolean = true, sharp: String? = null) {
+    val sources = remember(sharp, image, frame) { listOfNotNull(sharp, image, frame) }
     var failed by rememberSaveable(sources) { mutableIntStateOf(0) }
     val src = sources.getOrNull(failed)
     Box(modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
@@ -228,8 +229,11 @@ fun PosterCard(item: ItemCard, onClick: () -> Unit, modifier: Modifier = Modifie
     val sub = if (item.kind == "episode" && wide) listOfNotNull(subtitleOf(item), item.title).joinToString(" · ") else subtitleOf(item)
     Column(modifier.pressScale(source).clip(MaterialTheme.shapes.medium).clickable(source, null, onClick = onClick)) {
         Box(Modifier.fillMaxWidth().aspectRatio(if (wide) 16f / 9f else 2f / 3f).clip(MaterialTheme.shapes.medium)) {
+            val key = if (wide) item.backdrop ?: item.poster else item.poster
             Artwork(
-                image = api?.imageUrl(if (wide) item.backdrop ?: item.poster else item.poster),
+                image = api?.imageUrl(key),
+                // Episode stills are stored at 300 px; a wide card on a phone is about 800 px.
+                sharp = if (wide) api?.sharperImageUrl(key, 780) else null,
                 frame = api?.frameUrl(item.id),
                 title = if (item.showTitle != null && item.kind != "movie") item.showTitle!! else item.title,
                 poster = !wide,

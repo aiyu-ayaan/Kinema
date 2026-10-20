@@ -19,6 +19,16 @@ class CoreTest {
     }
 
     @Test
+    fun sharperArt() {
+        val api = KinemaApi("https://h:3000", null) { null }
+        assertEquals("https://h:3000/api/images/w780/abc.jpg", api.sharperImageUrl("w500/abc.jpg", 780))
+        assertEquals("https://h:3000/api/images/w780/still.jpg", api.sharperImageUrl("w300/still.jpg", 780))
+        assertNull(api.sharperImageUrl("w1280/back.jpg", 780))
+        assertNull(api.sharperImageUrl("tvmaze/original_untouched-1-2.jpg", 780))
+        assertNull(api.sharperImageUrl(null, 780))
+    }
+
+    @Test
     fun serverUrls() {
         assertEquals("https://192.168.1.10:3000", normalizeServerUrl("192.168.1.10"))
         assertEquals("https://192.168.1.10:3001", normalizeServerUrl(" 192.168.1.10:3001/ "))

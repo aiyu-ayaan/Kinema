@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -256,23 +257,28 @@ private fun Hero(features: List<Pair<ItemCard, FeatureReason>>) {
             }
         }
     }
-    Box(Modifier.fillMaxWidth().aspectRatio(0.78f).heightIn(max = 620.dp)) {
+    BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(0.78f).heightIn(max = 620.dp)) {
+        // Phones get a tall box, where a cropped 16:9 backdrop is a blurry sliver; the poster fits it. Tablets get a wide one.
+        val tall = maxWidth < maxHeight
         HorizontalPager(pager, Modifier.fillMaxSize(), key = { features[it].first.id }) { page ->
-            HeroSlide(features[page].first, features[page].second, pager, page)
+            HeroSlide(features[page].first, features[page].second, pager, page, tall)
         }
         PagerDots(pager, Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp))
     }
 }
 
 @Composable
-private fun HeroSlide(item: ItemCard, reason: FeatureReason, pager: PagerState, page: Int) {
+private fun HeroSlide(item: ItemCard, reason: FeatureReason, pager: PagerState, page: Int, tall: Boolean) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val c = MaterialTheme.colorScheme
     val offset = { (pager.currentPage - page + pager.currentPageOffsetFraction) }
+    // Posters are stored at 500 px wide; the hero is about 1100 px on a phone, so ask for the 780 px copy.
+    val key = if (tall) item.poster ?: item.backdrop else item.backdrop ?: item.poster
     Box(Modifier.fillMaxSize().clip(MaterialTheme.shapes.extraLarge.copy(topStart = androidx.compose.foundation.shape.CornerSize(0.dp), topEnd = androidx.compose.foundation.shape.CornerSize(0.dp)))) {
         Artwork(
-            image = api?.imageUrl(item.backdrop ?: item.poster),
+            image = api?.imageUrl(key),
+            sharp = api?.sharperImageUrl(key, if (key == item.poster) 780 else 1280),
             frame = api?.frameUrl(item.id),
             title = item.showTitle ?: item.title,
             poster = false,

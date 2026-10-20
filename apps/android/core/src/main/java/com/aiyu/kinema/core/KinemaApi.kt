@@ -133,11 +133,22 @@ class KinemaApi(val baseUrl: String, pin: String?, connectSeconds: Long = 6, pri
     /** `images/w500/abc.jpg` keys from the server, as an absolute URL. */
     fun imageUrl(key: String?) = key?.let { url("/images/$it") }
 
+    /**
+     * The same TMDB art at a larger [width] (one of the server's sizes: 780, 1280), for art shown bigger than the
+     * stored key's size. Null when the key is already that big or is not TMDB art (TVmaze keys are full size).
+     */
+    fun sharperImageUrl(key: String?, width: Int): String? {
+        val match = key?.let(TMDB_KEY::matchEntire) ?: return null
+        val (size, name) = match.destructured
+        return if (size.toInt() < width) url("/images/w$width/$name") else null
+    }
+
     /** A video frame for an item without artwork; 404 until the server made it. */
     fun frameUrl(itemId: Long) = url("/items/$itemId/thumb")
 
     private companion object {
         val JSON = "application/json".toMediaType()
+        val TMDB_KEY = Regex("""w(\d+)/([^/]+)""")
 
         fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
 
