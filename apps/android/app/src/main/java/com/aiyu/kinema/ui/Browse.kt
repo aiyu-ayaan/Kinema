@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
@@ -82,6 +83,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -257,13 +259,17 @@ private fun Hero(features: List<Pair<ItemCard, FeatureReason>>) {
             }
         }
     }
-    BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(0.78f).heightIn(max = 620.dp)) {
-        // Phones get a tall box, where a cropped 16:9 backdrop is a blurry sliver; the poster fits it. Tablets get a wide one.
-        val tall = maxWidth < maxHeight
-        HorizontalPager(pager, Modifier.fillMaxSize(), key = { features[it].first.id }) { page ->
-            HeroSlide(features[page].first, features[page].second, pager, page, tall)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        // Phones get a tall box, where a cropped 16:9 backdrop is a blurry sliver; the poster fits it. From 600dp a
+        // wide one, held to about 60 % of the window so the shelves below still show.
+        val tall = maxWidth < 600.dp
+        val height = if (tall) maxWidth / 0.78f else minOf(maxWidth * 9f / 16f, LocalConfiguration.current.screenHeightDp.dp * 0.62f)
+        Box(Modifier.fillMaxWidth().height(height.coerceAtMost(720.dp))) {
+            HorizontalPager(pager, Modifier.fillMaxSize(), key = { features[it].first.id }) { page ->
+                HeroSlide(features[page].first, features[page].second, pager, page, tall)
+            }
+            PagerDots(pager, Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp))
         }
-        PagerDots(pager, Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp))
     }
 }
 
@@ -291,7 +297,7 @@ private fun HeroSlide(item: ItemCard, reason: FeatureReason, pager: PagerState, 
         )
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to c.surface.copy(alpha = 0.55f), 0.25f to Color.Transparent, 0.55f to Color.Transparent, 1f to c.surface)))
         Column(
-            Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)
+            Modifier.align(Alignment.BottomStart).widthIn(max = 680.dp).fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)
                 .graphicsLayer { alpha = 1f - offset().absoluteValue.coerceIn(0f, 1f); translationX = offset() * -size.width * 0.15f },
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {

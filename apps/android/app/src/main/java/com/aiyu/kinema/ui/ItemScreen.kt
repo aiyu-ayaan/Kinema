@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -66,12 +67,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -125,9 +129,11 @@ private fun ItemContent(detail: ItemDetail) {
     val target: ItemCard? = if (item.playable) item else detail.nextUp
     val resume = target?.progress != null
 
-    Box(Modifier.fillMaxSize()) {
-        LazyColumn(state = list, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 48.dp)) {
-            item(key = "header") { Header(detail, list) }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // Wide windows keep the page at a readable 1040dp; only the backdrop runs edge to edge.
+        val gutter = ((maxWidth - 1040.dp) / 2).coerceAtLeast(0.dp)
+        LazyColumn(state = list, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(start = gutter, end = gutter, bottom = 48.dp)) {
+            item(key = "header") { Header(detail, list, Modifier.bleed(gutter)) }
             item(key = "actions") {
                 Column(Modifier.padding(horizontal = 20.dp).enterStaggered(1), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -223,15 +229,19 @@ private fun ItemContent(detail: ItemDetail) {
 
 /** Backdrop that scrolls away slower than the page and fades, with the poster and title overlapping its foot. */
 @Composable
-private fun Header(detail: ItemDetail, list: LazyListState) {
+private fun Header(detail: ItemDetail, list: LazyListState, modifier: Modifier = Modifier) {
     val item = detail.item
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val c = MaterialTheme.colorScheme
     val title = if (item.kind == "season" || item.kind == "episode") item.showTitle ?: item.title else item.title
-    Box(Modifier.fillMaxWidth()) {
+    // 16:11 on a phone; a tablet's backdrop stops at about half the window so the actions stay in view.
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val backdrop = minOf(maxWidth * 11f / 16f, LocalConfiguration.current.screenHeightDp.dp * 0.55f)
+        val posterWidth = if (maxWidth >= 600.dp) 168.dp else 120.dp
+        val gutter = ((maxWidth - 1040.dp) / 2).coerceAtLeast(0.dp)
         Box(
-            Modifier.fillMaxWidth().aspectRatio(16f / 11f).graphicsLayer {
+            Modifier.fillMaxWidth().height(backdrop).graphicsLayer {
                 val scrolled = if (list.firstVisibleItemIndex == 0) list.firstVisibleItemScrollOffset.toFloat() else size.height
                 translationY = scrolled * 0.5f
                 alpha = 1f - (scrolled / size.height).coerceIn(0f, 1f)
@@ -242,12 +252,12 @@ private fun Header(detail: ItemDetail, list: LazyListState) {
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to c.surface.copy(alpha = 0.4f), 0.3f to Color.Transparent, 1f to c.surface)))
         }
         Row(
-            Modifier.padding(top = 180.dp).padding(horizontal = 20.dp).enterStaggered(0),
+            Modifier.padding(top = (backdrop - 100.dp).coerceAtLeast(120.dp)).padding(horizontal = gutter + 20.dp).enterStaggered(0),
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             if (item.kind != "episode" && item.kind != "video") {
-                Surface(shape = MaterialTheme.shapes.medium, shadowElevation = 8.dp, modifier = Modifier.width(120.dp).aspectRatio(2f / 3f)) {
+                Surface(shape = MaterialTheme.shapes.medium, shadowElevation = 8.dp, modifier = Modifier.width(posterWidth).aspectRatio(2f / 3f)) {
                     Artwork(api?.imageUrl(item.poster), api?.frameUrl(item.id), title, Modifier.fillMaxSize())
                 }
             }
@@ -281,6 +291,13 @@ private fun Header(detail: ItemDetail, list: LazyListState) {
         }
     }
     Spacer(Modifier.height(20.dp))
+}
+
+/** Lays the content out [gutter] wider on both sides than the slot it sits in: full bleed inside a padded list. */
+private fun Modifier.bleed(gutter: Dp) = layout { measurable, constraints ->
+    val extra = (gutter * 2).roundToPx()
+    val placeable = measurable.measure(constraints.copy(minWidth = constraints.minWidth + extra, maxWidth = constraints.maxWidth + extra))
+    layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
 }
 
 /** The story, three lines until tapped. */
