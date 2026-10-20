@@ -16,7 +16,6 @@ if ! "$ADB" devices | awk 'NR>1 && $2=="device"' | grep -q .; then
 fi
 
 (cd apps/android && ./gradlew :app:installDevDebug)
-# Broadcast discovery does not cross USB or the emulator's NAT; the app also tries localhost:3000, which this forwards.
-"$ADB" reverse tcp:3000 tcp:3000 >/dev/null 2>&1 || true
+bash scripts/android-gateway.sh || true
 "$ADB" shell am start -n com.aiyu.kinema.dev/com.aiyu.kinema.MainActivity >/dev/null
 echo "Kinema Dev is open. Dev server: tap the discovered server, or enter localhost:3000."
