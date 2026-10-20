@@ -4,7 +4,6 @@ import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,12 +12,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -32,8 +28,6 @@ import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.SettingsBrightness
-import androidx.compose.material.icons.rounded.Subtitles
-import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
@@ -45,7 +39,6 @@ import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -63,7 +56,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -78,13 +70,7 @@ import com.aiyu.kinema.R
 import com.aiyu.kinema.core.Route
 import com.aiyu.kinema.core.Session
 import com.aiyu.kinema.core.normalizeServerUrl
-import java.util.Locale
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonPrimitive
 
 @Composable
 private fun Section(title: String, index: Int, content: @Composable ColumnScope.() -> Unit) {
@@ -124,7 +110,6 @@ fun SettingsTab() {
         ConnectionSection()
         AppearanceSection()
         PlaybackSection()
-        if (user?.isAdmin == true) LanguagesSection()
         Section(stringResource(R.string.settings_server), 5) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ShapedIcon(Icons.Rounded.Security, MaterialShapes.Clover4Leaf, c.tertiaryContainer, c.onTertiaryContainer)
@@ -245,94 +230,6 @@ private fun PlaybackSection() {
             leadingContent = { Icon(Icons.Rounded.PictureInPictureAlt, null) },
             trailingContent = { Switch(pip, repository::setPictureInPicture) },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        )
-    }
-}
-
-/** ISO 639-2 code ("fra") to its name in the phone's language; the server stores 639-2 codes. */
-private val languageNames: Map<String, String> by lazy {
-    Locale.getISOLanguages().associate { two ->
-        val locale = Locale.forLanguageTag(two)
-        runCatching { locale.isO3Language }.getOrDefault(two) to locale.displayLanguage
-    }
-}
-
-@Composable
-private fun languageName(code: String): String =
-    if (code.isEmpty()) stringResource(R.string.settings_language_default) else languageNames[code]?.ifBlank { null } ?: code.uppercase()
-
-/**
- * Admin only: the server-wide starting audio and subtitle languages (web Settings › Languages). The whole `server`
- * object goes back on save, so fields this app does not show keep their values.
- */
-@Composable
-private fun LanguagesSection() {
-    val repository = LocalRepository.current
-    val scope = rememberCoroutineScope()
-    val c = MaterialTheme.colorScheme
-    var view by remember { mutableStateOf<JsonObject?>(null) }
-    var picking by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) { repository.request { it.serverSettings() }.onSuccess { view = it } }
-    val current = view ?: return
-    val server = current["server"] as? JsonObject ?: return
-    val codes = (current["options"] as? JsonObject)?.get("track_languages")?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }.orEmpty()
-    fun value(key: String) = server[key]?.jsonPrimitive?.contentOrNull.orEmpty()
-    fun save(key: String, v: String) {
-        val next = JsonObject(server + (key to JsonPrimitive(v)))
-        view = JsonObject(current + ("server" to next))
-        scope.launch { repository.request { it.saveServerSettings(next) }.onSuccess { view = it }.onFailure { view = current } }
-    }
-
-    Section(stringResource(R.string.settings_languages), 4) {
-        Text(stringResource(R.string.settings_languages_hint), style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant)
-        listOf(
-            Triple("preferred_audio_language", R.string.settings_audio_language, Icons.Rounded.Translate),
-            Triple("preferred_subtitle_language", R.string.settings_subtitle_language, Icons.Rounded.Subtitles),
-        ).forEach { (key, label, icon) ->
-            ListItem(
-                headlineContent = { Text(stringResource(label)) },
-                supportingContent = { Text(languageName(value(key))) },
-                leadingContent = { Icon(icon, null) },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                modifier = Modifier.clip(MaterialTheme.shapes.large).clickable { picking = key },
-            )
-        }
-        Text(stringResource(R.string.settings_subtitle_mode), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 4.dp))
-        val modes = listOf(
-            "off" to R.string.settings_subtitle_mode_off,
-            "always" to R.string.settings_subtitle_mode_always,
-            "foreign" to R.string.settings_subtitle_mode_foreign,
-        )
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            modes.forEachIndexed { i, (mode, label) ->
-                SegmentedButton(
-                    selected = value("subtitle_mode") == mode,
-                    onClick = { save("subtitle_mode", mode) },
-                    shape = SegmentedButtonDefaults.itemShape(i, modes.size),
-                ) { Text(stringResource(label), maxLines = 1) }
-            }
-        }
-    }
-
-    picking?.let { key ->
-        AlertDialog(
-            onDismissRequest = { picking = null },
-            title = { Text(stringResource(if (key == "preferred_audio_language") R.string.settings_audio_language else R.string.settings_subtitle_language)) },
-            text = {
-                LazyColumn(Modifier.heightIn(max = 420.dp)) {
-                    items(listOf("") + codes) { code ->
-                        Row(
-                            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).clickable { save(key, code); picking = null }.padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(selected = value(key) == code, onClick = { save(key, code); picking = null })
-                            Spacer(Modifier.width(8.dp))
-                            Text(languageName(code), style = MaterialTheme.typography.bodyLarge)
-                        }
-                    }
-                }
-            },
-            confirmButton = { TextButton({ picking = null }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }

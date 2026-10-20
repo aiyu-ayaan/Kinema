@@ -76,12 +76,6 @@ class KinemaApi(val baseUrl: String, pin: String?, connectSeconds: Long = 6, pri
         }
     }
 
-    private fun parseObject(text: String): JsonObject = try {
-        json.parseToJsonElement(text).jsonObject
-    } catch (e: IllegalArgumentException) {
-        throw ApiException(e.message ?: "bad response", 500)
-    }
-
     private suspend fun <T> call(method: String, path: String, out: KSerializer<T>, body: JsonObject? = null): T {
         val text = send(method, path, body)
         return try {
@@ -152,16 +146,6 @@ class KinemaApi(val baseUrl: String, pin: String?, connectSeconds: Long = 6, pri
             throw ApiException(e.message ?: "offline", ApiException.OFFLINE)
         }
     }
-
-    /**
-     * Admin: the server options as the server sent them (`server` object) and the allowed `track_languages`.
-     * Kept as JSON so saving sends back every field, including ones this app does not know.
-     */
-    suspend fun serverSettings(): JsonObject = parseObject(send("GET", "/settings"))
-
-    /** Admin: saves the whole `server` object (missing fields would fall back to defaults on the server). */
-    suspend fun saveServerSettings(server: JsonObject): JsonObject =
-        parseObject(send("PUT", "/settings/server", server))
 
     /** `images/w500/abc.jpg` keys from the server, as an absolute URL. */
     fun imageUrl(key: String?) = key?.let { url("/images/$it") }

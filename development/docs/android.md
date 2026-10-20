@@ -113,10 +113,6 @@ flowchart LR
 - Swiping the app away from recents pauses and stops the service.
 - Known limit: Compose does not recompose while the activity is stopped, so "next episode" or the end of an episode pressed from the notification with the app fully in the background (not in picture-in-picture) takes effect when the app comes back. Stop pauses right away.
 
-### Server languages (admins)
-
-Settings › Languages · whole server: the server-wide starting audio language, subtitle language and when subtitles show (`off`, `always`, `foreign` audio), the same options as the web app's Settings › Languages. The app reads `GET /settings` and sends the whole `server` object back on `PUT /settings/server`, so options it does not show keep their values.
-
 ## Sync with the web app
 
 Nothing playback-related is stored on the phone; the server keeps it per profile, so every client sees the same state.

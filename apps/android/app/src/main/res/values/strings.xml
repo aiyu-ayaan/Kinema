@@ -178,15 +178,6 @@
     <string name="settings_pip">Picture-in-picture</string>
     <string name="settings_pip_on">Leaving the app keeps the video playing in a small window. Closing the window pauses it.</string>
     <string name="settings_pip_off">Leaving the app keeps the sound playing, with controls in the notification.</string>
-    <string name="settings_languages">Languages · whole server</string>
-    <string name="settings_languages_hint">What every profile starts with on every device. A track picked in the player is remembered for that title.</string>
-    <string name="settings_audio_language">Audio language</string>
-    <string name="settings_subtitle_language">Subtitle language</string>
-    <string name="settings_language_default">File’s default</string>
-    <string name="settings_subtitle_mode">Show subtitles</string>
-    <string name="settings_subtitle_mode_off">Off</string>
-    <string name="settings_subtitle_mode_always">Always</string>
-    <string name="settings_subtitle_mode_foreign">Foreign audio</string>
     <string name="settings_server">Server</string>
     <string name="settings_cert_pinned">Private certificate, approved on this phone</string>
     <string name="settings_cert_public">Certificate signed by a public authority</string>
