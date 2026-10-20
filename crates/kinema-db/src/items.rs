@@ -19,6 +19,8 @@ pub struct ItemCard {
     pub poster: Option<String>,
     pub backdrop: Option<String>,
     pub show_title: Option<String>,
+    /// Season or episode: the show it belongs to, for links back to it.
+    pub show_id: Option<i64>,
     pub position_s: Option<f64>,
     pub watched: bool,
     pub duration_s: Option<f64>,
@@ -32,6 +34,7 @@ const CARD_SELECT: &str =
   COALESCE(i.poster, p.poster, g.poster) AS poster,
   COALESCE(i.backdrop, p.backdrop, g.backdrop) AS backdrop,
   COALESCE(g.title, p.title) AS show_title,
+  COALESCE(g.id, p.id) AS show_id,
   w.position_s, COALESCE(w.watched, 0) AS watched,
   (SELECT MAX(f.duration_s) FROM files f WHERE f.item_id = i.id) AS duration_s,
   (SELECT COUNT(*) FROM items c WHERE c.parent_id = i.id) AS child_count,

@@ -43,6 +43,8 @@ export interface ItemCard {
   id: number
   library_id: number
   parent_id: number | null
+  /** Season or episode: the show it belongs to. */
+  show_id: number | null
   kind: ItemKind
   title: string
   year: number | null

@@ -128,6 +128,11 @@ class KinemaApi(val baseUrl: String, pin: String?, connectSeconds: Long = 6, pri
         send("PUT", "/items/$itemId/track-choice", buildJsonObject { put("audio", audio); put("subtitle", subtitle) })
     }
 
+    /** Admin: the audio and subtitle pick for every episode of a show, as positions; null is the server default. */
+    suspend fun setSeriesTracks(showId: Long, audio: Int?, subtitle: Int?) {
+        send("PUT", "/items/$showId/tracks", buildJsonObject { put("audio", audio); put("subtitle", subtitle) })
+    }
+
     suspend fun plan(fileId: Long, audio: Int?, caps: PlayCaps, start: Double) =
         call("GET", "/files/$fileId/plan?${playQuery(audio, caps, start)}", PlaybackPlan.serializer())
 

@@ -68,16 +68,19 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.aiyu.kinema.R
 import com.aiyu.kinema.core.CastMember
 import com.aiyu.kinema.core.ItemCard
 import com.aiyu.kinema.core.ItemDetail
 import com.aiyu.kinema.core.MediaFile
+import com.aiyu.kinema.core.Session
 import kotlinx.coroutines.launch
 
 /** "1h 30m" or "45m"; null without a length. */
@@ -115,6 +118,8 @@ private fun ItemContent(detail: ItemDetail) {
     val list = rememberLazyListState()
     var watched by remember(item) { mutableStateOf(item.watched) }
     val failed = stringResource(R.string.error_generic)
+    val session by repository.session.collectAsStateWithLifecycle()
+    val admin = (session as? Session.SignedIn)?.user?.isAdmin == true
 
     // What Play starts: the title itself, or the show's / season's next episode.
     val target: ItemCard? = if (item.playable) item else detail.nextUp
@@ -160,6 +165,8 @@ private fun ItemContent(detail: ItemDetail) {
                         ) {
                             Icon(if (watched) Icons.Rounded.CheckCircle else Icons.Rounded.Check, stringResource(if (watched) R.string.item_mark_unwatched else R.string.item_mark_watched))
                         }
+                        // Saving is admin only on the server.
+                        if (admin) detail.tracks?.let { SeriesTracksButton(item.id, it) { scope.launch { snackbar.showSnackbar(failed) } } }
                     }
                     target?.progress?.let { p ->
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -219,6 +226,7 @@ private fun ItemContent(detail: ItemDetail) {
 private fun Header(detail: ItemDetail, list: LazyListState) {
     val item = detail.item
     val api = LocalApi.current
+    val nav = LocalNavigator.current
     val c = MaterialTheme.colorScheme
     val title = if (item.kind == "season" || item.kind == "episode") item.showTitle ?: item.title else item.title
     Box(Modifier.fillMaxWidth()) {
@@ -245,7 +253,11 @@ private fun Header(detail: ItemDetail, list: LazyListState) {
             }
             Column(Modifier.weight(1f).padding(bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (item.kind == "season" || item.kind == "episode") {
-                    Text(title, style = MaterialTheme.typography.titleMedium, color = c.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    val show = item.showId ?: item.parentId
+                    Text(
+                        title, style = MaterialTheme.typography.titleMedium, color = c.primary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = if (show != null) Modifier.clickable(role = Role.Button) { nav.open(show) } else Modifier,
+                    )
                 }
                 Text(
                     if (item.kind == "episode") item.title else if (item.kind == "season") item.title else title,
@@ -253,11 +265,12 @@ private fun Header(detail: ItemDetail, list: LazyListState) {
                     modifier = Modifier.semantics { heading() },
                 )
                 val meta = listOfNotNull(
-                    subtitleOf(item).takeIf { item.kind != "movie" },
+                    subtitleOf(item).takeIf { item.kind != "movie" && !(item.kind == "episode" && item.episodeNo != null) },
                     item.year?.toString(),
                     runtime(item.durationS ?: detail.files.firstOrNull()?.durationS),
                 ).distinct().joinToString(" · ")
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (item.kind == "episode" && item.episodeNo != null) EpisodeLinks(item, nav.open, c.primary)
                     item.rating?.takeIf { it > 0 }?.let {
                         Icon(Icons.Rounded.Star, null, Modifier.size(16.dp), tint = c.tertiary)
                         Text("%.1f".format(it), style = MaterialTheme.typography.labelLarge, color = c.tertiary)

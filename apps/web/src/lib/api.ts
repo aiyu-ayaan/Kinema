@@ -157,3 +157,12 @@ export const frameUrl = (itemId: number) => `/api/items/${itemId}/thumb`
 
 /** `/api/images/w500/abc.jpg` for an image key, or null. */
 export const imageUrl = (key: string | null | undefined) => (key ? `/api/images/${key}` : null)
+
+/**
+ * The same TMDB art at a larger `width` (780 or 1280) for art shown bigger than its stored size, e.g. a 300 px
+ * episode still as a full-width backdrop. Null when the key is already that big or is not TMDB art.
+ */
+export function sharperImageUrl(key: string | null | undefined, width: number) {
+  const m = key?.match(/^w(\d+)\/([^/]+)$/)
+  return m && Number(m[1]) < width ? `/api/images/w${width}/${m[2]}` : null
+}

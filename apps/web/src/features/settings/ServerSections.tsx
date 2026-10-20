@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { CheckCircle, WarningCircle } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/Button'
 import { Badge, Card, CardHeader, ErrorText, Notice, Skeleton } from '@/components/ui/Card'
@@ -17,7 +18,7 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
  * Edits a copy of the server options and saves the whole object, so each section only
  * renders its own rows. Save is enabled once something changed.
  */
-function ServerForm({ title, children }: { title: string; children: (s: ServerOptions, set: (patch: Partial<ServerOptions>) => void, view: SettingsView) => ReactNode }) {
+export function ServerForm({ title, children }: { title: string; children: (s: ServerOptions, set: (patch: Partial<ServerOptions>) => void, view: SettingsView) => ReactNode }) {
   const qc = useQueryClient()
   const { data } = useQuery({ queryKey: ['settings'], queryFn: api.settings })
   const [draft, setDraft] = useState<ServerOptions | null>(null)
@@ -53,6 +54,7 @@ function ServerForm({ title, children }: { title: string; children: (s: ServerOp
 }
 
 export function GeneralSection() {
+  const navigate = useNavigate()
   return (
     <ServerForm title={t('settings.nav.general')}>
       {(s, set) => (
@@ -60,17 +62,14 @@ export function GeneralSection() {
           <SettingRow label={t('settings.general.name')} description={t('settings.general.nameHint')} htmlFor="server-name">
             <input id="server-name" className={cn(inputCls, 'w-64')} value={s.server_name} maxLength={60} onChange={(e) => set({ server_name: e.target.value })} />
           </SettingRow>
-          <SettingRow label={t('settings.general.publicUrl')} description={t('settings.general.publicUrlHint')} htmlFor="public-url">
-            <input
-              id="public-url"
-              type="url"
-              inputMode="url"
-              className={cn(inputCls, 'w-64')}
-              value={s.public_url}
-              maxLength={200}
-              placeholder="https://media.example.com"
-              onChange={(e) => set({ public_url: e.target.value })}
-            />
+          {/* Edited in Network, next to the local address, so both live in one place. */}
+          <SettingRow label={t('settings.general.publicUrl')} description={t('settings.general.publicUrlHint')}>
+            <div className="flex items-center gap-2">
+              <code className="rounded bg-raised px-2 py-1 font-mono text-label">{s.public_url || t('settings.general.publicUrlNone')}</code>
+              <Button size="sm" variant="ghost" onClick={() => navigate('/settings/network')}>
+                {t('common.edit')}
+              </Button>
+            </div>
           </SettingRow>
           {typeof window !== 'undefined' && (window.kinema?.chooseServer || window.desktop?.chooseServer) && (
             <SettingRow label={t('auth.changeServer')} description={t('connect.subtitle')}>

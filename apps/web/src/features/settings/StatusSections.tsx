@@ -4,10 +4,13 @@ import { libraryIcon } from '@/components/media/libraryIcon'
 import { Button } from '@/components/ui/Button'
 import { Badge, Card, CardHeader, Notice, Skeleton } from '@/components/ui/Card'
 import { SettingRow } from '@/components/ui/Controls'
+import { inputCls } from '@/components/ui/Field'
 import { api } from '@/lib/api'
+import { cn } from '@/lib/cn'
 import { fileSize } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import type { ServerStatus } from '@/lib/types'
+import { ServerForm } from './ServerSections'
 
 function useStatus() {
   // Polls while open so streams, scans and thumbnail progress move live.
@@ -110,27 +113,37 @@ export function NetworkSection() {
   const urls = data.lan_urls.length ? data.lan_urls : [window.location.origin]
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader title={t('settings.nav.network')} />
-        <div className="divide-y divide-border">
-          <SettingRow label={t('settings.network.listen')} description={t('settings.network.listenHint')}>
-            <code className="rounded bg-raised px-2 py-1 font-mono text-label">{data.listen}</code>
-          </SettingRow>
-          {urls.map((u) => (
-            <SettingRow key={u} label={t('settings.network.url')} description={t('settings.network.urlHint')}>
-              <div className="flex items-center gap-2">
-                <code className="rounded bg-raised px-2 py-1 font-mono text-label">{u}</code>
-                <Button size="sm" variant="ghost" aria-label={t('common.copy')} title={t('common.copy')} icon={<Copy size={16} />} onClick={() => navigator.clipboard?.writeText(u)} />
-              </div>
+      <ServerForm title={t('settings.nav.network')}>
+        {(s, set) => (
+          <>
+            {urls.map((u) => (
+              <SettingRow key={u} label={t('settings.network.url')} description={t('settings.network.urlHint')}>
+                <div className="flex items-center gap-2">
+                  <code className="rounded bg-raised px-2 py-1 font-mono text-label">{u}</code>
+                  <Button size="sm" variant="ghost" aria-label={t('common.copy')} title={t('common.copy')} icon={<Copy size={16} />} onClick={() => navigator.clipboard?.writeText(u)} />
+                </div>
+              </SettingRow>
+            ))}
+            <SettingRow label={t('settings.general.publicUrl')} description={t('settings.general.publicUrlHint')} htmlFor="public-url">
+              <input
+                id="public-url"
+                type="url"
+                inputMode="url"
+                className={cn(inputCls, 'w-64')}
+                value={s.public_url}
+                maxLength={200}
+                placeholder="https://media.example.com"
+                onChange={(e) => set({ public_url: e.target.value })}
+              />
             </SettingRow>
-          ))}
-          {data.tls_fingerprint && (
-            <SettingRow label={t('settings.network.fingerprint')} description={t('settings.network.fingerprintHint')}>
-              <code className="block max-w-xs break-all rounded bg-raised px-2 py-1 font-mono text-caption">{data.tls_fingerprint}</code>
-            </SettingRow>
-          )}
-        </div>
-      </Card>
+            {data.tls_fingerprint && (
+              <SettingRow label={t('settings.network.fingerprint')} description={t('settings.network.fingerprintHint')}>
+                <code className="block max-w-xs break-all rounded bg-raised px-2 py-1 font-mono text-caption">{data.tls_fingerprint}</code>
+              </SettingRow>
+            )}
+          </>
+        )}
+      </ServerForm>
       {data.lan_urls.length === 0 && <Notice tone="warn">{t('settings.network.localOnly')}</Notice>}
     </div>
   )

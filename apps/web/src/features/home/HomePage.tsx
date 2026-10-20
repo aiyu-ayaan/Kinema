@@ -5,7 +5,7 @@ import { FilmReel, Info, Play, Plus } from '@phosphor-icons/react'
 import { Shelf } from '@/components/media/PosterCard'
 import { Button } from '@/components/ui/Button'
 import { EmptyState, Skeleton } from '@/components/ui/Card'
-import { api, frameUrl, imageUrl } from '@/lib/api'
+import { api, frameUrl, imageUrl, sharperImageUrl } from '@/lib/api'
 import { useIsAdmin } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { clock, progressOf, runtime, subtitleOf } from '@/lib/format'
@@ -56,17 +56,27 @@ function Hero({ features }: { features: Feature[] }) {
       onMouseLeave={() => setPaused(false)}
       aria-roledescription="carousel"
     >
-      {features.map((f, i) => (
-        <img
-          key={f.item.id}
-          src={imageUrl(f.item.backdrop) ?? frameUrl(f.item.id)}
-          alt=""
-          aria-hidden
-          loading={i === 0 ? 'eager' : 'lazy'}
-          onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
-          className={cn('absolute inset-0 h-full w-full object-cover transition-opacity duration-700', i === index ? 'opacity-100' : 'opacity-0')}
-        />
-      ))}
+      {features.map((f, i) => {
+        // Full width: the 1280 copy first (episode stills are stored at 300 px), then the stored art, then a frame.
+        const sources = [sharperImageUrl(f.item.backdrop, 1280), imageUrl(f.item.backdrop), frameUrl(f.item.id)].filter((s): s is string => !!s)
+        return (
+          <img
+            key={f.item.id}
+            src={sources[0]}
+            alt=""
+            aria-hidden
+            loading={i === 0 ? 'eager' : 'lazy'}
+            onError={(e) => {
+              const el = e.currentTarget
+              const next = Number(el.dataset.source ?? 0) + 1
+              el.dataset.source = String(next)
+              if (sources[next]) el.src = sources[next]
+              else el.style.visibility = 'hidden'
+            }}
+            className={cn('absolute inset-0 h-full w-full object-cover transition-opacity duration-700', i === index ? 'opacity-100' : 'opacity-0')}
+          />
+        )
+      })}
       <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/40 to-bg/10" aria-hidden />
       <div className="absolute inset-0 bg-gradient-to-r from-bg/95 via-bg/50 to-transparent" aria-hidden />
 

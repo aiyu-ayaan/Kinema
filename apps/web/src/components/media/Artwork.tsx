@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { FilmSlate } from '@phosphor-icons/react'
-import { imageUrl } from '@/lib/api'
+import { imageUrl, sharperImageUrl } from '@/lib/api'
 import { cn } from '@/lib/cn'
 
 /** Deterministic warm gradient so items without art still look distinct. */
@@ -30,7 +30,8 @@ export function Artwork({
   aspect?: 'poster' | 'wide'
   eager?: boolean
 }) {
-  const sources = [imageUrl(image), frame].filter((s): s is string => !!s)
+  // Wide cards show episode stills, stored at 300 px: ask for a bigger copy first.
+  const sources = [aspect === 'wide' ? sharperImageUrl(image, 780) : null, imageUrl(image), frame].filter((s): s is string => !!s)
   const [failed, setFailed] = useState(0)
   const src = sources[failed] ?? null
   const isFrame = src != null && src === frame

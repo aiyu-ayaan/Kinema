@@ -3,10 +3,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowCounterClockwise, Check, CheckCircle, LinkSimple, Play, Star, User } from '@phosphor-icons/react'
 import { Artwork } from '@/components/media/Artwork'
+import { EpisodeLinks } from '@/components/media/EpisodeLinks'
 import { PosterGrid } from '@/components/media/PosterCard'
 import { Badge, Skeleton } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { api, frameUrl, imageUrl } from '@/lib/api'
+import { api, frameUrl, imageUrl, sharperImageUrl } from '@/lib/api'
 import { useIsAdmin } from '@/lib/auth'
 import { FixMatch } from './FixMatch'
 import { SeriesTracks } from './SeriesTracks'
@@ -17,12 +18,13 @@ import type { CastMember, ItemCard, ItemDetail } from '@/lib/types'
 function Hero({ detail, children }: { detail: ItemDetail; children?: ReactNode }) {
   const { item, genres, files } = detail
   // No TMDB backdrop: a blurred video frame still gives the page its colour.
-  const [frameFailed, setFrameFailed] = useState(false)
-  const backdrop = imageUrl(item.backdrop) ?? (frameFailed ? null : frameUrl(item.id))
-  const blurred = !item.backdrop
+  const sources = [sharperImageUrl(item.backdrop, 1280), imageUrl(item.backdrop), frameUrl(item.id)].filter((s): s is string => !!s)
+  const [failed, setFailed] = useState(0)
+  const backdrop = sources[failed] ?? null
+  const blurred = backdrop === frameUrl(item.id)
   const duration = files[0]?.duration_s ?? item.duration_s
   const facts = [
-    item.kind === 'episode' ? subtitleOf(item) : item.year,
+    item.kind === 'episode' && item.episode_no != null ? <EpisodeLinks item={item} /> : item.kind === 'episode' ? subtitleOf(item) : item.year,
     runtime(duration),
     item.kind === 'show' || item.kind === 'season' ? subtitleOf(item) : null,
   ].filter(Boolean)
@@ -30,7 +32,7 @@ function Hero({ detail, children }: { detail: ItemDetail; children?: ReactNode }
     <section className="relative -mx-4 -mt-6 mb-8 overflow-hidden md:-mx-8 md:-mt-8">
       {backdrop && (
         <div aria-hidden className="absolute inset-0">
-          <img src={backdrop} alt="" onError={() => setFrameFailed(true)} className={blurred ? 'h-full w-full scale-110 object-cover opacity-40 blur-2xl' : 'h-full w-full object-cover opacity-40'} />
+          <img key={backdrop} src={backdrop} alt="" onError={() => setFailed((f) => f + 1)} className={blurred ? 'h-full w-full scale-110 object-cover opacity-40 blur-2xl' : 'h-full w-full object-cover opacity-40'} />
           <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/80 to-bg/30" />
           <div className="absolute inset-0 bg-gradient-to-r from-bg/90 to-transparent" />
         </div>
@@ -39,7 +41,7 @@ function Hero({ detail, children }: { detail: ItemDetail; children?: ReactNode }
         <Artwork image={item.kind === 'episode' ? (item.backdrop ?? item.poster) : item.poster} frame={frameUrl(item.id)} title={item.show_title ?? item.title} aspect={item.kind === 'episode' ? 'wide' : 'poster'} eager className={item.kind === 'episode' ? 'w-72 shrink-0 shadow-overlay' : 'w-40 shrink-0 shadow-overlay md:w-52'} />
         <div className="min-w-0 max-w-3xl">
           {item.show_title && (
-            <Link to={`/item/${item.parent_id}`} className="text-label font-semibold uppercase tracking-wider text-primary hover:underline">
+            <Link to={`/item/${item.show_id ?? item.parent_id}`} className="text-label font-semibold uppercase tracking-wider text-primary hover:underline">
               {item.show_title}
             </Link>
           )}
@@ -274,7 +276,7 @@ export function ItemPage() {
   const nextUp = data.next_up
   return (
     <div className="anim-enter space-y-8">
-      <Hero detail={data}>
+      <Hero key={data.item.id} detail={data}>
         <div className="mt-6 flex flex-wrap gap-2">
           {canPlay && <PlayButtons item={item} />}
           {nextUp && <PlayButtons item={nextUp} episode />}

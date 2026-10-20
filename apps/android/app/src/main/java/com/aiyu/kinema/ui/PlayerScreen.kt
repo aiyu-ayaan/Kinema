@@ -61,7 +61,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.toPath
 import androidx.compose.material3.toShape
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -81,9 +80,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -141,7 +141,7 @@ fun clock(seconds: Double): String {
 
 /** "English · AC3 5.1 · Commentary" */
 @Composable
-private fun trackLabel(s: Stream, n: Int): String {
+internal fun trackLabel(s: Stream, n: Int): String {
     val language = s.language?.let { code -> Locale.forLanguageTag(code).displayLanguage.takeIf { it.isNotBlank() && it != code } ?: code.uppercase() }
     val channels = when (val ch = s.channels) {
         null, 0 -> null
@@ -420,7 +420,7 @@ private fun Player(detail: ItemDetail, startAt: Double) {
         AnimatedVisibility(showChrome, Modifier.fillMaxSize(), enter = fadeIn(effects.defaultEffectsSpec()), exit = fadeOut(effects.slowEffectsSpec())) {
             Box(Modifier.fillMaxSize()) {
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.75f), 0.3f to Color.Transparent, 0.6f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.85f))))
-                TopBar(detail, plan, onBack = nav.back, onTracks = if (audios.size > 1 || subs.isNotEmpty()) ({ tracks = true }) else null, subtitlesOn = subId != null, fill = fill, onFill = { fill = !fill; poke++ })
+                TopBar(detail, plan, onBack = nav.back, onOpen = nav.open, onTracks = if (audios.size > 1 || subs.isNotEmpty()) ({ tracks = true }) else null, subtitlesOn = subId != null, fill = fill, onFill = { fill = !fill; poke++ })
                 if (error == null) CenterControls(
                     playing = playing,
                     onPlay = { if (player.isPlaying) player.pause() else player.play(); poke++ },
@@ -520,7 +520,7 @@ private fun androidx.compose.foundation.layout.BoxScope.Subtitles(cues: List<Cue
 }
 
 @Composable
-private fun TopBar(detail: ItemDetail, plan: PlaybackPlan?, onBack: () -> Unit, onTracks: (() -> Unit)?, subtitlesOn: Boolean, fill: Boolean, onFill: () -> Unit) {
+private fun TopBar(detail: ItemDetail, plan: PlaybackPlan?, onBack: () -> Unit, onOpen: (Long) -> Unit, onTracks: (() -> Unit)?, subtitlesOn: Boolean, fill: Boolean, onFill: () -> Unit) {
     val item = detail.item
     val title = if (item.kind == "episode") item.showTitle ?: item.title else item.title
     val subtitle = if (item.kind == "episode") listOfNotNull(subtitleOf(item), item.title).joinToString(" · ") else item.year?.toString()
@@ -528,7 +528,10 @@ private fun TopBar(detail: ItemDetail, plan: PlaybackPlan?, onBack: () -> Unit, 
         IconButton(onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back), tint = Color.White) }
         Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
             Text(title, style = MaterialTheme.typography.titleLarge, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (item.kind == "episode" && item.episodeNo != null) {
+                EpisodeLinks(item, onOpen, Color.White, " · ${item.title}", MaterialTheme.typography.bodyMedium, Modifier, Color.White.copy(alpha = 0.7f))
+            }
+            else if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         plan?.let {
             val mode = when (it.mode) {
@@ -640,7 +643,7 @@ private fun TrackSheet(audios: List<Stream>, subs: List<Stream>, audio: Int?, su
 }
 
 @Composable
-private fun TrackRow(label: String, selected: Boolean, enabled: Boolean = true, note: String? = null, onClick: () -> Unit) {
+internal fun TrackRow(label: String, selected: Boolean, enabled: Boolean = true, note: String? = null, onClick: () -> Unit) {
     val c = MaterialTheme.colorScheme
     ListItem(
         headlineContent = { Text(label, maxLines = 2, overflow = TextOverflow.Ellipsis) },

@@ -68,9 +68,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.Morph
@@ -215,6 +222,21 @@ fun subtitleOf(item: ItemCard): String? = when {
     item.kind == "show" && item.childCount > 0 -> androidx.compose.ui.res.pluralStringResource(R.plurals.item_seasons, item.childCount, item.childCount)
     item.kind == "season" -> androidx.compose.ui.res.pluralStringResource(R.plurals.item_episodes, item.childCount, item.childCount)
     else -> item.year?.toString()
+}
+
+/** "S2 · E1[suffix]" where S2 opens the season and E1 the episode's page. */
+@Composable
+fun EpisodeLinks(item: ItemCard, onOpen: (Long) -> Unit, link: Color, suffix: String = "", style: TextStyle = MaterialTheme.typography.labelLarge, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
+    val styles = TextLinkStyles(SpanStyle(color = link, textDecoration = TextDecoration.Underline))
+    val season = stringResource(R.string.item_season_no, item.seasonNo ?: 0)
+    val episode = stringResource(R.string.item_episode_no, item.episodeNo ?: 0)
+    val text = buildAnnotatedString {
+        item.parentId?.let { id -> withLink(LinkAnnotation.Clickable("season", styles) { onOpen(id) }) { append(season) } } ?: append(season)
+        append(" · ")
+        withLink(LinkAnnotation.Clickable("episode", styles) { onOpen(item.id) }) { append(episode) }
+        append(suffix)
+    }
+    Text(text, modifier, style = style, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
 /**

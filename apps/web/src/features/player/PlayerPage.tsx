@@ -17,6 +17,7 @@ import {
   Subtitles,
   Check,
 } from '@phosphor-icons/react'
+import { EpisodeLinks } from '@/components/media/EpisodeLinks'
 import { api, type PlayCaps } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { hasTopLeftWindowControls, hasTopRightWindowControls } from '@/lib/desktop'
@@ -470,7 +471,14 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
         </IconButton>
         <div className="min-w-0">
           <p className="truncate text-title font-semibold">{title}</p>
-          {subtitle && <p className="truncate text-label text-white/70">{subtitle}</p>}
+          {item.kind === 'episode' && item.episode_no != null ? (
+            <p className="truncate text-label text-white/70">
+              <EpisodeLinks item={item} className="hover:text-white hover:underline" />
+              {` · ${item.title}`}
+            </p>
+          ) : (
+            subtitle && <p className="truncate text-label text-white/70">{subtitle}</p>
+          )}
         </div>
         {plan && (
           <span className="ms-auto rounded border border-white/20 px-2 py-0.5 text-caption font-medium text-white/70" title={t(`player.mode.${plan.mode}.hint`)}>

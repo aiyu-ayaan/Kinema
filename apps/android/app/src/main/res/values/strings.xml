@@ -95,6 +95,8 @@
     <string name="item_from_start">Play from the start</string>
     <string name="item_play_episode">Play S%1$d · E%2$d</string>
     <string name="item_episode_short">S%1$d · E%2$d</string>
+    <string name="item_season_no">S%1$d</string>
+    <string name="item_episode_no">E%1$d</string>
     <string name="item_episode_number">Episode %1$d</string>
     <string name="item_left">%1$s left</string>
     <string name="item_seasons">Seasons</string>
@@ -136,6 +138,10 @@
     <string name="player_audio">Audio</string>
     <string name="player_subtitles">Subtitles</string>
     <string name="player_subtitles_off">Off</string>
+    <string name="series_tracks">Audio &amp; subtitles for all episodes</string>
+    <string name="series_hint">Tracks come from the first episode. Every episode uses the same track position, so this works when all episodes come from the same release.</string>
+    <string name="series_default">Server default</string>
+    <string name="series_no_streams">The first episode has not been probed yet. Try again after the scan finishes.</string>
     <string name="player_subtitle_image">Picture subtitles can’t be shown yet</string>
     <string name="player_fill">Fill the screen</string>
     <string name="player_fit">Fit to screen</string>

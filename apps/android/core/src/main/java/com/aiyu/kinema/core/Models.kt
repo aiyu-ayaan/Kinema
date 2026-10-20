@@ -44,6 +44,8 @@ data class ItemCard(
     val id: Long,
     @SerialName("library_id") val libraryId: Long = 0,
     @SerialName("parent_id") val parentId: Long? = null,
+    /** Season or episode: the show it belongs to. */
+    @SerialName("show_id") val showId: Long? = null,
     val kind: String,
     val title: String,
     val year: Int? = null,
@@ -117,7 +119,13 @@ data class ItemDetail(
     @SerialName("prev_id") val prevId: Long? = null,
     @SerialName("next_id") val nextId: Long? = null,
     @SerialName("next_up") val nextUp: ItemCard? = null,
+    /** Show only, for admins: the audio and subtitle pick every episode starts with. */
+    val tracks: SeriesTracks? = null,
 )
+
+/** Positions among the first episode's audio / subtitle [streams]; null is the server's language settings, subtitle -1 is off. */
+@Serializable
+data class SeriesTracks(val audio: Int? = null, val subtitle: Int? = null, val streams: List<Stream> = emptyList())
 
 @Serializable
 data class Shelf(val library: Library, val kind: String, val items: List<ItemCard>)
