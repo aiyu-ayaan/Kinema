@@ -1,10 +1,14 @@
 use crate::error::MediaError;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct MediaBinaries {
     pub ffmpeg: PathBuf,
     pub ffprobe: PathBuf,
+    /// An ffmpeg that decodes HEVC on the GPU through `-hwaccel drm` (Raspberry Pi 5). Used for
+    /// HEVC re-encodes only. It may be another build than `ffmpeg`: the bundled static ffmpeg has
+    /// no V4L2 request support, the distribution's Raspberry Pi build does.
+    pub hevc_drm: Option<PathBuf>,
 }
 
 impl MediaBinaries {
@@ -17,8 +21,13 @@ impl MediaBinaries {
     pub fn resolve() -> Result<Self, MediaError> {
         let ffmpeg = Self::resolve_binary("ffmpeg", "KINEMA_FFMPEG")?;
         let ffprobe = Self::resolve_binary("ffprobe", "KINEMA_FFPROBE")?;
+        let hevc_drm = find_hevc_drm(&ffmpeg);
 
-        Ok(Self { ffmpeg, ffprobe })
+        Ok(Self {
+            ffmpeg,
+            ffprobe,
+            hevc_drm,
+        })
     }
 
     fn resolve_binary(binary_name: &str, env_var: &str) -> Result<PathBuf, MediaError> {
@@ -74,6 +83,33 @@ impl MediaBinaries {
     }
 }
 
+/// The resolved ffmpeg first, then the one on PATH. Runs only where the kernel has an HEVC
+/// decoder, so other machines pay nothing at startup.
+fn find_hevc_drm(resolved: &Path) -> Option<PathBuf> {
+    if !kinema_core::platform::has_v4l2_hevc_decoder() {
+        return None;
+    }
+    std::iter::once(resolved.to_path_buf())
+        .chain(which("ffmpeg").ok())
+        .find(|ffmpeg| hevc_decodes_with_drm(ffmpeg))
+}
+
+fn hevc_decodes_with_drm(ffmpeg: &Path) -> bool {
+    std::process::Command::new(ffmpeg)
+        .args(["-hide_banner", "-h", "decoder=hevc"])
+        .stdin(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .output()
+        .is_ok_and(|o| lists_drm(&String::from_utf8_lossy(&o.stdout)))
+}
+
+/// `Supported hardware devices: cuda drm vaapi vdpau` in `ffmpeg -h decoder=hevc`.
+fn lists_drm(help: &str) -> bool {
+    help.lines()
+        .filter_map(|l| l.trim().strip_prefix("Supported hardware devices:"))
+        .any(|devices| devices.split_whitespace().any(|d| d == "drm"))
+}
+
 fn which(name: &str) -> Result<PathBuf, ()> {
     if let Some(paths) = std::env::var_os("PATH") {
         for path in std::env::split_paths(&paths) {
@@ -91,4 +127,20 @@ fn which(name: &str) -> Result<PathBuf, ()> {
         }
     }
     Err(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn drm_only_from_the_hardware_devices_line() {
+        assert!(lists_drm(
+            "Decoder hevc\n    Supported hardware devices: cuda drm vaapi vdpau \n"
+        ));
+        assert!(!lists_drm(
+            "    Supported hardware devices: cuda vaapi vulkan \n"
+        ));
+        assert!(!lists_drm("Supported pixel formats: drm_prime\n"));
+    }
 }

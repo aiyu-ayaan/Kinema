@@ -226,13 +226,21 @@ pub fn stream_command(
     copy_audio: bool,
     encode: Encode,
 ) -> Command {
-    let mut cmd = Command::new(&bins.ffmpeg);
+    let reencode = !copy_video && video.is_some();
+    // Decoding 10-bit HEVC is a third of a re-encode's CPU on a Raspberry Pi 5; its GPU does it for free.
+    let hw_decode = bins
+        .hevc_drm
+        .as_ref()
+        .filter(|_| reencode && video.is_some_and(|v| v.codec == Some("hevc")));
+    let mut cmd = Command::new(hw_decode.unwrap_or(&bins.ffmpeg));
     kinema_core::platform::configure_playback_process(cmd.as_std_mut());
     cmd.args(["-hide_banner", "-loglevel", "error", "-nostdin"]);
-    let reencode = !copy_video && video.is_some();
     if reencode {
         // Progress for the throttle (Progress::watch); remux is cheap and left to run.
         cmd.args(["-progress", "pipe:2", "-nostats"]);
+    }
+    if hw_decode.is_some() {
+        cmd.args(["-hwaccel", "drm"]);
     }
     if start_s > 0.0 {
         // Copied video can only start at a keyframe before `start_s`. Accurate seek
@@ -331,6 +339,7 @@ mod tests {
         let bins = MediaBinaries {
             ffmpeg: "ffmpeg".into(),
             ffprobe: "ffprobe".into(),
+            hevc_drm: None,
         };
         let encode = Encode {
             preset: "veryfast",
@@ -353,6 +362,44 @@ mod tests {
         assert!(has_flag(600.0, true));
         assert!(!has_flag(600.0, false));
         assert!(!has_flag(0.0, true));
+    }
+
+    #[test]
+    fn hevc_reencode_decodes_on_the_gpu_build() {
+        let bins = MediaBinaries {
+            ffmpeg: "ffmpeg".into(),
+            ffprobe: "ffprobe".into(),
+            hevc_drm: Some("/usr/bin/ffmpeg".into()),
+        };
+        let encode = Encode {
+            preset: "veryfast",
+            crf: 23,
+            max_height: 0,
+        };
+        let hevc = Track {
+            codec: Some("hevc"),
+            ..H264
+        };
+        let run = |video: Track, copy_video: bool| {
+            let cmd = stream_command(
+                &bins,
+                Path::new("a.mkv"),
+                0.0,
+                Some(video),
+                Some(AAC),
+                copy_video,
+                true,
+                encode,
+            );
+            let std = cmd.as_std();
+            (
+                std.get_program().to_string_lossy().into_owned(),
+                std.get_args().any(|a| a == "drm"),
+            )
+        };
+        assert_eq!(run(hevc, false), ("/usr/bin/ffmpeg".into(), true));
+        assert_eq!(run(hevc, true), ("ffmpeg".into(), false));
+        assert_eq!(run(H264, false), ("ffmpeg".into(), false));
     }
 
     #[test]

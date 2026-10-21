@@ -65,6 +65,12 @@ async fn main() -> anyhow::Result<()> {
     let bins = match kinema_media::MediaBinaries::resolve() {
         Ok(b) => {
             info!("ffmpeg: {}", b.ffmpeg.display());
+            if let Some(hw) = &b.hevc_drm {
+                info!(
+                    "HEVC hardware decode for transcodes: {} (drm)",
+                    hw.display()
+                );
+            }
             Some(Arc::new(b))
         }
         Err(e) => {

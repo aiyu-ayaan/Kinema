@@ -66,6 +66,24 @@ pub fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     options.open(path)?.write_all(bytes)
 }
 
+/// A V4L2 HEVC decoder in the kernel, like the Raspberry Pi 5's `rpi-hevc-dec`. Only an ffmpeg
+/// built with the V4L2 request API can use it, through `-hwaccel drm`.
+pub fn has_v4l2_hevc_decoder() -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        std::fs::read_dir("/sys/class/video4linux")
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter_map(|d| std::fs::read_to_string(d.path().join("name")).ok())
+            .any(|name| name.trim().ends_with("hevc-dec"))
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        false
+    }
+}
+
 /// Kernel and runtime pseudo-filesystems: never media, and walking them can hang
 /// (`/proc` has self-referencing links and files that block on read).
 pub fn is_virtual_fs(path: &Path) -> bool {
