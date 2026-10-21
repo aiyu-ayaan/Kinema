@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import Layout from '@theme/Layout';
 import Heading from '@theme/Heading';
 import { 
@@ -30,7 +31,7 @@ function HeroSection() {
       <div className="hero-content">
         <div className="hero-logo-container">
           <img 
-            src="img/app-icon.svg" 
+            src={useBaseUrl('/img/app-icon.svg')} 
             alt="Kinema App Icon" 
             className="hero-projector-logo" 
             style={{ width: '100px', height: '100px', borderRadius: '24px', boxShadow: '0 8px 32px rgba(232, 85, 58, 0.4)' }}
@@ -286,6 +287,140 @@ MEDIA_DIR=/path/to/media docker compose up -d`,
   );
 }
 
+function DeviceShowcaseSection() {
+  const [view, setView] = useState<'home' | 'player' | 'video'>('home');
+
+  // Hooks must be called unconditionally at the top of the component
+  const videoSrc = useBaseUrl('/video/Kinema.mp4');
+  const videoPoster = useBaseUrl('/img/screenshots/phone-home.png');
+  const tabletMovies = useBaseUrl('/img/screenshots/tablet-movies.png');
+  const tabletDash = useBaseUrl('/img/screenshots/tablet-dashboard.png');
+  const webHome = useBaseUrl('/img/screenshots/web-home-inner.png');
+  const webPlayer = useBaseUrl('/img/screenshots/web-player-inner.png');
+  const phoneHome = useBaseUrl('/img/screenshots/phone-home.png');
+  const phoneSettings = useBaseUrl('/img/screenshots/phone-settings.png');
+
+  return (
+    <section className="device-showcase-section">
+      <div className="section-header" style={{ marginBottom: '2.5rem' }}>
+        <h2 className="section-title">Stream on Any Screen, Anywhere</h2>
+        <p className="section-subtitle">
+          Pixel-perfect native experiences across desktop workstations, tablets, and mobile devices.
+        </p>
+        <div style={{ display: 'inline-flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.5rem', marginTop: '1.25rem', background: 'var(--kinema-card-bg)', padding: '5px', borderRadius: '12px', border: '1px solid var(--kinema-border)' }}>
+          <button
+            onClick={() => setView('home')}
+            style={{
+              padding: '7px 18px',
+              borderRadius: '8px',
+              border: 'none',
+              background: view === 'home' ? 'var(--kinema-ember)' : 'transparent',
+              color: view === 'home' ? '#fff' : 'var(--ifm-heading-color)',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}>
+            Browse & Library
+          </button>
+          <button
+            onClick={() => setView('player')}
+            style={{
+              padding: '7px 18px',
+              borderRadius: '8px',
+              border: 'none',
+              background: view === 'player' ? 'var(--kinema-ember)' : 'transparent',
+              color: view === 'player' ? '#fff' : 'var(--ifm-heading-color)',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}>
+            Player Experience
+          </button>
+          <button
+            onClick={() => setView('video')}
+            style={{
+              padding: '7px 18px',
+              borderRadius: '8px',
+              border: 'none',
+              background: view === 'video' ? 'var(--kinema-ember)' : 'transparent',
+              color: view === 'video' ? '#fff' : 'var(--ifm-heading-color)',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease',
+            }}>
+            <Play size={14} fill="currentColor" /> Watch Showcase Video (39s)
+          </button>
+        </div>
+      </div>
+
+      {view === 'video' ? (
+        <div className="video-showcase-container">
+          <div className="video-showcase-mockup">
+            <video 
+              controls 
+              autoPlay 
+              loop 
+              playsInline 
+              src={videoSrc} 
+              poster={videoPoster}
+              className="showcase-video-elem"
+            />
+          </div>
+          <p className="video-showcase-note">
+            Kinema full motion showcase • Audio on • Native clients on Linux, Windows, Web & Android
+          </p>
+        </div>
+      ) : (
+        <div className="device-stage">
+          {/* Tablet Mockup */}
+          <div className="mockup-tablet">
+            <div className="mockup-tablet-screen">
+              <img 
+                src={view === 'home' ? tabletMovies : tabletDash} 
+                alt="Tablet Media Library" 
+              />
+            </div>
+          </div>
+
+          {/* Laptop / PC Mockup */}
+          <div className="mockup-pc">
+            <div className="mockup-pc-header">
+              <span className="mockup-dot mockup-dot-red" />
+              <span className="mockup-dot mockup-dot-yellow" />
+              <span className="mockup-dot mockup-dot-green" />
+              <span className="mockup-pc-title">kinema — localhost:3000</span>
+            </div>
+            <div className="mockup-pc-screen">
+              <img 
+                src={view === 'home' ? webHome : webPlayer} 
+                alt="Desktop Player" 
+              />
+            </div>
+            <div className="mockup-pc-base" />
+          </div>
+
+          {/* Phone Mockup */}
+          <div className="mockup-phone">
+            <div className="mockup-phone-island" />
+            <div className="mockup-phone-screen">
+              <img 
+                src={view === 'home' ? phoneHome : phoneSettings} 
+                alt="Android Media3 App" 
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
@@ -294,6 +429,7 @@ export default function Home(): JSX.Element {
       description={siteConfig.tagline}>
       <HeroSection />
       <main>
+        <DeviceShowcaseSection />
         <FeaturesSection />
         <QuickStartSection />
       </main>
