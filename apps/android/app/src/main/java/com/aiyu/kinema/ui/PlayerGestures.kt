@@ -128,26 +128,62 @@ fun Modifier.swipeLevels(levels: SwipeLevels, onSwipe: (Swipe?) -> Unit) = point
     var kind: Swipe? = null
     detectVerticalDragGestures(
         onDragStart = { start ->
-            // The top and bottom edges belong to the system bars' own swipe.
+            // The top 20% is reserved for swipe-down-to-PiP, bottom 10% for system navigation
             kind = when {
-                start.y < size.height * 0.08f || start.y > size.height * 0.92f -> null
+                start.y < size.height * 0.20f || start.y > size.height * 0.90f -> null
                 start.x < size.width / 2f -> Swipe.BRIGHTNESS
                 else -> Swipe.VOLUME
             }
             if (kind == Swipe.VOLUME) levels.syncVolume()
             onSwipe(kind)
         },
-        onDragEnd = { kind = null; onSwipe(null) },
-        onDragCancel = { kind = null; onSwipe(null) },
+        onDragEnd = {
+            kind = null
+            onSwipe(null)
+        },
+        onDragCancel = {
+            kind = null
+            onSwipe(null)
+        },
         onVerticalDrag = { change, dy ->
+            val k = kind ?: return@detectVerticalDragGestures
             // A swipe the full height of the screen moves a level by 100 %.
             val delta = -dy / size.height
-            when (kind) {
+            when (k) {
                 Swipe.BRIGHTNESS -> levels.changeBrightness(levels.brightness + delta)
                 Swipe.VOLUME -> levels.changeVolume(levels.volume + delta)
-                null -> return@detectVerticalDragGestures
             }
             change.consume()
+        },
+    )
+}
+
+/** Swiping down from the upper portion of the video smoothly triggers Picture-in-Picture. */
+fun Modifier.swipeDownToPip(onSwipeDown: () -> Unit) = pointerInput(onSwipeDown) {
+    var eligible = false
+    var totalDy = 0f
+    detectVerticalDragGestures(
+        onDragStart = { start ->
+            // Initiated from the top 35% of the video
+            eligible = start.y < size.height * 0.35f
+            totalDy = 0f
+        },
+        onDragEnd = {
+            if (eligible && totalDy > size.height * 0.15f) {
+                onSwipeDown()
+            }
+            eligible = false
+            totalDy = 0f
+        },
+        onDragCancel = {
+            eligible = false
+            totalDy = 0f
+        },
+        onVerticalDrag = { change, dy ->
+            if (eligible && dy > 0) {
+                totalDy += dy
+                change.consume()
+            }
         },
     )
 }

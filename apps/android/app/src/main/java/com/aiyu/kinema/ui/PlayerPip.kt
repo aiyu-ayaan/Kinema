@@ -48,6 +48,22 @@ private fun pipAspect(width: Float, height: Int): Rational {
     return Rational((ratio * 10_000).roundToInt(), 10_000)
 }
 
+fun enterPip(activity: ComponentActivity, playing: Boolean, aspect: Rational = Rational(16, 9)) {
+    if (activity.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
+        val toggleLabel = activity.getString(if (playing) R.string.player_pause else R.string.action_play)
+        val toggle = PendingIntent.getBroadcast(
+            activity, 0, Intent(ACTION_TOGGLE).setPackage(activity.packageName),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val icon = Icon.createWithResource(activity, if (playing) R.drawable.ic_pip_pause else R.drawable.ic_pip_play)
+        val params = PictureInPictureParams.Builder()
+            .setAspectRatio(aspect)
+            .setActions(listOf(RemoteAction(icon, toggleLabel, toggleLabel, toggle)))
+            .build()
+        runCatching { activity.enterPictureInPictureMode(params) }
+    }
+}
+
 /**
  * Picture-in-picture for the player. With [enabled], leaving the app (home, recents) shrinks the video into a
  * window that keeps playing; closing that window pauses it. Returns whether the activity is in that window now.

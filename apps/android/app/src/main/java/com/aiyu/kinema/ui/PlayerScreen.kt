@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Forward10
 import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay10
 import androidx.compose.material.icons.rounded.Stop
@@ -369,6 +370,9 @@ private fun Player(detail: ItemDetail, startAt: Double, large: Boolean, fullscre
             Playback.Controls(
                 stop = { player.pause(); nav.back() },
                 seekBy = { seek(now() + it) },
+                seekTo = { seek(it) },
+                durationMs = { ((duration ?: 0.0) * 1000).toLong() },
+                currentPositionMs = { (now() * 1000).toLong() },
                 next = detail.nextId?.let { next -> { nav.play(next, 0.0) } },
             ),
         )
@@ -417,9 +421,14 @@ private fun Player(detail: ItemDetail, startAt: Double, large: Boolean, fullscre
 
     val immersive = !large || fullscreen
     val onTracks = if (audios.size > 1 || subs.isNotEmpty()) ({ tracks = true; poke++; Unit }) else null
+    val onSwipeDownPiP: (() -> Unit)? = remember(context, pipEnabled, playing) {
+        val act = context.findActivity()
+        if (pipEnabled && act != null) { { enterPip(act, playing) } } else null
+    }
     var seekHint by remember { mutableStateOf<Pair<Boolean, Int>?>(null) }
     val video: @Composable (Modifier) -> Unit = { modifier -> BoxWithConstraints(
         modifier.background(Color.Black)
+            .then(if (onSwipeDownPiP != null) Modifier.swipeDownToPip(onSwipeDownPiP) else Modifier)
             .then(if (levels != null) Modifier.swipeLevels(levels) { swipe = it } else Modifier)
             .pointerTaps(
                 onTap = { chrome = !chrome; poke++ },
@@ -455,9 +464,12 @@ private fun Player(detail: ItemDetail, startAt: Double, large: Boolean, fullscre
         AnimatedVisibility(showChrome, Modifier.fillMaxSize(), enter = fadeIn(effects.defaultEffectsSpec()), exit = fadeOut(effects.slowEffectsSpec())) {
             Box(Modifier.fillMaxSize()) {
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.75f), 0.3f to Color.Transparent, 0.6f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.85f))))
+                val activity = context.findActivity()
                 TopBar(
                     detail, plan, showTitle = immersive, onBack = nav.back, onOpen = nav.open, onTracks = onTracks, subtitlesOn = subId != null,
-                    fill = fill, onFill = { fill = !fill; poke++ }, onList = if (immersive) ({ upNext = true; poke++; Unit }) else null,
+                    fill = fill, onFill = { fill = !fill; poke++ },
+                    onPip = if (pipEnabled && activity != null) { { enterPip(activity, playing) } } else null,
+                    onList = if (immersive) ({ upNext = true; poke++; Unit }) else null,
                 )
                 if (error == null) CenterControls(
                     playing = playing,
@@ -580,7 +592,7 @@ private fun androidx.compose.foundation.layout.BoxScope.Subtitles(cues: List<Cue
 }
 
 @Composable
-private fun TopBar(detail: ItemDetail, plan: PlaybackPlan?, showTitle: Boolean, onBack: () -> Unit, onOpen: (Long) -> Unit, onTracks: (() -> Unit)?, subtitlesOn: Boolean, fill: Boolean, onFill: () -> Unit, onList: (() -> Unit)?) {
+private fun TopBar(detail: ItemDetail, plan: PlaybackPlan?, showTitle: Boolean, onBack: () -> Unit, onOpen: (Long) -> Unit, onTracks: (() -> Unit)?, subtitlesOn: Boolean, fill: Boolean, onFill: () -> Unit, onPip: (() -> Unit)?, onList: (() -> Unit)?) {
     val item = detail.item
     val title = if (item.kind == "episode") item.showTitle ?: item.title else item.title
     val subtitle = if (item.kind == "episode") listOfNotNull(subtitleOf(item), item.title).joinToString(" · ") else item.year?.toString()
@@ -602,6 +614,7 @@ private fun TopBar(detail: ItemDetail, plan: PlaybackPlan?, showTitle: Boolean, 
             }
             Tag(stringResource(mode), container = Color.White.copy(alpha = 0.15f), content = Color.White)
         }
+        onPip?.let { IconButton(it) { Icon(Icons.Rounded.PictureInPictureAlt, stringResource(R.string.player_pip), tint = Color.White) } }
         IconButton(onFill) { Icon(Icons.Rounded.AspectRatio, stringResource(if (fill) R.string.player_fit else R.string.player_fill), tint = if (fill) MaterialTheme.colorScheme.primary else Color.White) }
         onTracks?.let { IconButton(it) { Icon(if (subtitlesOn) Icons.Rounded.Subtitles else Icons.Rounded.SubtitlesOff, stringResource(R.string.player_tracks), tint = Color.White) } }
         onList?.let { IconButton(it) { Icon(Icons.AutoMirrored.Rounded.PlaylistPlay, stringResource(R.string.player_up_next_list), tint = Color.White) } }
