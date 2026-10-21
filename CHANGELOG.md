@@ -1,3 +1,12 @@
+## v0.0.1-alpha.5 (2026-10-21)
+
+- !alpha(android) : Dedicated PiP button, swipe-down PiP gesture, and media notification seekbar
+- fix(player) : Re-encode audio with transcoded video so seeks no longer freeze the picture
+- fix(android) : Match the system predictive back animation and stop the leaving page ghosting
+- docs(readme) : Add multi-device screenshots with open-source demo library
+- perf(player) : Start transcodes in about 2.5 s after play or seek and hold the picture meanwhile
+- fix(player) : Revert desktop HEVC switches, fall back to transcode on decode errors, steady repeated skips
+
 ## v0.0.1-alpha.4 (2026-10-21)
 
 - !alpha(all) : HEVC GPU decoding, throttled transcodes, and desktop mpv playback
