@@ -84,7 +84,7 @@ Decision rules (`kinema-media::playback::plan`):
 |---|---|
 | mp4/m4v/mov/webm, browser-decodable video and audio, first audio track | Direct play |
 | Video decodable (H.264 8-bit, VP9, HEVC/AV1 when the browser says so) but container, audio codec or audio track choice is not | Remux: video copied, audio copied or AAC stereo |
-| Anything else | Transcode: libx264 veryfast, max 1920 wide, AAC stereo |
+| Anything else | Transcode: libx264 veryfast, max 1920 wide, audio always re-encoded to AAC stereo (copied audio would start at the keyframe before the seek point and leave the video a hole of up to a keyframe interval: the picture froze for seconds after a seek) |
 | Not probed (ffprobe missing or failed) | Direct, raw bytes |
 
 Browsers play only the first audio track of a file, so choosing another track switches to remux: cheap, the video is still copied.

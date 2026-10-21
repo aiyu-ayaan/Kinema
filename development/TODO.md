@@ -89,6 +89,7 @@ Trigger: F1 (1080p HEVC Main 10) transcoded at ~90 % CPU on the Pi 5 because Chr
 - [x] Real process priority: `nice 10` live streams, `nice 19` background (`kinema-core::platform`)
 - [x] Pi 5 HEVC hardware decode through the distribution ffmpeg (`MediaBinaries::hevc_drm`)
 - [x] Desktop: play in mpv through a loopback proxy (`apps/desktop/src/mpv.js`), server `raw=true`
+- [x] Transcode froze the picture after a seek while the clock ran (2026-10-22): copied audio started at the keyframe before the seek, video at the seek point; audio is now re-encoded in a transcode. Checked in Chrome and the desktop app (Electron 33): F1 seeks resume in ~1 s at 24 fps
 - [ ] Deploy to the Pi: `sudo apt install ffmpeg` is already there; restart Kinema and check the `HEVC hardware decode` log line
 - [ ] Try the mpv path by hand in the desktop app (mpv not installed on the dev laptop; proxy and raw seeks tested with ffmpeg)
 - [ ] Bundle mpv with the desktop app (Windows `mpv.exe`, Linux AppImage)

@@ -82,8 +82,14 @@ pub fn plan(
     if direct_container && video_copy && audio_copy && audio_is_first {
         return Plan::Direct;
     }
-    // vorbis does not go into MP4; the rest of audio_ok does.
-    let audio_copy = audio.is_none_or(|a| audio_ok(a.codec) && a.codec != Some("vorbis"));
+    // vorbis does not go into MP4; the rest of audio_ok does. A re-encoded video starts exactly at
+    // the seek point, but copied audio can only start at the keyframe before it: the video then has
+    // a hole of up to a keyframe interval (5.6 s on F1) and the browser freezes the picture over it
+    // while the audio clock runs. Re-encoding the audio too (AAC, a sliver of x264's CPU) cuts both
+    // at the same frame.
+    let reencode_video = video.is_some() && !video_copy;
+    let audio_copy =
+        !reencode_video && audio.is_none_or(|a| audio_ok(a.codec) && a.codec != Some("vorbis"));
     Plan::Stream {
         copy_video: video_copy,
         copy_audio: audio_copy,
@@ -443,8 +449,19 @@ mod tests {
             ..H264
         };
         assert_eq!(
-            plan(mkv, Some(hevc), Some(AAC), true, caps).name(),
-            "transcode"
+            plan(mkv, Some(hevc), Some(AAC), true, caps),
+            Plan::Stream {
+                copy_video: false,
+                copy_audio: false
+            }
+        );
+        // No video to re-encode: copied audio has nothing to drift from.
+        assert_eq!(
+            plan(mkv, None, Some(AAC), true, caps),
+            Plan::Stream {
+                copy_video: false,
+                copy_audio: true
+            }
         );
         let caps = ClientCaps {
             hevc: true,
