@@ -38,6 +38,37 @@ Priorities: **near-zero idle CPU**, support for any media container and codec, a
 
 ---
 
+## Screenshots
+
+### Web & Desktop Experience
+
+| Home & Hero Shelf | Movie & Series Detail |
+| :---: | :---: |
+| <img src="assets/screenshots/web-home.png" alt="Kinema Web Home" width="100%" /> | <img src="assets/screenshots/web-details.png" alt="Kinema Movie Detail" width="100%" /> |
+
+| Direct Play & Remux Player | Library Browse & Filtering |
+| :---: | :---: |
+| <img src="assets/screenshots/web-player.png" alt="Kinema Web Player" width="100%" /> | <img src="assets/screenshots/web-library.png" alt="Kinema Library Browse" width="100%" /> |
+
+### Native Android Experience (Jetpack Compose & Media3)
+
+<p align="center">
+  <img src="assets/screenshots/android-home.png" alt="Android Home" width="23%" />
+  &nbsp;&nbsp;
+  <img src="assets/screenshots/android-details.png" alt="Android Details" width="23%" />
+  &nbsp;&nbsp;
+  <img src="assets/screenshots/android-library.png" alt="Android Library" width="23%" />
+  &nbsp;&nbsp;
+  <img src="assets/screenshots/android-settings.png" alt="Android Settings" width="23%" />
+</p>
+
+<p align="center">
+  <em>Media3 ExoPlayer in landscape with Direct Play stream badges, live position markers, and seekbar</em><br/>
+  <img src="assets/screenshots/android-player.png" alt="Android Media3 Player" width="70%" />
+</p>
+
+---
+
 ## Quick Install
 
 ### Home Server (Linux x86_64 / aarch64)
@@ -335,7 +366,7 @@ sequenceDiagram
 - **Throttle**: ffmpeg's `-progress` output tells the server how far a re-encode is ahead; past 60 s the server stops reading the pipe, so ffmpeg waits and the encode runs at playback pace instead of taking every core.
 - **Priority**: live streams run at `nice 10` (Windows: below normal), background probing and thumbnails at `nice 19` (idle).
 - **Raspberry Pi 5**: the HEVC decoder in its GPU is used through the system `ffmpeg` (`-hwaccel drm`) when one is installed; about a third less CPU on 10-bit HEVC.
-- **Desktop app**: turns on Chromium's GPU decoding for HEVC on Linux (needs a VAAPI driver), so HEVC files remux instead of transcoding.
+- **Codec fallback**: when a browser claims HEVC or AV1 but cannot decode it, the player retries and the server transcodes.
 
 ### Accurate Seek Offsets
 Stream copy can only begin at a keyframe (or Matroska cue point). When a user seeks into a remuxed stream, Kinema calculates the exact prior keyframe time, launches `ffmpeg` at that boundary, and returns the keyframe timestamp as `start` in the plan. The client player offsets its playback time accordingly, ensuring seek bars and subtitles stay in exact synchronization.

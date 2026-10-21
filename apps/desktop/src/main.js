@@ -21,8 +21,6 @@ const override = process.env.KINEMA_URL
 const CONNECT = path.join(__dirname, 'connect.html')
 const BEACON_PORT = 48555 // backend/src/discovery.rs
 
-const LINUX_VIDEO_FEATURES = ['VaapiVideoDecoder', 'VaapiVideoDecodeLinuxGL', 'VaapiIgnoreDriverChecks', 'PlatformHEVCDecoderSupport']
-
 // App Flavors: 'dev' or 'prod'.
 const flavor = process.env.KINEMA_FLAVOR || (!app || !app.isPackaged ? 'dev' : 'prod')
 const isDev = flavor === 'dev'
@@ -40,13 +38,6 @@ if (app) {
   // Single instance lock per flavor
   if (!app.requestSingleInstanceLock()) app.exit(0)
   app.on('second-instance', () => showWindow())
-
-  // Chromium decodes HEVC through the GPU only, and on Linux only behind these switches. With them the player
-  // reports HEVC and the server remuxes instead of transcoding. Without a VAAPI driver nothing changes: the
-  // page's codec check still says no and the server transcodes as before.
-  if (process.platform === 'linux') {
-    app.commandLine.appendSwitch('enable-features', LINUX_VIDEO_FEATURES.join(','))
-  }
 }
 
 /** servers: origins to try in order. pins: origin -> approved self-signed certificate (SHA-256, AA:BB:..). */

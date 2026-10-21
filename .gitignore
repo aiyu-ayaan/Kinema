@@ -20,6 +20,8 @@ pnpm-debug.log*
 
 # Database & runtime data
 data/
+data.real.bak/
+dummy_media/
 *.db
 *.db-shm
 *.db-wal

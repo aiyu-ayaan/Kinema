@@ -280,6 +280,11 @@ pub fn stream_command(
             cmd.args(["-c:a", "aac", "-ac", "2", "-b:a", "192k"]);
         }
     }
+    if reencode {
+        // Without it a fragment closes only at the next keyframe, up to 10 s of encoding on a Pi: play and
+        // seek waited 6-9 s for the first frames. Half-second fragments start playback in about 2.5 s.
+        cmd.args(["-frag_duration", "500000"]);
+    }
     cmd.args([
         "-sn",
         "-dn",
@@ -365,7 +370,7 @@ mod tests {
     }
 
     #[test]
-    fn hevc_reencode_decodes_on_the_gpu_build() {
+    fn reencode_uses_gpu_decode_and_short_fragments() {
         let bins = MediaBinaries {
             ffmpeg: "ffmpeg".into(),
             ffprobe: "ffprobe".into(),
@@ -395,11 +400,12 @@ mod tests {
             (
                 std.get_program().to_string_lossy().into_owned(),
                 std.get_args().any(|a| a == "drm"),
+                std.get_args().any(|a| a == "-frag_duration"),
             )
         };
-        assert_eq!(run(hevc, false), ("/usr/bin/ffmpeg".into(), true));
-        assert_eq!(run(hevc, true), ("ffmpeg".into(), false));
-        assert_eq!(run(H264, false), ("ffmpeg".into(), false));
+        assert_eq!(run(hevc, false), ("/usr/bin/ffmpeg".into(), true, true));
+        assert_eq!(run(hevc, true), ("ffmpeg".into(), false, false));
+        assert_eq!(run(H264, false), ("ffmpeg".into(), false, true));
     }
 
     #[test]

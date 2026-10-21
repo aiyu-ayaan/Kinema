@@ -45,6 +45,24 @@ function detectCaps(): PlayCaps {
   }
 }
 
+/**
+ * A new remux/transcode stream starts empty: the element shows its poster until the first frame arrives.
+ * Using the current frame as that poster keeps the picture on screen instead of a black flash.
+ */
+function holdFrame(v: HTMLVideoElement | null) {
+  if (!v || !v.videoWidth) return
+  const scale = Math.min(1, 960 / v.videoWidth)
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.round(v.videoWidth * scale)
+  canvas.height = Math.round(v.videoHeight * scale)
+  try {
+    canvas.getContext('2d')?.drawImage(v, 0, 0, canvas.width, canvas.height)
+    v.poster = canvas.toDataURL('image/jpeg', 0.8)
+  } catch {
+    // A frame the canvas may not read: the old black gap is all that is lost.
+  }
+}
+
 function IconButton({ label, onClick, children, className }: { label: string; onClick: () => void; children: ReactNode; className?: string }) {
   return (
     <button type="button" onClick={onClick} aria-label={label} title={label} className={cn('flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/15 hover:text-white', className)}>
@@ -107,7 +125,9 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   const qc = useQueryClient()
   const { item } = detail
   const file = detail.files[0]
-  const caps = useMemo(detectCaps, [])
+  // The browser's answer, until a decode fails: some (Chromium with forced GPU switches, some Linux builds) claim
+  // HEVC or AV1 and then cannot play it. The retry asks the server to transcode instead.
+  const caps = useRef<PlayCaps>(detectCaps())
   const mpv = useMpv()
   const audios = useMemo(() => file.streams.filter((s) => s.type === 'audio'), [file])
   const subs = useMemo(() => file.streams.filter((s) => s.type === 'subtitle'), [file])
@@ -167,6 +187,9 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     return v ? offset.current + v.currentTime : 0
   }, [])
 
+  /** Where playback is headed: a seek still loading counts, so quick repeated skips add up instead of starting over. */
+  const playhead = useCallback(() => seekTarget.current ?? absTime(), [absTime])
+
   const duration = plan?.duration_s ?? (videoRef.current && Number.isFinite(videoRef.current.duration) ? videoRef.current.duration : null)
 
   const load = useCallback(
@@ -178,7 +201,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
       seekTarget.current = at
       const seq = ++loadSeq.current
       try {
-        const p = await api.plan(file.id, audioIdx, caps, at)
+        const p = await api.plan(file.id, audioIdx, caps.current, at)
         // A newer seek or track change started meanwhile: its answer wins.
         if (seq !== loadSeq.current) return
         // Language settings pick the starting subtitle; later choices are the viewer's.
@@ -190,12 +213,13 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
         if (p.mode === 'direct') {
           offset.current = 0
           pendingSeek.current = at
-          setSrc(api.streamUrl(file.id, audioIdx, caps, 0))
+          setSrc(api.streamUrl(file.id, audioIdx, caps.current, 0))
         } else {
+          holdFrame(videoRef.current)
           // ffmpeg gets the requested time; p.start is where its output really begins.
           offset.current = p.start
           pendingSeek.current = null
-          setSrc(api.streamUrl(file.id, audioIdx, caps, at))
+          setSrc(api.streamUrl(file.id, audioIdx, caps.current, at))
         }
       } catch (e) {
         if (seq !== loadSeq.current) return
@@ -203,7 +227,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
         setError(e instanceof Error ? e.message : String(e))
       }
     },
-    [file.id, caps],
+    [file.id],
   )
 
   useEffect(() => {
@@ -359,10 +383,10 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
         togglePlay()
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault()
-        seek(absTime() - 10)
+        seek(playhead() - 10)
       } else if (e.key === 'ArrowRight') {
         e.preventDefault()
-        seek(absTime() + 10)
+        seek(playhead() + 10)
       } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         e.preventDefault()
         setLevel(level + (e.key === 'ArrowUp' ? 0.05 : -0.05))
@@ -377,7 +401,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [absTime, level, poke, seek, setLevel, stop, toggleFullscreen, toggleTheater, togglePlay])
+  }, [level, playhead, poke, seek, setLevel, stop, toggleFullscreen, toggleTheater, togglePlay])
 
   useEffect(() => {
     const onChange = () => setFullscreen(!!document.fullscreenElement)
@@ -483,7 +507,14 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
                 }
                 if (detail.next_id) navigate(`/play/${detail.next_id}?t=0`, { replace: true })
               }}
-              onError={() => {
+              onError={(e) => {
+                const code = e.currentTarget.error?.code
+                const decodeFailed = code === MediaError.MEDIA_ERR_DECODE || code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
+                if (decodeFailed && mode.current !== 'transcode' && (caps.current.hevc || caps.current.av1)) {
+                  caps.current = { hevc: false, av1: false }
+                  load(audio, playhead())
+                  return
+                }
                 seekTarget.current = null
                 setWaiting(false)
                 setError(t('player.error'))
@@ -615,13 +646,13 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
                 </div>
               ) : null}
               <div className="mt-1 flex items-center gap-1">
-                <IconButton label={t('player.back10')} onClick={() => seek(absTime() - 10)}>
+                <IconButton label={t('player.back10')} onClick={() => seek(playhead() - 10)}>
                   <ClockCounterClockwise size={22} />
                 </IconButton>
                 <IconButton label={playing ? t('player.pause') : t('player.play')} onClick={togglePlay} className="h-12 w-12">
                   {playing ? <Pause size={28} weight="fill" /> : <Play size={28} weight="fill" />}
                 </IconButton>
-                <IconButton label={t('player.forward10')} onClick={() => seek(absTime() + 10)}>
+                <IconButton label={t('player.forward10')} onClick={() => seek(playhead() + 10)}>
                   <ClockClockwise size={22} />
                 </IconButton>
                 <IconButton label={t('player.stop')} onClick={stop}>

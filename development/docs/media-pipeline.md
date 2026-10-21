@@ -33,9 +33,11 @@ Client sends supported containers, video codecs (with profile/level), audio code
 
 Text subtitles never force a transcode: convert to WebVTT and send as a side track.
 
-### Desktop app: HEVC through the GPU
+### Codec claims that fail
 
-Chromium (and so Electron) decodes HEVC only with a hardware decoder, and on Linux only behind feature switches. The desktop app turns them on at start (`LINUX_VIDEO_FEATURES` in `apps/desktop/src/main.js`: `VaapiVideoDecoder`, `VaapiVideoDecodeLinuxGL`, `VaapiIgnoreDriverChecks`, `PlatformHEVCDecoderSupport`). With a working VAAPI driver (`intel-media-va-driver-non-free`, `mesa-va-drivers`, or `nvidia-vaapi-driver`) the page's codec check reports HEVC, and an HEVC file plays as remux instead of transcode. Without one, nothing changes. Windows and macOS decode HEVC through the platform by default.
+A browser can claim HEVC or AV1 (`MediaSource.isTypeSupported`, `canPlayType`) and still fail to decode it: Chromium on Linux with GPU switches forced but no working VAAPI HEVC decoder does exactly that. When the `<video>` element reports `MEDIA_ERR_DECODE` or `MEDIA_ERR_SRC_NOT_SUPPORTED` on a direct or remux stream, the web player drops HEVC and AV1 from its caps and plans again at the same time, so the server transcodes. The Android app does the same on a decoder error.
+
+The desktop app once forced Chromium's VAAPI and HEVC switches on Linux (`VaapiIgnoreDriverChecks`, `PlatformHEVCDecoderSupport`). Reverted: without a working driver Chromium claimed HEVC and playback stopped. HEVC in the desktop app goes through a transcode, or through mpv.
 
 ### Desktop app: play in mpv
 
@@ -77,6 +79,8 @@ sequenceDiagram
 - Session limits: default 2 concurrent. A third request gets HTTP 503 with a retry hint.
 - HEVC decode on the GPU where only that exists (Raspberry Pi 5): `-hwaccel drm` through the distribution's ffmpeg, see `packaging.md` § Hardware transcoding.
 - Priority: live remux and transcode run at `nice 10` (Windows `BELOW_NORMAL_PRIORITY_CLASS`), background ffmpeg (probe, thumbnails, markers, subtitles) at `nice 19` (`IDLE_PRIORITY_CLASS`). Both live in `kinema-core::platform` (`configure_playback_process`, `configure_low_priority_process`).
+- Fragments: a re-encode writes `-frag_duration 500000` fragments. With only `frag_keyframe`, ffmpeg holds output until the next keyframe (x264 places one up to 250 frames apart), so on a Pi the first two fragments took 6.6 s (GPU decode) or 8.9 s (CPU) after play or a seek; with half-second fragments, 2.5 s. Chrome plays and seeks the result the same as before. Remux keeps keyframe fragments: copying is fast enough.
+- Seek picture: before a new remux/transcode stream loads, the web player draws the current frame into the `<video>` poster, so the picture holds instead of flashing black.
 - Throttle: a re-encode may run at most 60 s (`THROTTLE_AHEAD_S`) ahead of the wall clock since it started. ffmpeg reports `out_time_us` through `-progress pipe:2`; past the lead, the server stops reading its stdout, the pipe fills and ffmpeg blocks until playback catches up. CPU drops from "as fast as the cores allow" to "real time" (measured on an i5-10200H: 470 % to 230 %). Done in Rust, not with ffmpeg's `-readrate_initial_burst`, because that option needs ffmpeg 6.1 and the Raspberry Pi build with HEVC hardware decode is 5.1. Remux is not throttled: it costs little CPU and a deep buffer helps slow networks.
 - Segments are deleted as the client moves past them. Session dir purged on idle timeout (60 s) and at startup.
 
