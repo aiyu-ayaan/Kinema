@@ -28,6 +28,7 @@ Priorities: **near-zero idle CPU**, support for any media container and codec, a
 - **Zero-polling background monitoring**: Filesystem events (`notify` / inotify with debouncing) trigger scans instantly without burning idle CPU cycles.
 - **Smart release parser**: Automatically groups episodes (`S01E02`, `1x02`, date patterns), collapses multi-part series, and identifies movies and shows even in mixed folders.
 - **Direct play first**: Serves original streams directly via ranged HTTP reads. Remuxes container/audio formats on-the-fly without touching video streams. Re-encodes only when strictly necessary.
+- **Cheap when it must transcode**: a re-encode runs at most 60 s ahead of playback and below the server's own priority; on a Raspberry Pi 5 the HEVC decode runs on its GPU. The desktop app can instead play any file in a local **mpv**, so the server converts nothing.
 - **Never do work twice**: Probed media streams, extracted WebVTT subtitles, video keyframe grabs, and TMDB posters/backdrops are aggressively cached and keyed by file fingerprints (`size + mtime + content hash`).
 - **Rich metadata**: Automatic lookup via TMDB API with local fallback (filename parsing + ffmpeg frame grabs). In-app Fix Match interface for corrections.
 - **Family profiles**: Multi-user support with PIN or password protection, independent watch progress, and sticky per-profile audio and subtitle track memory across devices.
@@ -143,7 +144,7 @@ flowchart LR
     Clients -->|"HTTPS + WSS"| TLS
     And -. "UDP Discover" .-> Beacon
     MediaProc -->|"spawn nice 19"| FF
-    Stream -->|"pipe fMP4 / Range"| FF
+    Stream -->|"pipe fMP4 / Range, nice 10, throttled"| FF
     Meta -->|"fetch metadata & posters"| TMDB
     Meta --> ArtCache
     MediaProc --> ThumbCache
@@ -327,7 +328,14 @@ sequenceDiagram
 | MP4 / M4V / WebM with browser-supported video & audio | Client supports container and codecs natively | **Direct Play** | Zero CPU; served directly via ranged reads |
 | MKV / TS container, or secondary audio track | Video codec supported (e.g. H.264, HEVC, VP9); container or audio needs conversion | **Remux** | Very low CPU; video stream is copied without re-encoding, audio converted to AAC stereo in a fragmented MP4 container |
 | Unsupported video codec (e.g. MPEG-2, VC-1, 10-bit H.264) | Client cannot decode stream | **Transcode** | Bounded CPU; transcoded to H.264/AAC with fast presets and resolution capping |
+| Any file, desktop app with mpv installed | Client plays it in mpv (`raw=true`) | **Direct Play** | Zero server CPU; mpv decodes every codec on the viewer's computer |
 | Unprobed file or probe error | Any client | **Direct Play** | Fallback raw download; never hides unplayable files |
+
+### Keeping Transcodes Cheap
+- **Throttle**: ffmpeg's `-progress` output tells the server how far a re-encode is ahead; past 60 s the server stops reading the pipe, so ffmpeg waits and the encode runs at playback pace instead of taking every core.
+- **Priority**: live streams run at `nice 10` (Windows: below normal), background probing and thumbnails at `nice 19` (idle).
+- **Raspberry Pi 5**: the HEVC decoder in its GPU is used through the system `ffmpeg` (`-hwaccel drm`) when one is installed; about a third less CPU on 10-bit HEVC.
+- **Desktop app**: turns on Chromium's GPU decoding for HEVC on Linux (needs a VAAPI driver), so HEVC files remux instead of transcoding.
 
 ### Accurate Seek Offsets
 Stream copy can only begin at a keyframe (or Matroska cue point). When a user seeks into a remuxed stream, Kinema calculates the exact prior keyframe time, launches `ffmpeg` at that boundary, and returns the keyframe timestamp as `start` in the plan. The client player offsets its playback time accordingly, ensuring seek bars and subtitles stay in exact synchronization.
@@ -383,6 +391,7 @@ Kinema/
 ### 2. Desktop App (`apps/desktop`)
 - Lightweight Electron shell bundling LAN discovery and server switcher.
 - Configurable for Linux (`.AppImage`, `.deb`) and Windows (`.exe` installer).
+- **Play in mpv**: with [mpv](https://mpv.io) installed (on `PATH`, or set `KINEMA_MPV`), titles open in mpv with the server's audio and subtitle picks and saved progress. The file is served as it is through a loopback proxy that keeps the session and certificate pin inside the app.
 
 ### 3. Android App (`apps/android`)
 - Designed exclusively for browsing and watching media on phones and tablets.
@@ -411,6 +420,7 @@ Kinema/
 - **Rust**: 1.80+ (edition 2024)
 - **Node.js**: 18+ and `pnpm`
 - **FFmpeg & FFprobe**: Must be available on your system `PATH` (or specified via `KINEMA_FFMPEG` environment variable).
+- **mpv** (optional): enables Play in mpv in the desktop app.
 
 ### Running in Development
 
