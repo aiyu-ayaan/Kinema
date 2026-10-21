@@ -26,6 +26,9 @@
     "build:desktop:dev": "pnpm --filter @kinema/desktop build:dev",
     "build:desktop:prod": "pnpm --filter @kinema/desktop build:prod",
     "test:desktop": "pnpm --filter @kinema/desktop test",
+    "dev:docs": "pnpm --filter @kinema/docs start",
+    "build:docs": "pnpm --filter @kinema/docs build",
+    "serve:docs": "pnpm --filter @kinema/docs serve",
     "lint": "pnpm --filter @kinema/web lint && cargo clippy -- -D warnings",
     "test": "cargo test && pnpm --filter @kinema/web test && pnpm --filter @kinema/desktop test"
   },

@@ -1,5 +1,6 @@
 packages:
   - 'apps/*'
 allowBuilds:
+  core-js: true
   electron: true
   esbuild: true
