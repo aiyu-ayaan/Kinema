@@ -29,8 +29,8 @@ This is Kinema's own API. It is not Plex-compatible.
 | PUT | `/items/{id}/track-choice` | `{audio, subtitle}` positions (subtitle `-1` off): this profile's pick, saved by every player and kept on the movie or the show; the plan prefers it over the show's admin choice and the Languages settings |
 | PUT / DELETE | `/items/{id}/markers/{intro\|credits}` | Admin: `{start_s, end_s}` sets a marker on the title's main file that detection never replaces; DELETE drops it and looks for it again. Markers come with each file in `GET /items/{id}` as `markers: [{kind, start_s, end_s, source}]` |
 | PUT | `/items/{id}/tracks` | Admin, show only: `{audio, subtitle}` as positions among an episode's audio / subtitle streams; `null` follows the Languages settings, subtitle `-1` is off |
-| GET | `/files/{id}/plan?audio=&start=&hevc=&av1=` | `{mode: direct\|remux\|transcode, duration_s, audio, start, subtitle}`; audio and subtitle follow the show's track choice, then the Languages settings |
-| GET | `/stream/{id}?audio=&start=&hevc=&av1=` | Direct (Range) or fMP4 pipe, per the plan |
+| GET | `/files/{id}/plan?audio=&start=&hevc=&av1=&raw=` | `{mode: direct\|remux\|transcode, duration_s, audio, start, subtitle}`; audio and subtitle follow the show's track choice, then the Languages settings. `raw=true` always plans direct (a player that decodes anything, mpv) |
+| GET | `/stream/{id}?audio=&start=&hevc=&av1=&raw=` | Direct (Range) or fMP4 pipe, per the plan; `raw=true` always serves the file as it is |
 | GET | `/subtitles/{stream_id}` | Text subtitle as WebVTT, cached |
 | GET | `/images/{size}/{name}` | TMDB art, cached |
 | GET | `/items/{id}/thumb` | Video frame JPEG from the background thumbnail cache; 404 until made |

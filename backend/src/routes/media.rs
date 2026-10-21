@@ -41,6 +41,9 @@ struct PlayQuery {
     hevc: bool,
     #[serde(default)]
     av1: bool,
+    /// The file as it is, whatever it holds: for a player that decodes anything (mpv in the desktop app).
+    #[serde(default)]
+    raw: bool,
 }
 
 struct Chosen {
@@ -100,7 +103,7 @@ async fn choose(state: &AppState, user_id: i64, file_id: i64, q: &PlayQuery) -> 
         av1: q.av1,
     };
     // Unprobed files (no ffprobe, or probe failed) go out raw: never hide a file.
-    let plan = if file.probe_status != "ok" {
+    let plan = if file.probe_status != "ok" || q.raw {
         Plan::Direct
     } else {
         playback::plan(
