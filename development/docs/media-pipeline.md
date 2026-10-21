@@ -33,9 +33,11 @@ Client sends supported containers, video codecs (with profile/level), audio code
 
 Text subtitles never force a transcode: convert to WebVTT and send as a side track.
 
-### Desktop app: HEVC through the GPU
+### Codec claims that fail
 
-Chromium (and so Electron) decodes HEVC only with a hardware decoder, and on Linux only behind feature switches. The desktop app turns them on at start (`LINUX_VIDEO_FEATURES` in `apps/desktop/src/main.js`: `VaapiVideoDecoder`, `VaapiVideoDecodeLinuxGL`, `VaapiIgnoreDriverChecks`, `PlatformHEVCDecoderSupport`). With a working VAAPI driver (`intel-media-va-driver-non-free`, `mesa-va-drivers`, or `nvidia-vaapi-driver`) the page's codec check reports HEVC, and an HEVC file plays as remux instead of transcode. Without one, nothing changes. Windows and macOS decode HEVC through the platform by default.
+A browser can claim HEVC or AV1 (`MediaSource.isTypeSupported`, `canPlayType`) and still fail to decode it: Chromium on Linux with GPU switches forced but no working VAAPI HEVC decoder does exactly that. When the `<video>` element reports `MEDIA_ERR_DECODE` or `MEDIA_ERR_SRC_NOT_SUPPORTED` on a direct or remux stream, the web player drops HEVC and AV1 from its caps and plans again at the same time, so the server transcodes. The Android app does the same on a decoder error.
+
+The desktop app once forced Chromium's VAAPI and HEVC switches on Linux (`VaapiIgnoreDriverChecks`, `PlatformHEVCDecoderSupport`). Reverted: without a working driver Chromium claimed HEVC and playback stopped. HEVC in the desktop app goes through a transcode, or through mpv.
 
 ### Desktop app: play in mpv
 
