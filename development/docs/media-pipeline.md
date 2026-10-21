@@ -33,6 +33,10 @@ Client sends supported containers, video codecs (with profile/level), audio code
 
 Text subtitles never force a transcode: convert to WebVTT and send as a side track.
 
+### Desktop app: HEVC through the GPU
+
+Chromium (and so Electron) decodes HEVC only with a hardware decoder, and on Linux only behind feature switches. The desktop app turns them on at start (`LINUX_VIDEO_FEATURES` in `apps/desktop/src/main.js`: `VaapiVideoDecoder`, `VaapiVideoDecodeLinuxGL`, `VaapiIgnoreDriverChecks`, `PlatformHEVCDecoderSupport`). With a working VAAPI driver (`intel-media-va-driver-non-free`, `mesa-va-drivers`, or `nvidia-vaapi-driver`) the page's codec check reports HEVC, and an HEVC file plays as remux instead of transcode. Without one, nothing changes. Windows and macOS decode HEVC through the platform by default.
+
 ## 4. Transcode
 
 - Hardware first: VAAPI (Intel/AMD), NVENC, QSV, VideoToolbox, detected at startup by test-encoding a short clip.
