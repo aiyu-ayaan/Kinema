@@ -1106,6 +1106,7 @@ name = "kinema-core"
 version = "0.0.1-alpha.3"
 dependencies = [
  "chrono",
+ "libc",
  "serde",
  "serde_json",
  "thiserror 1.0.69",

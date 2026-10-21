@@ -58,7 +58,7 @@ Host GPU drivers cannot be bundled. Software x264 is always the fallback. Spike 
 
 | Concern | Linux | Windows |
 |---|---|---|
-| Low priority ffmpeg | `nice 19` + `ionice -c3` | `BELOW_NORMAL_PRIORITY_CLASS` / `IDLE_PRIORITY_CLASS` via creation flags |
+| Low priority ffmpeg | `nice 19` (background), `nice 10` (live streams) | `BELOW_NORMAL_PRIORITY_CLASS` / `IDLE_PRIORITY_CLASS` via creation flags |
 | Kill child tree | process group + `SIGTERM` | Job Object with kill-on-close |
 | FS watching | inotify via `notify` | ReadDirectoryChangesW via `notify` |
 | Paths | bytes allowed, store as `OsString`, display lossy | UTF-16; long paths with `\\?\` prefix; case-insensitive compare |

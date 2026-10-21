@@ -262,14 +262,26 @@ async fn stream(
         },
     )
     .spawn()?;
+    let started = std::time::Instant::now();
     let stdout = child.stdout.take().ok_or_else(ApiError::internal)?;
+    let progress = child.stderr.take().map(playback::Progress::watch);
     // The stream owns the child: when the client goes away the body drops and
     // kill_on_drop stops ffmpeg, so abandoned sessions never keep encoding.
     // The counters live as long as the stream, so the dashboard sees real activity.
-    let body = ReaderStream::with_capacity(stdout, 256 * 1024).map(move |chunk| {
-        let _owner = (&child, &stream_slot, &transcode_slot);
-        chunk
-    });
+    let body = ReaderStream::with_capacity(stdout, 256 * 1024)
+        .then(move |chunk| {
+            let progress = progress.clone();
+            async move {
+                if let Some(p) = progress {
+                    p.pace(started).await;
+                }
+                chunk
+            }
+        })
+        .map(move |chunk| {
+            let _owner = (&child, &stream_slot, &transcode_slot);
+            chunk
+        });
     Ok((
         [
             (CONTENT_TYPE, HeaderValue::from_static("video/mp4")),
