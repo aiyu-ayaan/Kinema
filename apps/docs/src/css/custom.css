@@ -15,15 +15,16 @@
   --ifm-background-color: #fff8f6;
   --ifm-background-surface-color: #ffffff;
   
-  --ifm-font-family-base: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --ifm-heading-font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --ifm-font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --ifm-heading-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --ifm-code-font-size: 92%;
   --ifm-heading-color: #231917;
   --ifm-font-color-base: #322825;
-  --ifm-footer-background-color: #231917;
-  --ifm-navbar-background-color: rgba(255, 248, 246, 0.85);
+  --ifm-footer-background-color: #140d0c;
+  --ifm-navbar-background-color: rgba(255, 248, 246, 0.9);
 
   --kinema-ember: #e8553a;
+  --kinema-ember-hover: #d2462c;
   --kinema-ember-glow: rgba(232, 85, 58, 0.25);
   --kinema-gold: #ddc48c;
   --kinema-border: #d8c2be;
@@ -46,9 +47,10 @@
   --ifm-heading-color: #f1dfdb;
   --ifm-font-color-base: #d8c2be;
   --ifm-footer-background-color: #140d0c;
-  --ifm-navbar-background-color: rgba(26, 17, 15, 0.85);
+  --ifm-navbar-background-color: rgba(26, 17, 15, 0.9);
 
   --kinema-ember: #e8553a;
+  --kinema-ember-hover: #ff7b5d;
   --kinema-ember-glow: rgba(232, 85, 58, 0.35);
   --kinema-gold: #ddc48c;
   --kinema-border: #534340;
@@ -75,6 +77,8 @@
 
 .navbar__brand .navbar__logo {
   transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+  width: 28px;
+  height: 28px;
 }
 .navbar__brand:hover .navbar__logo {
   transform: rotate(-8deg) scale(1.08);
@@ -100,7 +104,148 @@
   border-bottom-left-radius: 0;
 }
 
-/* Kinema Custom Hero Animations */
+/* -------------------------------------------------------------
+ * HERO SECTION
+ * ------------------------------------------------------------- */
+.hero-wrapper {
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  padding: 5rem 1.5rem;
+  min-height: 540px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 20%, rgba(232, 85, 58, 0.12) 0%, transparent 70%);
+}
+
+.hero-beam-bg {
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  max-width: 90vw;
+  height: 480px;
+  background: radial-gradient(ellipse at 50% 30%, rgba(232, 85, 58, 0.22) 0%, rgba(221, 196, 140, 0.08) 45%, transparent 75%);
+  pointer-events: none;
+  z-index: 0;
+  animation: beamPulse 6s ease-in-out infinite;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 10;
+  max-width: 880px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hero-logo-container {
+  position: relative;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero-projector-logo {
+  width: 96px !important;
+  height: 96px !important;
+  max-width: 96px !important;
+  max-height: 96px !important;
+  display: block;
+  object-fit: contain;
+  animation: floatGentle 5s ease-in-out infinite, glowShift 4s ease-in-out infinite;
+}
+
+.hero-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.hero-main-title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+  color: var(--ifm-heading-color);
+}
+
+@media (max-width: 640px) {
+  .hero-main-title {
+    font-size: 2.5rem;
+  }
+}
+
+.hero-main-subtitle {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  max-width: 680px;
+  margin: 0 auto 2rem auto;
+  opacity: 0.88;
+  font-weight: 400;
+}
+
+.hero-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* Custom Hero Buttons */
+.btn-cinema-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--kinema-ember);
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0.75rem 1.75rem;
+  border-radius: 8px;
+  text-decoration: none !important;
+  box-shadow: 0 4px 16px rgba(232, 85, 58, 0.4);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.btn-cinema-primary:hover {
+  background-color: var(--kinema-ember-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(232, 85, 58, 0.55);
+}
+
+.btn-cinema-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--ifm-heading-color) !important;
+  border: 1px solid var(--kinema-border);
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0.75rem 1.75rem;
+  border-radius: 8px;
+  text-decoration: none !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.btn-cinema-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--kinema-ember);
+  transform: translateY(-2px);
+}
+
+/* -------------------------------------------------------------
+ * ANIMATIONS
+ * ------------------------------------------------------------- */
 @keyframes beamPulse {
   0%, 100% {
     opacity: 0.35;
@@ -117,43 +262,90 @@
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-8px);
+    transform: translateY(-6px);
   }
 }
 
 @keyframes glowShift {
   0%, 100% {
-    filter: drop-shadow(0 0 24px rgba(232, 85, 58, 0.4));
+    filter: drop-shadow(0 0 20px rgba(232, 85, 58, 0.45));
   }
   50% {
-    filter: drop-shadow(0 0 40px rgba(232, 85, 58, 0.7));
+    filter: drop-shadow(0 0 35px rgba(232, 85, 58, 0.75));
   }
 }
 
-.hero-beam-bg {
-  position: absolute;
-  top: -150px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 900px;
-  height: 500px;
-  background: radial-gradient(ellipse at 50% 30%, rgba(232, 85, 58, 0.22) 0%, rgba(221, 196, 140, 0.08) 45%, transparent 75%);
-  pointer-events: none;
-  z-index: 0;
-  animation: beamPulse 6s ease-in-out infinite;
+/* -------------------------------------------------------------
+ * BADGES
+ * ------------------------------------------------------------- */
+.kinema-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: rgba(232, 85, 58, 0.12);
+  color: var(--kinema-ember);
+  border: 1px solid rgba(232, 85, 58, 0.3);
+  letter-spacing: 0.02em;
 }
 
-.hero-projector-logo {
-  animation: floatGentle 5s ease-in-out infinite, glowShift 4s ease-in-out infinite;
+.kinema-badge-gold {
+  background: rgba(221, 196, 140, 0.12);
+  color: #cca450;
+  border-color: rgba(221, 196, 140, 0.35);
 }
 
-/* Feature & Architecture Cards */
+[data-theme='dark'] .kinema-badge-gold {
+  color: var(--kinema-gold);
+}
+
+/* -------------------------------------------------------------
+ * FEATURE CARDS & GRID
+ * ------------------------------------------------------------- */
+.section-wrapper {
+  padding: 4.5rem 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.section-title {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.75rem;
+  color: var(--ifm-heading-color);
+}
+
+.section-subtitle {
+  font-size: 1.15rem;
+  opacity: 0.8;
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.75rem;
+}
+
 .kinema-card {
   background-color: var(--kinema-card-bg);
   border: 1px solid var(--kinema-card-border);
   border-radius: 12px;
   box-shadow: var(--kinema-shadow);
-  padding: 1.5rem;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), border-color 0.25s ease, box-shadow 0.25s ease;
   position: relative;
   overflow: hidden;
@@ -174,68 +366,104 @@
 .kinema-card:hover {
   transform: translateY(-4px);
   border-color: rgba(232, 85, 58, 0.5);
-    box-shadow: 0 20px 48px -12px var(--kinema-ember-glow);
+  box-shadow: 0 20px 48px -12px var(--kinema-ember-glow);
 }
 
 .kinema-card:hover::before {
   opacity: 1;
 }
 
-/* Tech Pill Badges */
-.kinema-badge {
+.card-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  background-color: rgba(232, 85, 58, 0.12);
+  color: var(--kinema-ember);
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+  color: var(--ifm-heading-color);
+}
+
+.card-text {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  opacity: 0.85;
+  margin-bottom: 1.25rem;
+}
+
+.card-link {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--kinema-ember) !important;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0.75rem;
+  gap: 0.3rem;
+  text-decoration: none !important;
+}
+.card-link:hover {
+  text-decoration: underline !important;
+}
+
+/* -------------------------------------------------------------
+ * QUICKSTART CODE CARD
+ * ------------------------------------------------------------- */
+.code-box-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.code-box-card {
+  background-color: var(--kinema-card-bg);
+  border: 1px solid var(--kinema-card-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--kinema-shadow);
+}
+
+.code-box-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--kinema-border);
+}
+
+.code-box-badge {
+  font-family: monospace;
   font-size: 0.8rem;
-  font-weight: 600;
-  border-radius: 9999px;
-  background: rgba(232, 85, 58, 0.12);
-  color: var(--kinema-ember);
-  border: 1px solid rgba(232, 85, 58, 0.3);
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
 }
 
-.kinema-badge-gold {
-  background: rgba(221, 196, 140, 0.12);
-  color: #cca450;
-  border-color: rgba(221, 196, 140, 0.35);
-}
-
-[data-theme='dark'] .kinema-badge-gold {
-  color: var(--kinema-gold);
-}
-
-/* Code Blocks & Tabs */
-.prism-code {
-  border-radius: 10px;
-  border: 1px solid var(--kinema-border);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
-/* Tables Styling */
-table {
-  border-collapse: separate;
-  border-spacing: 0;
+.code-box-pre {
+  background: rgba(0, 0, 0, 0.45) !important;
   border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--kinema-border);
-  width: 100%;
+  padding: 1.25rem !important;
+  margin: 0 0 1rem 0 !important;
+  overflow-x: auto;
+  font-family: monospace;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #f1dfdb;
 }
 
-th {
-  background-color: rgba(232, 85, 58, 0.08);
-  border-bottom: 2px solid var(--kinema-border);
-  color: var(--ifm-heading-color);
-  font-weight: 600;
-}
-
-td, th {
-  padding: 0.75rem 1rem;
-}
-
-tr:nth-child(even) {
-  background-color: rgba(232, 85, 58, 0.02);
+.code-box-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 /* Mermaid Diagram Containers */

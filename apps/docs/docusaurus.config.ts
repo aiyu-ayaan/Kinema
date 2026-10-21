@@ -57,8 +57,8 @@ const config: Config = {
     navbar: {
       title: 'Kinema',
       logo: {
-        alt: 'Kinema Projector K Logo',
-        src: 'img/logo.svg',
+        alt: 'Kinema Projector Logo',
+        src: 'img/app-icon.svg',
         width: 32,
         height: 32,
       },
