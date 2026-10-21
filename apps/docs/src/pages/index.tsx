@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
@@ -14,6 +14,11 @@ import {
   Flame, 
   Layers, 
   Radio, 
+  Server,
+  Laptop,
+  Box,
+  Copy,
+  Check,
   ChevronRight 
 } from 'lucide-react';
 
@@ -150,38 +155,129 @@ function FeaturesSection() {
 }
 
 function QuickStartSection() {
+  const [tab, setTab] = useState<'server' | 'desktop' | 'docker'>('server');
+  const [copied, setCopied] = useState(false);
+
+  const snippets = {
+    server: `# Home Server (Linux x86_64 / aarch64) - Standalone bundle with backend, web UI, bundled FFmpeg 8.1 & systemd service
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-server.sh | sudo sh`,
+    desktop: `# Desktop App (Linux x86_64) - AppImage, desktop application menu entry with icon & 'kinema' CLI
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-desktop.sh | sh`,
+    docker: `# Run with Docker Compose
+wget https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/docker-compose.yml
+MEDIA_DIR=/path/to/media docker compose up -d`,
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(snippets[tab]);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <section style={{ backgroundColor: 'rgba(232, 85, 58, 0.04)', padding: '4rem 1.5rem', borderTop: '1px solid var(--kinema-border)' }}>
+    <section style={{ backgroundColor: 'rgba(232, 85, 58, 0.04)', padding: '4.5rem 1.5rem', borderTop: '1px solid var(--kinema-border)' }}>
       <div className="code-box-container">
         <div className="section-header" style={{ marginBottom: '2rem' }}>
-          <h2 className="section-title">Deploy in Seconds</h2>
-          <p className="section-subtitle">Get Kinema running locally with Docker or build natively with Cargo.</p>
+          <h2 className="section-title">Quick Install</h2>
+          <p className="section-subtitle">Install the native Kinema server bundle or desktop app with a single terminal command.</p>
+        </div>
+
+        {/* Tab Buttons */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setTab('server')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.6rem 1.2rem',
+              borderRadius: '8px',
+              border: '1px solid var(--kinema-border)',
+              backgroundColor: tab === 'server' ? 'var(--kinema-ember)' : 'var(--kinema-card-bg)',
+              color: tab === 'server' ? '#fff' : 'var(--ifm-heading-color)',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}>
+            <Server size={16} /> Home Server (Recommended)
+          </button>
+          <button
+            onClick={() => setTab('desktop')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.6rem 1.2rem',
+              borderRadius: '8px',
+              border: '1px solid var(--kinema-border)',
+              backgroundColor: tab === 'desktop' ? 'var(--kinema-ember)' : 'var(--kinema-card-bg)',
+              color: tab === 'desktop' ? '#fff' : 'var(--ifm-heading-color)',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}>
+            <Laptop size={16} /> Desktop App (Linux)
+          </button>
+          <button
+            onClick={() => setTab('docker')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.6rem 1.2rem',
+              borderRadius: '8px',
+              border: '1px solid var(--kinema-border)',
+              backgroundColor: tab === 'docker' ? 'var(--kinema-ember)' : 'var(--kinema-card-bg)',
+              color: tab === 'docker' ? '#fff' : 'var(--ifm-heading-color)',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}>
+            <Box size={16} /> Docker Compose
+          </button>
         </div>
 
         <div className="code-box-card">
-          <div className="code-box-header">
-            <Terminal size={18} color="#e8553a" />
-            <span className="code-box-badge">docker-compose.yml</span>
+          <div className="code-box-header" style={{ justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Terminal size={18} color="#e8553a" />
+              <span className="code-box-badge">
+                {tab === 'server' ? 'install-server.sh' : tab === 'desktop' ? 'install-desktop.sh' : 'docker-compose'}
+              </span>
+            </div>
+            <button
+              onClick={handleCopy}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: copied ? '#4ade80' : 'var(--ifm-heading-color)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+              }}>
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              {copied ? 'Copied!' : 'Copy Command'}
+            </button>
           </div>
           <pre className="code-box-pre">
-{`services:
-  kinema:
-    image: ghcr.io/aiyu-ayaan/kinema:latest
-    container_name: kinema
-    network_mode: host # Enables UDP port 48555 LAN discovery
-    restart: unless-stopped
-    volumes:
-      - ./data:/app/data
-      - /path/to/movies:/media/movies:ro
-      - /path/to/tv:/media/tv:ro
-    environment:
-      - KINEMA_DATA_DIR=/app/data
-      - TZ=UTC`}
+            {snippets[tab]}
           </pre>
           <div className="code-box-footer">
-            <span style={{ fontSize: '0.85rem', opacity: 0.75 }}>Spins up server with web UI on port 3000</span>
+            <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>
+              {tab === 'server'
+                ? 'Installs service to /opt/kinema with bundled FFmpeg 8.1 & systemd auto-restart'
+                : tab === 'desktop'
+                ? 'Installs AppImage to ~/.local/share/kinema with app icon & mpv zero-transcode player'
+                : 'Runs multi-arch image on port 3000 with host networking for UDP discovery'}
+            </span>
             <Link to="/docs/getting-started/quick-start" className="card-link">
-              Full installation instructions <ChevronRight size={14} />
+              Read install options & flags <ChevronRight size={14} />
             </Link>
           </div>
         </div>

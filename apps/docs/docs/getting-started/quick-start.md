@@ -1,29 +1,103 @@
 ---
 id: quick-start
-title: Quick Start
+title: Quick Install & Setup
 sidebar_position: 2
 ---
 
-# Quick Start Guide
+# Quick Install & Setup
 
-Get your Kinema media server up and running in minutes. You can run Kinema using Docker (recommended for production servers) or compile and run natively on Linux, macOS, or Windows.
+Kinema can be installed via an automated standalone script (recommended), run with Docker Compose, or compiled from source.
 
 ---
 
-## Method 1: Docker (Recommended)
+## Method 1: One-Line Install Script (Recommended)
 
-Kinema provides multi-arch Docker images (`linux/amd64` and `linux/arm64`) that bundle the Rust backend, pre-compiled web distribution, and pinned `ffmpeg` and `ffprobe` binaries.
+The installation scripts download the pre-compiled, self-contained release bundle with the static Rust backend, web frontend distribution, and pinned **FFmpeg 8.1** binaries.
 
-### Using Docker Compose
+### Home Server (Linux x86_64 / aarch64)
 
-Create a `docker-compose.yml` file:
+Installs the standalone server bundle into `/opt/kinema`, creates a dedicated systemd service, and sets up persistent storage in `/var/lib/kinema`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-server.sh | sudo sh
+```
+
+#### Optional Command-Line Flags
+
+```bash
+# Custom port (default 3000; auto-falls back if taken)
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-server.sh | sudo sh -s -- --port 32400
+
+# Install beta or alpha builds
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-server.sh | sudo sh -s -- --channel beta
+
+# Check installed vs newest upstream version without making changes
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-server.sh | sudo sh -s -- --check
+
+# Force re-installation even if already up to date
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-server.sh | sudo sh -s -- --force
+
+# Remove the systemd service (database and media library remain safe in /var/lib/kinema)
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-server.sh | sudo sh -s -- --uninstall
+```
+
+---
+
+### Desktop App (Linux x86_64)
+
+Installs the native desktop player for the current user into `~/.local/share/kinema`, installs an application launcher menu entry with desktop icon, and creates a symlink for the `kinema` terminal command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-desktop.sh | sh
+```
+
+#### Desktop Flags
+
+```bash
+# Check installed and latest version
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-desktop.sh | sh -s -- --check
+
+# Install beta builds
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-desktop.sh | sh -s -- --channel beta
+
+# Remove desktop app (settings kept in ~/.config/Kinema)
+curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-desktop.sh | sh -s -- --uninstall
+```
+
+---
+
+## Updating & Zero-Downtime Rollback
+
+Kinema includes automated update and rollback protection:
+
+- **Server Updates**: Run the install script again:
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/scripts/install-server.sh | sudo sh
+  ```
+  - If the server is already on the newest release, the script exits immediately without downtime.
+  - When an update is detected, it stops the service, creates an automated database snapshot in `/var/lib/kinema/backup-<old version>`, atomically replaces `/opt/kinema`, and restarts the service.
+  - **Self-Healing Rollback**: If the new binary fails healthchecks on startup, the script automatically restores the previous binary and database backup. Your port, settings, and library choices are strictly preserved.
+- **Desktop Updates**: The desktop client checks GitHub releases on launch and offers self-updating AppImage replacement. Running the install script again also updates the binary cleanly.
+
+---
+
+## Method 2: Docker Compose (Alternative)
+
+For containerized environments:
+
+```bash
+wget https://raw.githubusercontent.com/aiyu-ayaan/Kinema/master/docker-compose.yml
+MEDIA_DIR=/path/to/media docker compose up -d
+```
+
+### `docker-compose.yml` Configuration
 
 ```yaml
 services:
   kinema:
     image: ghcr.io/aiyu-ayaan/kinema:latest
     container_name: kinema
-    network_mode: host # Highly recommended for LAN discovery (UDP 48555)
+    network_mode: host # Enables UDP port 48555 LAN discovery
     restart: unless-stopped
     volumes:
       - ./data:/app/data
@@ -34,119 +108,48 @@ services:
       - TZ=UTC
 ```
 
-Start the container in the background:
-
-```bash
-docker compose up -d
-```
-
-### Using Docker CLI
-
-```bash
-docker run -d \
-  --name kinema \
-  --network host \
-  --restart unless-stopped \
-  -v $(pwd)/data:/app/data \
-  -v /mnt/storage/movies:/media/movies:ro \
-  -v /mnt/storage/tv:/media/tv:ro \
-  -e KINEMA_DATA_DIR=/app/data \
-  ghcr.io/aiyu-ayaan/kinema:latest
-```
-
-:::note Host Networking
-Using `network_mode: host` is essential if you want automatic local server discovery via UDP port `48555` on Android and Desktop clients. If running with bridged bridge ports (`-p 3000:3000`), clients will need to enter the server IP manually.
-:::
-
 ---
 
-## Method 2: Running from Source (Development)
+## Method 3: Running from Source (Development)
 
 ### Prerequisites
 
-1. **Rust**: 1.80+ (edition 2024). Install via [rustup.rs](https://rustup.rs).
-2. **Node.js**: v18+ and `pnpm` (v9+).
-3. **FFmpeg & FFprobe**: Must be installed and accessible on your `PATH`.
-4. *(Optional)* **mpv**: Required for the Desktop client's "Play in mpv" mode.
+- **Rust**: 1.80+ (edition 2024).
+- **Node.js**: 18+ and `pnpm`.
+- **FFmpeg & FFprobe**: Available on `PATH` (or via `KINEMA_FFMPEG`).
+- **mpv** *(optional)*: For Desktop client's native zero-transcode player.
 
-### Setup & Run
-
-1. **Clone the repository:**
+### Clone & Run
 
 ```bash
 git clone https://github.com/aiyu-ayaan/Kinema.git
 cd Kinema
-```
 
-2. **Install JavaScript workspace dependencies:**
-
-```bash
+# Install workspace dependencies
 pnpm install
-```
 
-3. **Start the backend and web client simultaneously:**
-
-```bash
+# Start backend and web UI concurrently with Vite HMR
 pnpm dev
 ```
 
-The Vite development server will open on `http://localhost:5173` with full Hot Module Replacement (HMR) and proxy all `/api/*` and stream requests to the Axum backend on `http://localhost:3000`.
-
-### Dedicated Component Commands
-
-```bash
-pnpm dev:backend    # Runs Rust backend with hot-reload on .rs, .toml, and .sql changes
-pnpm dev:web        # Runs only the Vite React 18 web UI
-pnpm dev:desktop    # Launches Electron desktop client
-pnpm android:dev    # Compiles and runs Android app on connected device or emulator
-pnpm build          # Builds production web assets, then compiles release Rust binary
-```
+Open `http://localhost:5173` in your browser.
 
 ---
 
-## First-Run Admin Wizard
+## First-Run Setup Wizard
 
-Once Kinema is running, navigate to `http://localhost:3000` (or `http://localhost:5173` in development mode):
+When you open Kinema for the first time on `http://localhost:3000`:
 
 ```mermaid
 graph TD
-    A["Open Web App"] --> B{"Server Configured?"}
-    B -- "No (Status 200 { needs_setup: true })" --> C["First-Run Wizard"]
-    C --> D["1. Create Administrator Account\n(Username + Argon2id Password)"]
-    D --> E["2. Add First Media Library\n(Movies, TV Shows, Other Videos)"]
-    E --> F["3. Browse Server Directory\n(Interactive /api/fs path picker)"]
-    F --> G["4. Optional: TMDB API Key\n(Enables poster art & actor credits)"]
-    G --> H["Server Ready & Scanning Files!"]
-    B -- "Yes" --> I["Profile Sign-In / Dashboard"]
+    A["Open Web App"] --> B{"First Run?"}
+    B -- "Yes" --> C["1. Create Administrator\n(Username + Argon2id Password)"]
+    C --> D["2. Add Media Libraries\n(Interactive /api/fs directory picker)"]
+    D --> E["3. Optional TMDB API Key\n(Automated posters & actor credits)"]
+    E --> F["Server Ready & Scanning Files!"]
+    B -- "No" --> G["Sign-In / Dashboard"]
 ```
 
-1. **Create Administrator Account**: Enter your username and master password. Passwords are automatically hashed with salted Argon2id.
-2. **Select Media Libraries**: Choose your library type:
-   - **Movies**: Single-title directory structure with optional year.
-   - **TV Shows**: Season/episode hierarchical folder structure.
-   - **Other Videos**: Home videos, music clips, or unconventionally named files.
-3. **Directory Picker**: Use the built-in server path browser to pick folders mounted on your filesystem.
-4. **Metadata Scraper**: Enter a free [The Movie Database (TMDB)](https://www.themoviedb.org) API key for automated posters, backdrops, cast profiles, and summaries. If omitted, Kinema falls back to TVmaze for television and local ffmpeg frame grabbing for artwork.
-
----
-
-## Verifying Health & Telemetry
-
-Check server information directly from your terminal:
-
-```bash
-curl -k https://localhost:3000/api/server/info
-```
-
-Example response:
-
-```json
-{
-  "name": "Kinema Media Server",
-  "version": "0.0.1-alpha.5",
-  "public_url": "https://192.168.1.120:3000",
-  "tls_fingerprint": "a4f89d3c71e2...58",
-  "transcoding_count": 0,
-  "hevc_drm": true
-}
-```
+1. **Admin Account**: Set your master username and password (hashed with Argon2id).
+2. **Library Setup**: Add folder paths using the interactive server filesystem browser.
+3. **Metadata Matching**: Enter your free TMDB API key (or let Kinema fall back to TVmaze and local ffmpeg frame grabs).
