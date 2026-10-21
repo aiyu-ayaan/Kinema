@@ -37,6 +37,38 @@ Text subtitles never force a transcode: convert to WebVTT and send as a side tra
 
 Chromium (and so Electron) decodes HEVC only with a hardware decoder, and on Linux only behind feature switches. The desktop app turns them on at start (`LINUX_VIDEO_FEATURES` in `apps/desktop/src/main.js`: `VaapiVideoDecoder`, `VaapiVideoDecodeLinuxGL`, `VaapiIgnoreDriverChecks`, `PlatformHEVCDecoderSupport`). With a working VAAPI driver (`intel-media-va-driver-non-free`, `mesa-va-drivers`, or `nvidia-vaapi-driver`) the page's codec check reports HEVC, and an HEVC file plays as remux instead of transcode. Without one, nothing changes. Windows and macOS decode HEVC through the platform by default.
 
+### Desktop app: play in mpv
+
+When mpv is installed (`mpv` on PATH, or `KINEMA_MPV`), the desktop app offers **Play in mpv** on the title page, and **Open in mpv** in the player while it transcodes. mpv decodes every codec on the viewer's computer, so the server only serves bytes (`raw=true`, ranged reads): no remux, no transcode, whatever the file holds.
+
+```mermaid
+sequenceDiagram
+  participant Page as Web page (MpvPlayer)
+  participant Main as Desktop main (mpv.js)
+  participant Proxy as Loopback proxy 127.0.0.1:random/nonce
+  participant Mpv as mpv window
+  participant Server as Kinema server
+  Page->>Server: GET /files/{id}/plan?raw=true (audio, subtitle picks)
+  Page->>Main: mpv:play {fileId, start, title, aid, subtitleId}
+  Main->>Proxy: start, random nonce
+  Main->>Mpv: spawn: proxy URL, --start, --aid, --sub-file, --input-ipc-server
+  Mpv->>Proxy: GET /nonce/api/stream/{id}?raw=true (Range)
+  Proxy->>Server: same, via Electron net: session cookie, pinned TLS
+  Server-->>Mpv: file bytes (206)
+  Mpv-->>Main: JSON IPC time-pos, end-file
+  Main-->>Page: mpv:progress every 10 s
+  Page->>Server: PUT /items/{id}/progress
+  Mpv-->>Main: exit
+  Main-->>Page: {position, ended}
+  Page->>Server: PUT progress (watched past 92 % or at the end), then back or next episode
+```
+
+- The proxy keeps the session out of mpv's command line (visible to every local user in `ps`) and lets the app's own network stack check the server's pinned certificate, instead of mpv skipping TLS checks. Only `GET`/`HEAD` under `/<nonce>/api/` are forwarded, and only the headers ranged reads need come back.
+- Tracks: the server's picks (this profile's choice, then Languages settings) become `--aid` and, for a text subtitle, `--sub-file` pointing at the WebVTT endpoint. mpv's own menus switch tracks after that.
+- `--ytdl=no`: a URL never reaches youtube-dl. The user's own `mpv.conf` and scripts still apply.
+- One mpv at a time; a new title closes the previous one, and quitting the app closes it too.
+- Shortcut: mpv is not bundled. Bundle it (Windows `mpv.exe`, Linux AppImage) when installs show people miss it.
+
 ## 4. Transcode
 
 - Hardware first: VAAPI (Intel/AMD), NVENC, QSV, VideoToolbox, detected at startup by test-encoding a short clip.

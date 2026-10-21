@@ -5,7 +5,7 @@
 One process, one async runtime. External `ffmpeg`/`ffprobe` child processes do all media work.
 
 ```
-clients (web SPA, Android app)
+clients (web SPA, Android app, desktop app; desktop may hand a title to a local mpv)
       |  HTTPS, range requests          apps find servers by UDP broadcast (port 48555)
 +-----v------------------------------+
 | backend (axum)                     |
@@ -21,7 +21,7 @@ clients (web SPA, Android app)
 
 ## ffmpeg resolution
 
-`kinema-media` owns one resolver for `ffmpeg` and `ffprobe`: `KINEMA_FFMPEG` env, then the user-updated copy in `$XDG_DATA_HOME/kinema/ffmpeg/`, then the bundled `$APPDIR/usr/bin`, then `PATH`. See `packaging.md`.
+`kinema-media` owns one resolver for `ffmpeg` and `ffprobe`: `KINEMA_FFMPEG` env, then the user-updated copy in `$XDG_DATA_HOME/kinema/ffmpeg/`, then the bundled `$APPDIR/usr/bin`, then `PATH`. Where the kernel has a V4L2 HEVC decoder (Raspberry Pi 5) it also finds an ffmpeg that can use it (`hevc_drm`) for HEVC re-encodes. See `packaging.md`.
 
 ## Workspace layout
 
@@ -44,7 +44,23 @@ Priority order: user-triggered > newly added > refresh.
 
 ## Streaming path
 
-MVP (built): `GET /api/files/{id}/plan` picks the mode; remux and transcode pipe fragmented MP4 from ffmpeg straight into the response, with no session or segment files. See `mvp.md`. The HLS design below is the M4 target.
+MVP (built): `GET /api/files/{id}/plan` picks the mode; remux and transcode pipe fragmented MP4 from ffmpeg straight into the response, with no session or segment files. A re-encode is throttled to 60 s ahead of real time. The desktop app can skip all of it and play the raw file in mpv. See `mvp.md` and `media-pipeline.md` § 3–4.
+
+```mermaid
+flowchart LR
+  P[play request] --> M{client}
+  M -- desktop + mpv --> Raw[raw=true: file bytes, Range] --> Mpv[mpv decodes locally]
+  M -- browser / app --> Plan{plan}
+  Plan -- codecs OK --> Direct[direct: ServeFile, Range]
+  Plan -- video OK --> Remux[remux: ffmpeg -c:v copy, fMP4 pipe]
+  Plan -- video not OK --> Tx[transcode: libx264, fMP4 pipe]
+  Tx --> HW{HEVC + hevc_drm?}
+  HW -- yes --> GPU[-hwaccel drm decode]
+  HW -- no --> CPU[software decode]
+  Tx --> Thr[throttle: 60 s lead, then real time]
+```
+
+The HLS design below is the M4 target.
 
 1. Client asks `POST /api/playback/decide` with its capabilities.
 2. Server picks direct play, remux or transcode.

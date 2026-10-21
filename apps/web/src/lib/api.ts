@@ -135,6 +135,8 @@ export const api = {
 
   plan: (fileId: number, audio: number | null, caps: PlayCaps, start: number) =>
     request<PlaybackPlan>('GET', `/files/${fileId}/plan?${playQuery(audio, caps, start)}`),
+  /** What the server picks (audio, subtitle) for a player that takes the file as it is. */
+  rawPlan: (fileId: number) => request<PlaybackPlan>('GET', `/files/${fileId}/plan?raw=true`),
   streamUrl: (fileId: number, audio: number | null, caps: PlayCaps, start: number) =>
     `/api/stream/${fileId}?${playQuery(audio, caps, start)}`,
   subtitleText: async (streamId: number) => {

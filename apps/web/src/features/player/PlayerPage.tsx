@@ -24,8 +24,10 @@ import { hasTopLeftWindowControls, hasTopRightWindowControls } from '@/lib/deskt
 import { storageKeys } from '@/lib/flavor'
 import { clock, isTextSub, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
+import { mpvBridge, useMpv } from '@/lib/mpv'
 import type { ItemDetail, PlaybackPlan, Stream } from '@/lib/types'
 import { parseVtt, type Cue } from '@/lib/vtt'
+import { MpvPlayer } from './MpvPlayer'
 import { SkipPill, UP_NEXT_S, UpNextCard, UpNextList, WatchDetails } from './WatchPanels'
 
 
@@ -106,6 +108,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   const { item } = detail
   const file = detail.files[0]
   const caps = useMemo(detectCaps, [])
+  const mpv = useMpv()
   const audios = useMemo(() => file.streams.filter((s) => s.type === 'audio'), [file])
   const subs = useMemo(() => file.streams.filter((s) => s.type === 'subtitle'), [file])
 
@@ -536,8 +539,21 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
                   subtitle && <p className="truncate text-label text-white/70">{subtitle}</p>
                 )}
               </div>
+              {plan?.mode === 'transcode' && mpv && (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/play/${item.id}?mpv=1&t=${absTime().toFixed(1)}`, { replace: true })}
+                  title={t('player.mpv.openHint')}
+                  className="ms-auto cursor-pointer rounded border border-white/40 px-2 py-0.5 text-caption font-medium text-white transition-colors hover:bg-white hover:text-black"
+                >
+                  {t('player.mpv.open')}
+                </button>
+              )}
               {plan && (
-                <span className="ms-auto rounded border border-white/20 px-2 py-0.5 text-caption font-medium text-white/70" title={t(`player.mode.${plan.mode}.hint`)}>
+                <span
+                  className={cn('rounded border border-white/20 px-2 py-0.5 text-caption font-medium text-white/70', plan.mode === 'transcode' && mpv ? 'ms-2' : 'ms-auto')}
+                  title={t(`player.mode.${plan.mode}.hint`)}
+                >
                   {t(`player.mode.${plan.mode}`)}
                 </span>
               )}
@@ -700,7 +716,9 @@ export function PlayerPage() {
   }
   const explicit = params.get('t')
   const resume = data.item.watched ? 0 : (data.item.position_s ?? 0)
-  return <Player key={id} detail={data} startAt={explicit != null ? Number(explicit) || 0 : resume} />
+  const startAt = explicit != null ? Number(explicit) || 0 : resume
+  if (params.get('mpv') === '1' && mpvBridge) return <MpvPlayer key={id} detail={data} startAt={startAt} />
+  return <Player key={id} detail={data} startAt={startAt} />
 }
 
 export default PlayerPage

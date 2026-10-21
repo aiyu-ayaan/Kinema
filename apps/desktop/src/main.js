@@ -1,5 +1,5 @@
 const electron = require('electron')
-const { app, BrowserWindow, Menu, dialog, ipcMain, nativeTheme, shell, session } =
+const { app, BrowserWindow, Menu, dialog, ipcMain, nativeTheme, net: electronNet, shell, session } =
   typeof electron === 'object' && electron !== null ? electron : {}
 const dgram = require('dgram')
 const fs = require('fs')
@@ -13,6 +13,7 @@ const { pipeline } = require('stream/promises')
 const { pathToFileURL } = require('url')
 const { t, setLanguage, getLanguage, messages } = require('./i18n')
 const updates = require('./updates')
+const mpv = require('./mpv')
 
 // The window shows the web UI served by the Kinema server itself.
 // The server is chosen on the connect page (connect.html) and remembered.
@@ -493,6 +494,41 @@ if (ipcMain) {
   })
 }
 
+// --- mpv: plays a title in its own window with every codec decoded here (mpv.js).
+if (ipcMain) {
+  ipcMain.handle('mpv:available', (event) => trusted(event) && !!mpv.findMpv())
+  ipcMain.handle('mpv:play', async (event, o) => {
+    const server = origin(event.senderFrame?.url ?? '')
+    if (!trusted(event) || !server || !known(server) || !o) return { error: t('mpv.notAllowed') }
+    const binary = mpv.findMpv()
+    if (!binary) return { error: t('mpv.notFound') }
+    const id = (v) => (Number.isInteger(v) && v > 0 ? v : null)
+    const fileId = id(o.fileId)
+    if (!fileId) return { error: t('mpv.notAllowed') }
+    return mpv.play({
+      mpv: binary,
+      server,
+      // Chromium's network stack: the session cookie, and the certificate checked against the saved pin.
+      fetchUpstream: (url, method, range) => {
+        const request = electronNet.request({ url, method, useSessionCookies: true })
+        if (range) request.setHeader('Range', range)
+        return request
+      },
+      fileId,
+      start: Number.isFinite(o.start) && o.start > 0 ? o.start : 0,
+      title: String(o.title ?? '').slice(0, 200),
+      aid: id(o.aid),
+      subtitleId: id(o.subtitleId),
+      onPosition: (pos) => {
+        if (!event.sender.isDestroyed()) event.sender.send('mpv:progress', pos)
+      },
+    })
+  })
+  ipcMain.on('mpv:stop', (event) => {
+    if (trusted(event)) mpv.stop()
+  })
+}
+
 function appIcon() {
   const iconFile = isDev ? 'icon-dev.png' : 'icon.png'
   const isPackaged = app ? app.isPackaged : false
@@ -597,6 +633,7 @@ if (app) {
     app.on('activate', () => showWindow())
   })
 
+  app.on('before-quit', () => mpv.stop())
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()
   })

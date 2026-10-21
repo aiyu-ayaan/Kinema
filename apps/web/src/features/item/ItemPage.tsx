@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowCounterClockwise, Check, CheckCircle, LinkSimple, Play, Star, User } from '@phosphor-icons/react'
+import { ArrowCounterClockwise, Check, CheckCircle, LinkSimple, MonitorPlay, Play, Star, User } from '@phosphor-icons/react'
 import { Artwork } from '@/components/media/Artwork'
 import { EpisodeLinks } from '@/components/media/EpisodeLinks'
 import { PosterGrid } from '@/components/media/PosterCard'
@@ -13,6 +13,7 @@ import { FixMatch } from './FixMatch'
 import { SeriesTracks } from './SeriesTracks'
 import { clock, fileSize, progressOf, runtime, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
+import { useMpv } from '@/lib/mpv'
 import type { CastMember, ItemCard, ItemDetail } from '@/lib/types'
 
 function Hero({ detail, children }: { detail: ItemDetail; children?: ReactNode }) {
@@ -82,6 +83,7 @@ function Hero({ detail, children }: { detail: ItemDetail; children?: ReactNode }
 function PlayButtons({ item, episode }: { item: ItemCard; episode?: boolean }) {
   const navigate = useNavigate()
   const progress = progressOf(item)
+  const mpv = useMpv()
   const ep = subtitleOf(item) ?? ''
   const label = episode
     ? t(progress != null ? 'item.resumeEpisode' : 'item.playEpisode', { ep })
@@ -96,6 +98,11 @@ function PlayButtons({ item, episode }: { item: ItemCard; episode?: boolean }) {
       {progress != null && (
         <Button size="lg" icon={<ArrowCounterClockwise size={18} />} onClick={() => navigate(`/play/${item.id}?t=0`)}>
           {t('item.fromStart')}
+        </Button>
+      )}
+      {mpv && (
+        <Button size="lg" icon={<MonitorPlay size={18} />} onClick={() => navigate(`/play/${item.id}?mpv=1`)}>
+          {t('player.mpv.play')}
         </Button>
       )}
     </>

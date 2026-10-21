@@ -18,6 +18,18 @@ const desktopBridge = {
   hasSavedServer: () => ipcRenderer.sendSync('server:hasSaved'),
   getTheme: () => ipcRenderer.sendSync('theme:get'),
   getMessages: () => ipcRenderer.sendSync('i18n:get'),
+  // Plays in mpv (mpv.js). play() resolves when mpv closes: { position, ended } or { error }.
+  mpv: {
+    available: () => ipcRenderer.invoke('mpv:available'),
+    play: (options) => ipcRenderer.invoke('mpv:play', options),
+    stop: () => ipcRenderer.send('mpv:stop'),
+    // The position every 10 s while playing. Returns the function that stops listening.
+    onProgress: (listener) => {
+      const heard = (_event, position) => listener(position)
+      ipcRenderer.on('mpv:progress', heard)
+      return () => ipcRenderer.removeListener('mpv:progress', heard)
+    },
+  },
   // This app's own releases (main.js, updates.js).
   updates: {
     info: () => ipcRenderer.invoke('update:info'),
