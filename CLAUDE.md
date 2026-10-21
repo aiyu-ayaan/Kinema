@@ -14,6 +14,8 @@ Platform rule: OS-specific code (process priority, child-process kill, paths, au
 
 MVP built: admin setup and sign-in, libraries with folder picker, scanner + watcher, TMDB metadata, browse UI and a player with direct play / remux / transcode and audio and subtitle switching. What it does and its shortcuts: `development/docs/mvp.md`. Build order: `development/docs/roadmap.md`. Full docs index: `development/docs/README.md`.
 
+Playback cost (2026-10-21): live re-encodes are throttled to 60 s ahead of real time and run at `nice 10`; background ffmpeg at `nice 19`. On a Raspberry Pi 5 HEVC re-encodes decode on the GPU through the distribution's ffmpeg (`MediaBinaries::hevc_drm`). The desktop app turns on Chromium's VAAPI HEVC decoding on Linux and can play titles in a local mpv (`raw=true`, loopback proxy). Details: `development/docs/media-pipeline.md` § 3–4.
+
 ## Stack
 
 - Language: Rust (stable, edition 2024).
@@ -99,7 +101,7 @@ scripts/package-docker.sh     # multi-arch Docker image
 scripts/update-ffmpeg.sh      # bump pinned ffmpeg in scripts/ffmpeg.lock
 ```
 
-Dev needs `ffmpeg` and `ffprobe` on PATH. Resolution order: `KINEMA_FFMPEG`, bundled `$APPDIR/usr/bin`, then PATH. Never hard-code `ffmpeg`: always go through the resolver in `kinema-media`.
+Dev needs `ffmpeg` and `ffprobe` on PATH. Optional: `mpv` on PATH (or `KINEMA_MPV`) for the desktop app's Play in mpv. Resolution order: `KINEMA_FFMPEG`, bundled `$APPDIR/usr/bin`, then PATH. Never hard-code `ffmpeg`: always go through the resolver in `kinema-media`.
 
 Dev and prod flavors, as in Domus: dev isolates localStorage keys (`kinema.dev.token`, `kinema.dev.theme`), uses `/favicon-dev.svg` and shows a `DEV` pill. Prod uses `kinema.token`, `kinema.theme`.
 

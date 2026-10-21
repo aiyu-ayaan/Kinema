@@ -46,8 +46,10 @@ export const credits: { group: string; items: Credit[] }[] = [
       { name: 'argon2 and sha2 (RustCrypto)', url: 'https://github.com/RustCrypto', license: 'MIT / Apache-2.0' },
       { name: 'serde', url: 'https://github.com/serde-rs/serde', license: 'MIT / Apache-2.0' },
       { name: 'chrono', url: 'https://github.com/chronotope/chrono', license: 'MIT / Apache-2.0' },
+      { name: 'libc', url: 'https://github.com/rust-lang/libc', license: 'MIT / Apache-2.0' },
       { name: 'tracing', url: 'https://github.com/tokio-rs/tracing', license: 'MIT' },
       { name: 'FFmpeg', url: 'https://ffmpeg.org', license: 'GPL (bundled build, run as a separate program)' },
+      { name: 'mpv', url: 'https://github.com/mpv-player/mpv', license: 'GPL-2.0+ / LGPL-2.1+ (optional, run as a separate program)' },
     ],
   },
   {

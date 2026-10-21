@@ -78,3 +78,16 @@ See `docs/roadmap.md` for later milestones.
 - [ ] Admin UI to set or clear a marker (API only for now)
 - [ ] Credits over lit footage (no black, no shared song) are not found; consider a text-overlay or loudness check
 - [ ] Android tablet keyboard shortcuts (f, t, space) like the web player
+
+## Cheaper HEVC playback (2026-10-21)
+Trigger: F1 (1080p HEVC Main 10) transcoded at ~90 % CPU on the Pi 5 because Chrome on Linux has no HEVC decoder.
+- [x] Desktop: Chromium VAAPI + HEVC switches on Linux, so HEVC remuxes where a VAAPI driver exists
+- [x] Transcode throttle: 60 s lead, then real time (`playback::Progress`)
+- [x] Real process priority: `nice 10` live streams, `nice 19` background (`kinema-core::platform`)
+- [x] Pi 5 HEVC hardware decode through the distribution ffmpeg (`MediaBinaries::hevc_drm`)
+- [x] Desktop: play in mpv through a loopback proxy (`apps/desktop/src/mpv.js`), server `raw=true`
+- [ ] Deploy to the Pi: `sudo apt install ffmpeg` is already there; restart Kinema and check the `HEVC hardware decode` log line
+- [ ] Try the mpv path by hand in the desktop app (mpv not installed on the dev laptop; proxy and raw seeks tested with ffmpeg)
+- [ ] Bundle mpv with the desktop app (Windows `mpv.exe`, Linux AppImage)
+- [ ] Optimized versions: pre-convert files no browser plays, at low priority, cached by fingerprint
+- [ ] LAN transcode helper (offload re-encodes to a machine with a GPU, like rffmpeg)

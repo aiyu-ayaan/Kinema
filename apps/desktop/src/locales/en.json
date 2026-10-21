@@ -24,5 +24,7 @@
   "update.downloadAnswered": "The download answered {status}.",
   "update.notAppImage": "The download is not an AppImage.",
   "update.none": "No update to install.",
-  "update.failed": "Update failed: {reason}"
+  "update.failed": "Update failed: {reason}",
+  "mpv.notFound": "mpv is not installed. Install it, or set KINEMA_MPV to its path.",
+  "mpv.notAllowed": "This page cannot start mpv."
 }

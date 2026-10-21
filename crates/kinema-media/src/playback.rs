@@ -2,7 +2,11 @@
 
 use crate::MediaBinaries;
 use std::path::Path;
-use tokio::process::Command;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Duration, Instant};
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::process::{ChildStderr, Command};
 
 /// Codecs the browser reported beyond the baseline (h264, vp9, aac, mp3, opus).
 #[derive(Debug, Clone, Copy, Default)]
@@ -166,6 +170,51 @@ pub struct Encode<'a> {
     pub max_height: u32,
 }
 
+/// How far a re-encode may run ahead of the wall clock. The browser holds that much, so a seek
+/// inside it stays local; past it ffmpeg keeps pace with playback instead of taking every core.
+pub const THROTTLE_AHEAD_S: f64 = 60.0;
+
+/// Seconds of output a re-encode has written, read from ffmpeg's `-progress` lines on stderr.
+#[derive(Debug, Clone, Default)]
+pub struct Progress(Arc<AtomicU64>);
+
+/// Stored in place of the time once ffmpeg is done: nothing left to throttle.
+const DONE: u64 = 0;
+
+impl Progress {
+    pub fn watch(stderr: ChildStderr) -> Self {
+        let progress = Self::default();
+        let out = progress.0.clone();
+        tokio::spawn(async move {
+            let mut lines = BufReader::new(stderr).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                if let Some(us) = line.strip_prefix("out_time_us=") {
+                    if let Ok(us) = us.trim().parse::<i64>() {
+                        out.store((us.max(0) as u64 / 1000).max(1), Ordering::Relaxed);
+                    }
+                } else if line == "progress=end" {
+                    out.store(DONE, Ordering::Relaxed);
+                }
+            }
+            out.store(DONE, Ordering::Relaxed);
+        });
+        progress
+    }
+
+    /// Waits while the output is more than [THROTTLE_AHEAD_S] ahead of `started`. Not reading the
+    /// pipe meanwhile blocks ffmpeg's next write, which pauses the encode.
+    pub async fn pace(&self, started: Instant) {
+        while self.ahead_of(started.elapsed().as_secs_f64()) {
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
+    }
+
+    fn ahead_of(&self, elapsed_s: f64) -> bool {
+        let ms = self.0.load(Ordering::Relaxed);
+        ms != DONE && ms as f64 / 1000.0 - elapsed_s > THROTTLE_AHEAD_S
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn stream_command(
     bins: &MediaBinaries,
@@ -177,8 +226,22 @@ pub fn stream_command(
     copy_audio: bool,
     encode: Encode,
 ) -> Command {
-    let mut cmd = Command::new(&bins.ffmpeg);
+    let reencode = !copy_video && video.is_some();
+    // Decoding 10-bit HEVC is a third of a re-encode's CPU on a Raspberry Pi 5; its GPU does it for free.
+    let hw_decode = bins
+        .hevc_drm
+        .as_ref()
+        .filter(|_| reencode && video.is_some_and(|v| v.codec == Some("hevc")));
+    let mut cmd = Command::new(hw_decode.unwrap_or(&bins.ffmpeg));
+    kinema_core::platform::configure_playback_process(cmd.as_std_mut());
     cmd.args(["-hide_banner", "-loglevel", "error", "-nostdin"]);
+    if reencode {
+        // Progress for the throttle (Progress::watch); remux is cheap and left to run.
+        cmd.args(["-progress", "pipe:2", "-nostats"]);
+    }
+    if hw_decode.is_some() {
+        cmd.args(["-hwaccel", "drm"]);
+    }
     if start_s > 0.0 {
         // Copied video can only start at a keyframe before `start_s`. Accurate seek
         // would still trim re-encoded audio to `start_s` exactly, then both land on
@@ -234,7 +297,11 @@ pub fn stream_command(
     ]);
     cmd.stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::null())
+        .stderr(if reencode {
+            std::process::Stdio::piped()
+        } else {
+            std::process::Stdio::null()
+        })
         .kill_on_drop(true);
     cmd
 }
@@ -272,6 +339,7 @@ mod tests {
         let bins = MediaBinaries {
             ffmpeg: "ffmpeg".into(),
             ffprobe: "ffprobe".into(),
+            hevc_drm: None,
         };
         let encode = Encode {
             preset: "veryfast",
@@ -294,6 +362,56 @@ mod tests {
         assert!(has_flag(600.0, true));
         assert!(!has_flag(600.0, false));
         assert!(!has_flag(0.0, true));
+    }
+
+    #[test]
+    fn hevc_reencode_decodes_on_the_gpu_build() {
+        let bins = MediaBinaries {
+            ffmpeg: "ffmpeg".into(),
+            ffprobe: "ffprobe".into(),
+            hevc_drm: Some("/usr/bin/ffmpeg".into()),
+        };
+        let encode = Encode {
+            preset: "veryfast",
+            crf: 23,
+            max_height: 0,
+        };
+        let hevc = Track {
+            codec: Some("hevc"),
+            ..H264
+        };
+        let run = |video: Track, copy_video: bool| {
+            let cmd = stream_command(
+                &bins,
+                Path::new("a.mkv"),
+                0.0,
+                Some(video),
+                Some(AAC),
+                copy_video,
+                true,
+                encode,
+            );
+            let std = cmd.as_std();
+            (
+                std.get_program().to_string_lossy().into_owned(),
+                std.get_args().any(|a| a == "drm"),
+            )
+        };
+        assert_eq!(run(hevc, false), ("/usr/bin/ffmpeg".into(), true));
+        assert_eq!(run(hevc, true), ("ffmpeg".into(), false));
+        assert_eq!(run(H264, false), ("ffmpeg".into(), false));
+    }
+
+    #[test]
+    fn throttle_holds_only_past_the_lead() {
+        let p = Progress::default();
+        p.0.store(30_000, Ordering::Relaxed);
+        assert!(!p.ahead_of(0.0));
+        p.0.store(90_000, Ordering::Relaxed);
+        assert!(p.ahead_of(10.0));
+        assert!(!p.ahead_of(40.0));
+        p.0.store(DONE, Ordering::Relaxed);
+        assert!(!p.ahead_of(0.0));
     }
 
     #[test]

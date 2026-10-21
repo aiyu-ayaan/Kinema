@@ -1,8 +1,17 @@
+use std::os::windows::process::CommandExt;
 use std::process::Command;
 
-/// Configure background worker process priority on Windows
-pub fn configure_low_priority_process(_cmd: &mut Command) {
-    // Windows process priority configuration
+const IDLE_PRIORITY_CLASS: u32 = 0x0000_0040;
+const BELOW_NORMAL_PRIORITY_CLASS: u32 = 0x0000_4000;
+
+/// Background work (scan, probe, thumbnails, markers): idle class, so it only takes CPU nothing else wants.
+pub fn configure_low_priority_process(cmd: &mut Command) {
+    cmd.creation_flags(IDLE_PRIORITY_CLASS);
+}
+
+/// Live remux and transcode: below the server itself, above background work.
+pub fn configure_playback_process(cmd: &mut Command) {
+    cmd.creation_flags(BELOW_NORMAL_PRIORITY_CLASS);
 }
 
 /// Terminate child process and job objects cleanly on Windows

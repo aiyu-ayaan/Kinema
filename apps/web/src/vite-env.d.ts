@@ -10,6 +10,16 @@ export interface DesktopBridge {
     get: () => string | null
     set: (token: string | null) => void
   }
+  /** Plays in mpv (apps/desktop/src/mpv.js). Absent in older desktop builds. */
+  mpv?: {
+    /** Whether mpv is installed on this computer. */
+    available(): Promise<boolean>
+    /** Resolves when mpv closes. `aid` is 1-based among audio tracks; `subtitleId` a text subtitle stream id. */
+    play(options: { fileId: number; start: number; title: string; aid: number | null; subtitleId: number | null }): Promise<{ position?: number; ended?: boolean; error?: string }>
+    stop(): void
+    /** The position every 10 s while playing. Returns the function that stops listening. */
+    onProgress(listener: (position: number) => void): () => void
+  }
   /** The desktop app's own releases (apps/desktop/src/updates.js). Absent in older desktop builds. */
   updates?: {
     info(): Promise<{ version: string; channel: string; selfInstall: boolean; skipped: string | null } | null>

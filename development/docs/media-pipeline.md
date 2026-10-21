@@ -33,13 +33,51 @@ Client sends supported containers, video codecs (with profile/level), audio code
 
 Text subtitles never force a transcode: convert to WebVTT and send as a side track.
 
+### Desktop app: HEVC through the GPU
+
+Chromium (and so Electron) decodes HEVC only with a hardware decoder, and on Linux only behind feature switches. The desktop app turns them on at start (`LINUX_VIDEO_FEATURES` in `apps/desktop/src/main.js`: `VaapiVideoDecoder`, `VaapiVideoDecodeLinuxGL`, `VaapiIgnoreDriverChecks`, `PlatformHEVCDecoderSupport`). With a working VAAPI driver (`intel-media-va-driver-non-free`, `mesa-va-drivers`, or `nvidia-vaapi-driver`) the page's codec check reports HEVC, and an HEVC file plays as remux instead of transcode. Without one, nothing changes. Windows and macOS decode HEVC through the platform by default.
+
+### Desktop app: play in mpv
+
+When mpv is installed (`mpv` on PATH, or `KINEMA_MPV`), the desktop app offers **Play in mpv** on the title page, and **Open in mpv** in the player while it transcodes. mpv decodes every codec on the viewer's computer, so the server only serves bytes (`raw=true`, ranged reads): no remux, no transcode, whatever the file holds.
+
+```mermaid
+sequenceDiagram
+  participant Page as Web page (MpvPlayer)
+  participant Main as Desktop main (mpv.js)
+  participant Proxy as Loopback proxy 127.0.0.1:random/nonce
+  participant Mpv as mpv window
+  participant Server as Kinema server
+  Page->>Server: GET /files/{id}/plan?raw=true (audio, subtitle picks)
+  Page->>Main: mpv:play {fileId, start, title, aid, subtitleId}
+  Main->>Proxy: start, random nonce
+  Main->>Mpv: spawn: proxy URL, --start, --aid, --sub-file, --input-ipc-server
+  Mpv->>Proxy: GET /nonce/api/stream/{id}?raw=true (Range)
+  Proxy->>Server: same, via Electron net: session cookie, pinned TLS
+  Server-->>Mpv: file bytes (206)
+  Mpv-->>Main: JSON IPC time-pos, end-file
+  Main-->>Page: mpv:progress every 10 s
+  Page->>Server: PUT /items/{id}/progress
+  Mpv-->>Main: exit
+  Main-->>Page: {position, ended}
+  Page->>Server: PUT progress (watched past 92 % or at the end), then back or next episode
+```
+
+- The proxy keeps the session out of mpv's command line (visible to every local user in `ps`) and lets the app's own network stack check the server's pinned certificate, instead of mpv skipping TLS checks. Only `GET`/`HEAD` under `/<nonce>/api/` are forwarded, and only the headers ranged reads need come back.
+- Tracks: the server's picks (this profile's choice, then Languages settings) become `--aid` and, for a text subtitle, `--sub-file` pointing at the WebVTT endpoint. mpv's own menus switch tracks after that.
+- `--ytdl=no`: a URL never reaches youtube-dl. The user's own `mpv.conf` and scripts still apply.
+- One mpv at a time; a new title closes the previous one, and quitting the app closes it too.
+- Shortcut: mpv is not bundled. Bundle it (Windows `mpv.exe`, Linux AppImage) when installs show people miss it.
+
 ## 4. Transcode
 
 - Hardware first: VAAPI (Intel/AMD), NVENC, QSV, VideoToolbox, detected at startup by test-encoding a short clip.
-- Software fallback: `libx264 -preset veryfast -crf 23`, capped threads.
+- Software fallback: `libx264` with the admin's preset, CRF and max height (Transcoder settings). Threads are not capped: a Raspberry Pi 5 encodes 1080p at only about 1.4x real time on all four cores, so a cap would stall playback. Priority keeps the server responsive instead.
 - Output: HLS, 4 s segments, started at the requested position (`-ss` before `-i`).
 - Session limits: default 2 concurrent. A third request gets HTTP 503 with a retry hint.
-- Process runs under `nice 19` so playback of direct streams is never starved.
+- HEVC decode on the GPU where only that exists (Raspberry Pi 5): `-hwaccel drm` through the distribution's ffmpeg, see `packaging.md` § Hardware transcoding.
+- Priority: live remux and transcode run at `nice 10` (Windows `BELOW_NORMAL_PRIORITY_CLASS`), background ffmpeg (probe, thumbnails, markers, subtitles) at `nice 19` (`IDLE_PRIORITY_CLASS`). Both live in `kinema-core::platform` (`configure_playback_process`, `configure_low_priority_process`).
+- Throttle: a re-encode may run at most 60 s (`THROTTLE_AHEAD_S`) ahead of the wall clock since it started. ffmpeg reports `out_time_us` through `-progress pipe:2`; past the lead, the server stops reading its stdout, the pipe fills and ffmpeg blocks until playback catches up. CPU drops from "as fast as the cores allow" to "real time" (measured on an i5-10200H: 470 % to 230 %). Done in Rust, not with ffmpeg's `-readrate_initial_burst`, because that option needs ffmpeg 6.1 and the Raspberry Pi build with HEVC hardware decode is 5.1. Remux is not throttled: it costs little CPU and a deep buffer helps slow networks.
 - Segments are deleted as the client moves past them. Session dir purged on idle timeout (60 s) and at startup.
 
 ## 5. Thumbnails
