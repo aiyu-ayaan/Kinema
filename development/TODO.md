@@ -84,6 +84,7 @@ Trigger: F1 (1080p HEVC Main 10) transcoded at ~90 % CPU on the Pi 5 because Chr
 - [x] ~~Desktop: Chromium VAAPI + HEVC switches on Linux~~ reverted 2026-10-22: Chromium then claimed HEVC it could not decode and F1 stopped with "could not be played"
 - [x] Web player: a decode failure with HEVC/AV1 claimed retries with them off, so the server transcodes
 - [x] Web player: repeated skips build on the pending seek target instead of the old position
+- [x] Transcode: half-second fragments, play/seek start 6-9 s -> ~2.5 s on the Pi; last frame held during a restart
 - [x] Transcode throttle: 60 s lead, then real time (`playback::Progress`)
 - [x] Real process priority: `nice 10` live streams, `nice 19` background (`kinema-core::platform`)
 - [x] Pi 5 HEVC hardware decode through the distribution ffmpeg (`MediaBinaries::hevc_drm`)

@@ -45,6 +45,24 @@ function detectCaps(): PlayCaps {
   }
 }
 
+/**
+ * A new remux/transcode stream starts empty: the element shows its poster until the first frame arrives.
+ * Using the current frame as that poster keeps the picture on screen instead of a black flash.
+ */
+function holdFrame(v: HTMLVideoElement | null) {
+  if (!v || !v.videoWidth) return
+  const scale = Math.min(1, 960 / v.videoWidth)
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.round(v.videoWidth * scale)
+  canvas.height = Math.round(v.videoHeight * scale)
+  try {
+    canvas.getContext('2d')?.drawImage(v, 0, 0, canvas.width, canvas.height)
+    v.poster = canvas.toDataURL('image/jpeg', 0.8)
+  } catch {
+    // A frame the canvas may not read: the old black gap is all that is lost.
+  }
+}
+
 function IconButton({ label, onClick, children, className }: { label: string; onClick: () => void; children: ReactNode; className?: string }) {
   return (
     <button type="button" onClick={onClick} aria-label={label} title={label} className={cn('flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/15 hover:text-white', className)}>
@@ -197,6 +215,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
           pendingSeek.current = at
           setSrc(api.streamUrl(file.id, audioIdx, caps.current, 0))
         } else {
+          holdFrame(videoRef.current)
           // ffmpeg gets the requested time; p.start is where its output really begins.
           offset.current = p.start
           pendingSeek.current = null
