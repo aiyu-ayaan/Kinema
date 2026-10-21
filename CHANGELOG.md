@@ -1,3 +1,14 @@
+## v0.0.1-alpha.4 (2026-10-21)
+
+- !alpha(all) : HEVC GPU decoding, throttled transcodes, and desktop mpv playback
+- docs(all) : Add the HEVC playback work to the README and credits (libc, mpv)
+- docs(all) : Record the HEVC playback work in CLAUDE.md and TODO
+- feat(desktop) : Play titles in mpv with no remux or transcode on the server
+- feat(server) : Serve the file as it is on raw=true for players that decode anything
+- perf(server) : Decode HEVC on the Raspberry Pi 5 GPU for transcodes
+- perf(server) : Throttle live transcodes to playback pace and lower ffmpeg priority
+- feat(desktop) : Turn on GPU HEVC decoding on Linux so HEVC files remux
+
 ## v0.0.1-alpha.3 (2026-10-20)
 
 - !alpha(all) : YouTube watch page, skip intro and credits, and in-app updates
