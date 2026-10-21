@@ -395,7 +395,7 @@ Kinema/
 
 ### 3. Android App (`apps/android`)
 - Designed exclusively for browsing and watching media on phones and tablets.
-- **Predictive back gesture**: Screens fluidly scale down while revealing underlying pages.
+- **Predictive back gesture**: Android's own back animation: the page shrinks and drifts with the finger while the page beneath slides in, then slides away on release.
 - **Certificate Pinning**: Reads and pins the server's self-signed TLS fingerprint on first connection.
 - **Home/Public Address Roaming**: Automatically checks whether the local server or public reverse proxy answers and switches transparently on network changes.
 

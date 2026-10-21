@@ -75,7 +75,7 @@ stateDiagram-v2
 ## Navigation and motion
 
 - Navigation 3 back stack (`TabsKey`, `ItemKey(id)`, `PlayerKey(id, start)`), saved across process death.
-- Forward: shared-axis X slide. Back button: the reverse. **Predictive back gesture**: the page shrinks to 90 % toward the swiped edge while the page beneath rises from 95 % and fades in, tracking the finger; cancel springs back. Inside the tab host, back from a non-home tab previews the scale and rounded corners before returning home.
+- Forward: shared-axis X slide. Back button: the reverse. **Predictive back gesture**, after Android's own animation between activities: while the finger drags, the page shrinks to 90 % with rounded corners and drifts about 8 % toward the far edge, and the page beneath slides in from the near side, dimmed. Letting go slides the page off the screen; cancel springs back. NavDisplay seeks one transition with the gesture progress, so the drag is the first half of the timeline and the slide-off the second (piecewise-linear easings in `predictivePop`, `Navigation.kt`). The page never fades: an earlier version faded it out at 90 % over the page beneath, which left a ghost that read as stuck. Inside the tab host, back from a non-home tab previews the scale and rounded corners before returning home.
 - `MotionScheme.expressive()` springs everywhere: card press scale, nav pill growth and icon pop, staggered entry, hero pager parallax, the player's play button morphing from a cookie (paused) to a circle (playing), the double-tap seek bubble.
 - Reduced motion (animator scale 0) stops decorative motion: the morphing brand mark, the drifting backdrop, staggered entries, hero auto-advance.
 

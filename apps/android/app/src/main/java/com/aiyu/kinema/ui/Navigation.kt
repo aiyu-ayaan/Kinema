@@ -4,14 +4,13 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -27,7 +26,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
@@ -137,21 +135,34 @@ fun <T> AnimatedContentTransitionScope<T>.sharedAxisX(forward: Boolean, motion: 
         .togetherWith(slideOutHorizontally(motion.fastSpatialSpec()) { if (forward) -it / 4 else it / 4 } + fadeOut(motion.fastEffectsSpec()))
 
 /**
- * Material predictive back: the page shrinks to 90 % toward the swiped edge and stays opaque until near the end, while
- * the page beneath rises from 95 %. NavDisplay seeks the transition with the gesture progress (already eased by the
- * system), so the specs are linear tweens: an eased curve would make the page lag the finger, then lurch. The page
- * beneath is drawn under the leaving one, not over it.
+ * Android's own back animation (the one between activities): while the finger drags, the page shrinks to 90 % and
+ * drifts a little toward the far edge, and the page beneath slides in from the near side, dimmed. Let go and the page
+ * slides off the screen; it never fades, so no ghost of it lingers over the page beneath.
+ *
+ * NavDisplay seeks one transition with the gesture progress (already eased by the system), then plays the rest on
+ * release. So both phases live on one timeline: the drag is the first [DRAG_END] of it, the slide-off the rest. The
+ * easings below are piecewise linear for the same reason the specs are tweens: a curve of their own would make the
+ * page lag the finger, then lurch.
  */
 private fun <T> AnimatedContentTransitionScope<T>.predictivePop(edge: Int): ContentTransform {
-    val pivot = if (edge == NavigationEvent.EDGE_LEFT) TransformOrigin(1f, 0.5f) else TransformOrigin(0f, 0.5f)
+    val away = if (edge == NavigationEvent.EDGE_LEFT) 1 else -1
+    val drift = Easing { f -> if (f < DRAG_END) f / DRAG_END * DRIFT else DRIFT + (1 - DRIFT) * (f - DRAG_END) / (1 - DRAG_END) }
+    val shrink = Easing { f -> (f / DRAG_END).coerceAtMost(1f) }
     val linear = tween<Float>(PREDICTIVE_MS, easing = LinearEasing)
-    val enter = scaleIn(linear, initialScale = 0.95f) + fadeIn(linear, initialAlpha = 0.5f)
-    val exit = scaleOut(linear, targetScale = 0.9f, transformOrigin = pivot) +
-        fadeOut(keyframes { durationMillis = PREDICTIVE_MS; 1f at PREDICTIVE_MS * 3 / 4 })
+    val exit = slideOutHorizontally(tween(PREDICTIVE_MS, easing = drift)) { away * it } +
+        scaleOut(tween(PREDICTIVE_MS, easing = shrink), targetScale = 0.9f)
+    val enter = slideInHorizontally(tween(PREDICTIVE_MS, easing = LinearEasing)) { -away * it / 10 } +
+        fadeIn(linear, initialAlpha = 0.6f)
     return (enter togetherWith exit).apply { targetContentZIndex = -1f }
 }
 
 private const val PREDICTIVE_MS = 320
+
+/** The share of the timeline the finger drives; past it the page leaves on its own. */
+private const val DRAG_END = 0.5f
+
+/** How far the page drifts during the drag, as a share of its width (the system's is about 8 %). */
+private const val DRIFT = 0.08f
 
 /**
  * Back gesture with a live preview inside one screen (tabs, sheets). While the user drags, the returned progress runs
