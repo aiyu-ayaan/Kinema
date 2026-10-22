@@ -25,6 +25,6 @@
   "update.notAppImage": "The download is not an AppImage.",
   "update.none": "No update to install.",
   "update.failed": "Update failed: {reason}",
-  "mpv.notFound": "mpv is not installed. Install it, or set KINEMA_MPV to its path.",
+  "mpv.notFound": "mpv was not found. This build has no bundled copy; install mpv or set KINEMA_MPV to its path, or play in the app instead.",
   "mpv.notAllowed": "This page cannot start mpv."
 }

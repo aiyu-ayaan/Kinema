@@ -157,6 +157,7 @@
   "player.mpv.hint": "The video plays in its own window. Closing it brings you back here.",
   "player.mpv.stop": "Stop",
   "player.mpv.back": "Back",
+  "player.mpv.fallback": "Play in the app instead",
   "settings.title": "Settings",
   "settings.noLibraries.title": "No libraries",
   "settings.noLibraries.message": "Add a folder with your movies or shows to get started.",

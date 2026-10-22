@@ -41,7 +41,7 @@ The desktop app once forced Chromium's VAAPI and HEVC switches on Linux (`VaapiI
 
 ### Desktop app: play in mpv
 
-When mpv is installed (`mpv` on PATH, or `KINEMA_MPV`), the desktop app offers **Play in mpv** on the title page, and **Open in mpv** in the player while it transcodes. mpv decodes every codec on the viewer's computer, so the server only serves bytes (`raw=true`, ranged reads): no remux, no transcode, whatever the file holds.
+When mpv is available (`KINEMA_MPV`, the copy bundled with the app, or `mpv` on PATH; order and bundling in `packaging.md`), the desktop app offers **Play in mpv** on the title page, and **Open in mpv** in the player while it transcodes. mpv decodes every codec on the viewer's computer, so the server only serves bytes (`raw=true`, ranged reads): no remux, no transcode, whatever the file holds.
 
 ```mermaid
 sequenceDiagram
@@ -69,7 +69,7 @@ sequenceDiagram
 - Tracks: the server's picks (this profile's choice, then Languages settings) become `--aid` and, for a text subtitle, `--sub-file` pointing at the WebVTT endpoint. mpv's own menus switch tracks after that.
 - `--ytdl=no`: a URL never reaches youtube-dl. The user's own `mpv.conf` and scripts still apply.
 - One mpv at a time; a new title closes the previous one, and quitting the app closes it too.
-- Shortcut: mpv is not bundled. Bundle it (Windows `mpv.exe`, Linux AppImage) when installs show people miss it.
+- mpv ships inside the desktop installers once `scripts/mpv.lock` is pinned (`packaging.md`). When it is missing or fails to start, the page offers **Play in the app instead** (in-page player, same position).
 
 ## 4. Transcode
 

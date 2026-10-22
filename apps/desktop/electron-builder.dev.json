@@ -13,6 +13,14 @@
     {
       "from": "build/icon-dev.png",
       "to": "icon.png"
+    },
+    {
+      "from": "build/mpv",
+      "to": "mpv",
+      "filter": [
+        "**/*",
+        "!.pinned"
+      ]
     }
   ],
   "linux": {

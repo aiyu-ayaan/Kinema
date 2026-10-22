@@ -1,0 +1,26 @@
+# mpv bundled into the desktop app (scripts/fetch-mpv.mjs, run by `pnpm --filter @kinema/desktop build:*`).
+# mpv runs as a separate program, never linked, so Kinema's own license is not affected; the notice shipped next
+# to it (resources/mpv/NOTICE-mpv.txt) carries the license and the source link.
+#
+# Each platform needs `url` (an immutable, versioned release asset, never a "latest" link), `sha256` of that
+# exact file and `format`: `7z` (Windows build, extracted with 7zip-bin or 7z on PATH) or `appimage` (Linux,
+# extracted with --appimage-extract on the build machine, so the matching architecture must build it).
+# Pin a platform with: node scripts/fetch-mpv.mjs --pin <platform> <url>
+# That downloads the file, prints its SHA-256 and writes it here. Compare it with the publisher's checksum before
+# committing: the build verifies the file against what is written below and nothing else.
+# An entry with an empty url or sha256 is skipped with a warning (the desktop app then uses mpv from PATH).
+#
+# shortcut: not pinned yet. The builds below were chosen but their release assets could not be fetched where this
+# was written, so no hash is invented. Candidates: Windows x64 from zhongfly/mpv-winbuild (GPL build, .7z),
+# Linux from pkgforge-dev/mpv-AppImage (x86_64 and aarch64).
+version=
+source=
+windows-x64.format=7z
+windows-x64.url=
+windows-x64.sha256=
+linux-x86_64.format=appimage
+linux-x86_64.url=
+linux-x86_64.sha256=
+linux-aarch64.format=appimage
+linux-aarch64.url=
+linux-aarch64.sha256=

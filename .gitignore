@@ -48,3 +48,6 @@ Thumbs.db
 # Media test files
 *.mkv
 *.webm
+
+# mpv bundled into the desktop app, fetched by scripts/fetch-mpv.mjs
+apps/desktop/build/mpv/

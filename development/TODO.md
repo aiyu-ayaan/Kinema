@@ -92,7 +92,9 @@ Trigger: F1 (1080p HEVC Main 10) transcoded at ~90 % CPU on the Pi 5 because Chr
 - [x] Transcode froze the picture after a seek while the clock ran (2026-10-22): copied audio started at the keyframe before the seek, video at the seek point; audio is now re-encoded in a transcode. Checked in Chrome and the desktop app (Electron 33): F1 seeks resume in ~1 s at 24 fps
 - [ ] Deploy to the Pi: `sudo apt install ffmpeg` is already there; restart Kinema and check the `HEVC hardware decode` log line
 - [ ] Try the mpv path by hand in the desktop app (mpv not installed on the dev laptop; proxy and raw seeks tested with ffmpeg)
-- [ ] Bundle mpv with the desktop app (Windows `mpv.exe`, Linux AppImage)
+- [x] Bundle mpv with the desktop app: resolver order, fetch script, lock, extraResources, notice, in-app fallback (`scripts/fetch-mpv.mjs`)
+- [ ] Pin `scripts/mpv.lock` (Windows x64, Linux x86_64 and aarch64): `node scripts/fetch-mpv.mjs --pin <platform> <url>`, compare with the publisher checksum; until then installers ship without mpv
+- [ ] Try the bundled mpv by hand: AppImage, .deb and Windows install start it from `resources/mpv` (the nested AppRun wrapper is untested)
 - [ ] Optimized versions: pre-convert files no browser plays, at low priority, cached by fingerprint
 - [ ] LAN transcode helper (offload re-encodes to a machine with a GPU, like rffmpeg)
 
