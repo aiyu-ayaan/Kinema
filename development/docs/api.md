@@ -82,8 +82,8 @@ The tables below are the full target API.
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/images/{key}?w=400` | Poster/backdrop/thumb, WebP, `Cache-Control: immutable` |
-| GET | `/items/{id}/timeline.vtt` | Scrub-thumbnail index |
-| GET | `/items/{id}/sprite.jpg` | Scrub sprite sheet |
+| GET | `/items/{id}/timeline.vtt` | Implemented. Scrub-thumbnail index of the title's main file (`sprites/{n}.jpg#xywh=x,y,w,h` cues, relative to the VTT). 202 + `Retry-After: 15` while the sheets are being made (the first request starts them), 404 when none can be made |
+| GET | `/items/{id}/sprites/{n}` | Implemented. Scrub sprite sheet `n` (JPEG, 10x10 tiles of 160x90); same 202/404 rules |
 
 ## Playback
 

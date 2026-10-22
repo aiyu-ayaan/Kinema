@@ -3,6 +3,7 @@ pub mod markers;
 pub mod playback;
 pub mod probe;
 pub mod resolver;
+pub mod sprites;
 pub mod subtitles;
 pub mod thumbs;
 

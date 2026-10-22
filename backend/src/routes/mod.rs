@@ -3,6 +3,7 @@ pub mod items;
 pub mod libraries;
 pub mod matching;
 pub mod media;
+pub mod scrub;
 pub mod server;
 pub mod settings;
 pub mod users;
@@ -18,6 +19,7 @@ pub fn api_router() -> Router<AppState> {
         .merge(items::router())
         .merge(matching::router())
         .merge(media::router())
+        .merge(scrub::router())
         .merge(settings::router())
         .merge(users::router())
 }

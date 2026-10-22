@@ -175,6 +175,8 @@ async fn clear_cache(
         tokio::fs::remove_dir_all(&path).await?;
     }
     if dir == "thumbs" {
+        // Scrub sheets are thumbnails too; they come back on the next scrub.
+        let _ = tokio::fs::remove_dir_all(state.cache_dir("sprites")).await;
         for lib in libraries::list(&state.db).await? {
             thumbs::spawn(state.clone(), lib.id);
         }

@@ -20,6 +20,7 @@ mod markers;
 mod routes;
 mod scan;
 mod server_settings;
+mod sprites;
 mod state;
 mod thumbs;
 mod tls;
