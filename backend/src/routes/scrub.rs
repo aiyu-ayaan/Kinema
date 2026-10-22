@@ -72,9 +72,12 @@ async fn timeline(
 async fn sheet(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
-    Path((id, n)): Path<(i64, usize)>,
+    Path((id, file)): Path<(i64, String)>,
     req: Request,
 ) -> ApiResult<Response> {
+    let name = file.strip_suffix(".jpg").unwrap_or(&file);
+    let name = name.strip_prefix("sheet-").unwrap_or(name);
+    let n: usize = name.parse().map_err(|_| ApiError::not_found())?;
     let dir = match ready(&state, &user, id).await? {
         Ok(dir) => dir,
         Err(wait) => return Ok(wait),

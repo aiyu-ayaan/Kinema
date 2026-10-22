@@ -78,7 +78,7 @@ pub fn token_from(parts: &Parts) -> Option<String> {
     {
         return Some(bearer.trim().to_string());
     }
-    parts
+    if let Some(cookie) = parts
         .headers
         .get_all(COOKIE)
         .iter()
@@ -89,6 +89,19 @@ pub fn token_from(parts: &Parts) -> Option<String> {
                 .strip_prefix(&format!("{SESSION_COOKIE}=")[..])
                 .map(str::to_string)
         })
+    {
+        return Some(cookie);
+    }
+    parts.uri.query().and_then(|q| {
+        q.split('&').find_map(|pair| {
+            let mut it = pair.splitn(2, '=');
+            if it.next()? == "token" {
+                it.next().map(str::to_string)
+            } else {
+                None
+            }
+        })
+    })
 }
 
 /// `secure` when the server speaks HTTPS: the browser then never sends the cookie in clear.
