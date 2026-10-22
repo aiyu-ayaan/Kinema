@@ -51,6 +51,22 @@ pub fn token_hash(token: &str) -> String {
     hex(&Sha256::digest(token.as_bytes()))
 }
 
+/// `n` random bytes from the OS, as lowercase hex.
+pub fn random_hex(n: usize) -> String {
+    let mut bytes = vec![0u8; n];
+    OsRng.fill_bytes(&mut bytes);
+    hex(&bytes)
+}
+
+/// Equality whose time does not depend on where the inputs differ.
+pub fn ct_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let diff = a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y));
+    std::hint::black_box(diff) == 0
+}
+
 /// Bearer header for API calls; the cookie covers `<video>`, `<img>` and subtitle
 /// fetches, which cannot set headers.
 pub fn token_from(parts: &Parts) -> Option<String> {
@@ -96,10 +112,14 @@ impl FromRequestParts<AppState> for AuthUser {
     async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, ApiError> {
         let token = token_from(parts)
             .ok_or_else(|| ApiError::new(StatusCode::UNAUTHORIZED, "auth.required"))?;
-        users::session_user(&state.db, &token_hash(&token))
+        let (user, lan_only) = users::session_lookup(&state.db, &token_hash(&token))
             .await?
-            .map(AuthUser)
-            .ok_or_else(|| ApiError::new(StatusCode::UNAUTHORIZED, "auth.required"))
+            .ok_or_else(|| ApiError::new(StatusCode::UNAUTHORIZED, "auth.required"))?;
+        // Opened without a PIN at home: the same token from outside must sign in again.
+        if lan_only && !crate::net::origin(parts, state).lan {
+            return Err(ApiError::new(StatusCode::UNAUTHORIZED, "auth.lan_session"));
+        }
+        Ok(AuthUser(user))
     }
 }
 
@@ -125,6 +145,16 @@ mod tests {
         let h = hash_password("correct horse").unwrap();
         assert!(verify_password("correct horse", &h));
         assert!(!verify_password("wrong", &h));
+    }
+
+    #[test]
+    fn constant_time_eq() {
+        assert!(ct_eq(b"abc", b"abc"));
+        assert!(!ct_eq(b"abc", b"abd"));
+        assert!(!ct_eq(b"abc", b"ab"));
+        assert!(ct_eq(b"", b""));
+        assert_eq!(random_hex(8).len(), 16);
+        assert_ne!(random_hex(16), random_hex(16));
     }
 
     #[test]

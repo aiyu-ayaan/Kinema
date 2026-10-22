@@ -146,8 +146,13 @@ async fn library_items(
     AuthUser(user): AuthUser,
     Path(id): Path<i64>,
 ) -> ApiResult<Json<Vec<ItemCard>>> {
-    crate::access::check_library(&state, &user, id).await?;
-    Ok(Json(items::library_items(&state.db, user.id, id).await?))
+    let policy = crate::access::policy(&state, &user).await?;
+    if !policy.allows_library(id) {
+        return Err(ApiError::not_found());
+    }
+    let mut items = items::library_items(&state.db, user.id, id).await?;
+    policy.retain(&mut items);
+    Ok(Json(items))
 }
 
 #[derive(Deserialize)]

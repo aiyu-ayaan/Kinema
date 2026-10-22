@@ -11,12 +11,15 @@ use tower_http::services::ServeDir;
 use tracing::{info, warn};
 
 mod access;
+#[cfg(test)]
+mod access_tests;
 mod auth;
 mod discovery;
 mod error;
 mod i18n;
 mod jobs;
 mod markers;
+mod net;
 mod routes;
 mod scan;
 mod server_settings;
@@ -46,6 +49,11 @@ async fn main() -> anyhow::Result<()> {
     let listener = bind(&config.server.host, config.server.port)?;
     config.server.port = listener.local_addr()?.port();
     let config = Arc::new(config);
+    for proxy in &config.network.trusted_proxies {
+        if net::Cidr::parse(proxy).is_none() {
+            warn!("Ignoring network.trusted_proxies entry {proxy:?}: not an IP address or CIDR");
+        }
+    }
 
     // Ensure data directory exists
     std::fs::create_dir_all(&config.data_dir).context("Failed to create data directory")?;
@@ -169,15 +177,17 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let addr = listener.local_addr()?;
+    // The peer address decides LAN-only profiles (net.rs).
+    let service = app.into_make_service_with_connect_info::<std::net::SocketAddr>();
     if let Some((rustls, _)) = rustls {
         info!("Kinema server listening on https://{}", addr);
         axum_server::from_tcp_rustls(listener, rustls)
-            .serve(app.into_make_service())
+            .serve(service)
             .await?;
     } else {
         warn!("TLS is off: traffic is unencrypted. Only do this behind a TLS-terminating proxy.");
         info!("Kinema server listening on http://{}", addr);
-        axum::serve(tokio::net::TcpListener::from_std(listener)?, app).await?;
+        axum::serve(tokio::net::TcpListener::from_std(listener)?, service).await?;
     }
 
     Ok(())

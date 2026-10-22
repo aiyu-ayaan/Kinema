@@ -3,8 +3,10 @@ pub mod items;
 pub mod libraries;
 pub mod matching;
 pub mod media;
+pub mod profile;
 pub mod server;
 pub mod settings;
+pub mod shares;
 pub mod users;
 
 use crate::state::AppState;
@@ -20,4 +22,6 @@ pub fn api_router() -> Router<AppState> {
         .merge(media::router())
         .merge(settings::router())
         .merge(users::router())
+        .merge(profile::router())
+        .merge(shares::router())
 }

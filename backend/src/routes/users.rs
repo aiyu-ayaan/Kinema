@@ -1,10 +1,12 @@
 use crate::auth::{AdminUser, hash_password};
 use crate::error::{ApiError, ApiResult};
+use crate::routes::profile::{Languages, clean_languages, clean_max_rating};
 use crate::state::AppState;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{get, patch};
 use axum::{Json, Router};
+use kinema_db::profiles::{self, Prefs};
 use kinema_db::users::{self, NewUser, Secret, User, UserUpdate};
 use serde::{Deserialize, Serialize};
 
@@ -25,13 +27,45 @@ struct UserView {
     user: User,
     /// Empty: every library.
     library_ids: Vec<i64>,
+    preferences: Prefs,
 }
 
 async fn view(state: &AppState, user: User) -> ApiResult<UserView> {
     Ok(UserView {
         library_ids: users::library_access(&state.db, user.id).await?,
+        preferences: profiles::get(&state.db, user.id).await?,
         user,
     })
+}
+
+/// Household rules and languages for a profile, set by an admin.
+#[derive(Deserialize)]
+struct PrefsBody {
+    #[serde(flatten)]
+    languages: Languages,
+    /// Minimum-age scale 0..18 (`kinema_core::content_rating`); null = no limit.
+    max_rating: Option<i64>,
+    #[serde(default)]
+    allow_unrated: bool,
+    /// A PIN profile opens without it from the LAN.
+    #[serde(default)]
+    lan_unlock: bool,
+}
+
+/// Saves a profile's preferences when the request carried them; None keeps them.
+async fn save_prefs(state: &AppState, id: i64, body: Option<PrefsBody>) -> ApiResult<()> {
+    let Some(b) = body else { return Ok(()) };
+    let l = clean_languages(b.languages)?;
+    let prefs = Prefs {
+        audio_language: l.audio_language,
+        subtitle_language: l.subtitle_language,
+        subtitle_mode: l.subtitle_mode,
+        max_rating: clean_max_rating(b.max_rating)?,
+        allow_unrated: b.allow_unrated,
+        lan_unlock: b.lan_unlock,
+    };
+    profiles::set(&state.db, id, &prefs).await?;
+    Ok(())
 }
 
 async fn list(State(state): State<AppState>, _: AdminUser) -> ApiResult<Json<Vec<UserView>>> {
@@ -55,6 +89,9 @@ struct Profile {
     pin: Option<String>,
     #[serde(default)]
     library_ids: Vec<i64>,
+    /// Languages, content limit and LAN unlock; omitted keeps them.
+    #[serde(default)]
+    preferences: Option<PrefsBody>,
 }
 
 /// Validates and hashes a profile's fields. Admins need a password so the
@@ -120,8 +157,9 @@ fn borrowed(s: &Lock) -> Secret<'_> {
 async fn create(
     State(state): State<AppState>,
     _: AdminUser,
-    Json(p): Json<Profile>,
+    Json(mut p): Json<Profile>,
 ) -> ApiResult<(StatusCode, Json<UserView>)> {
+    let prefs = p.preferences.take();
     let (name, avatar, password, pin) = prepare(&p, false).await?;
     let hash = |s: &Lock| match s {
         Lock::Set(h) => Some(h.clone()),
@@ -141,6 +179,7 @@ async fn create(
     .await?
     .ok_or_else(|| ApiError::new(StatusCode::CONFLICT, "users.name_taken"))?;
     users::set_library_access(&state.db, id, if p.is_admin { &[] } else { &p.library_ids }).await?;
+    save_prefs(&state, id, prefs).await?;
     let user = users::get(&state.db, id)
         .await?
         .ok_or_else(ApiError::not_found)?;
@@ -151,8 +190,9 @@ async fn update(
     State(state): State<AppState>,
     AdminUser(me): AdminUser,
     Path(id): Path<i64>,
-    Json(p): Json<Profile>,
+    Json(mut p): Json<Profile>,
 ) -> ApiResult<Json<UserView>> {
+    let prefs = p.preferences.take();
     let current = users::get(&state.db, id)
         .await?
         .ok_or_else(ApiError::not_found)?;
@@ -180,6 +220,13 @@ async fn update(
         return Err(ApiError::new(StatusCode::CONFLICT, "users.name_taken"));
     }
     users::set_library_access(&state.db, id, if p.is_admin { &[] } else { &p.library_ids }).await?;
+    let old_prefs = profiles::get(&state.db, id).await?;
+    save_prefs(&state, id, prefs).await?;
+    // Turning the LAN unlock off must end the sessions it opened without the PIN.
+    let unlock_revoked = old_prefs.lan_unlock && !profiles::get(&state.db, id).await?.lan_unlock;
+    if unlock_revoked {
+        users::delete_lan_sessions(&state.db, id).await?;
+    }
     // A new lock means old sessions were opened with the old one.
     if lock_changed && id != me.id {
         users::delete_user_sessions(&state.db, id).await?;
