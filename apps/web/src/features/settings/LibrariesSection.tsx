@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge, Card, CardHeader, EmptyState, ErrorText } from '@/components/ui/Card'
 import { Field, inputCls } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
+import { LibraryFolders } from './LibraryFolders'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { t } from '@/lib/i18n'
@@ -238,6 +239,7 @@ export function LibrariesSection() {
                   title={t('library.regenerateThumbnails')}
                   icon={<ImagesSquare size={16} />}
                 />
+                <LibraryFolders library={l} />
                 <Button
                   size="sm"
                   variant="ghost"
