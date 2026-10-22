@@ -23,7 +23,7 @@
 - [ ] Per-profile language preferences; LAN-only unlocked profiles
 - [x] Fix-match UI for wrong TMDB matches
 - [x] Episodes inside Movies libraries grouped as shows; Movies / TV Shows sidebar sub-entries
-- [ ] Sidecar subtitles picked up without a video change
+- [x] Sidecar subtitles picked up without a video change
 
 ## Android app (2026-10-19)
 - [x] HTTPS by default with a self-signed certificate; fingerprint on the dashboard, pinned by the app
@@ -46,10 +46,14 @@
 ## Playback speed (Plex pain points)
 - [ ] Store keyframe/Cues index at probe time (M1)
 - [ ] Direct play: ranged `sendfile`, no session (M1)
-- [ ] Scan-time subtitle extraction to cached WebVTT (M4)
-- [ ] Client-side subtitle track switch, no player reload (M4)
+- [x] Scan-time subtitle extraction to cached WebVTT (M4)
+- [x] Client-side subtitle track switch, no player reload (M4)
 - [ ] HLS seek reuses existing segments; keep idle session 60 s (M4)
-- [ ] Optional OCR of PGS/VobSub to WebVTT (M4)
+- [x] Optional OCR of PGS/VobSub to WebVTT (M4)
+- [ ] Android: offer picture subtitles that have `ocr: true` (web and desktop mpv do)
+- [ ] Bundle `tesseract` (+ eng model) in AppImage / Windows / Docker, or document installing it
+- [ ] Prune subtitle cache entries of old file versions (they stay until the cache is cleared)
+- [ ] OCR: check accuracy on real Blu-ray PGS and DVD VobSub (only a generated PGS sample was tested)
 
 ## Packaging (end goal)
 - [x] Decisions: GPL ffmpeg as separate process; static musl (Linux) + MSVC (Windows); aarch64 in first release

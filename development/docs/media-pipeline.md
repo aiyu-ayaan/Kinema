@@ -110,12 +110,33 @@ flowchart LR
 
 ## 6. Subtitles
 
-- External files `name.lang.srt|ass|vtt` matched by basename.
-- Embedded text tracks extracted on demand and cached.
-- `ass` converted to WebVTT with styling stripped by default.
-- Extraction runs at scan time (low priority), not at play time, so the first track switch is a cache hit.
-- Switching a text track is client-side only: the player swaps the `<track>` source. No server session restart, no ffmpeg run, no video reload.
-- Image tracks (PGS, VobSub) are OCRed at scan time to WebVTT (optional, off by default, runs after probe at lowest priority). Without OCR they fall back to burn-in, which restarts the transcode on each change. Burn-in is the only case where a caption change costs a restart.
+Built 2026-10-22 (`kinema-media::subtitles`, `kinema-media::ocr`, `backend/src/subtitles.rs`).
+
+```mermaid
+flowchart LR
+  FS["library folder\nvideo + .srt/.ass/.vtt"] -- notify events --> W[watcher, 10 s debounce]
+  W --> Scan["scan: walk_media\nvideos + subtitle files"]
+  Scan -- "new / changed video" --> Probe["ffprobe\nstreams + sidecars"]
+  Scan -- "same video, sidecars differ\n(path or size-mtime)" --> Side["replace_sidecars\n(no probe)"]
+  Probe --> DB[("streams")]
+  Side --> DB
+  Scan --> Job["subtitle job (per library)\nthumb slot, nice 19"]
+  DB --> Job
+  Job -- "all text tracks of a file,\none ffmpeg read" --> Cache[("cache/subtitles\n{key}.vtt / .fail")]
+  Job -- "PGS / VobSub, setting on,\ntesseract found" --> OCR["ffmpeg sub2video PNGs\n→ dedupe → tesseract list run"]
+  OCR --> Cache
+  OCR -- "streams.ocr = 1" --> DB
+  Cache --> API["GET /subtitles/{stream}"]
+  API --> Player["web player: cues drawn over video,\ncached per track"]
+```
+
+- Sidecars: `name.srt|ass|ssa|vtt`, `name.lang.srt`, `name.lang.forced.srt` matched by basename. The scan walks subtitle files together with videos, so a subtitle added, edited or removed next to an unchanged video updates that file's sidecar streams (`items::replace_sidecars`) without probing the video. Each sidecar stream stores its own `size-mtime` (`streams.external_fingerprint`).
+- Cache key (`subtitles::CacheKey`): embedded `{file}-{size}-{mtime}-{stream idx}`, sidecar `{file}-s{fnv64(path)}-{size-mtime}`. A changed video or sidecar gets a new name, so nothing stale is served and nothing unchanged is redone. A failure leaves `{key}.fail`, so it is not retried until the file changes. Entries of old versions stay until the cache is cleared in Troubleshooting.
+- Extraction runs in a background job after every scan (`Jobs "subtitles"`), one file at a time through the shared thumbnail slot at `nice 19`. All text tracks of a video are written in one ffmpeg run (one `-map`/output pair per track), so a 20 GB file is read once, not once per language. If that run fails, each track is retried alone so one broken track does not block the others.
+- `GET /subtitles/{id}` serves the cached WebVTT; a text track the job has not reached yet is extracted once on request. `ass` styling becomes WebVTT `<i>`/`<b>` or is dropped by ffmpeg, and the player strips tags.
+- Switching a text track is client-side only: the player fetches the WebVTT once per track (kept in memory, so switching back is instant) and draws cues over the video at the absolute play time. No server session restart, no ffmpeg run, no video reload.
+- Picture tracks (PGS, VobSub, DVB) are read by OCR when the admin turns on Settings › Languages › Read picture subtitles (`subtitle_ocr`, off by default) and `tesseract` was found at startup (`KINEMA_TESSERACT`, then PATH; `tesseract --list-langs` must list a model). Flow: ffmpeg renders only the subtitle stream (sub2video, no video decode) as grayscale PNGs named by their time in ms (`-filter_complex [0:N]format=gray -fps_mode passthrough -enc_time_base 1/1000 -frame_pts 1`); byte-identical consecutive frames are dropped; one `tesseract` run reads all frames from a list file (`--psm 6`, `OMP_THREAD_LIMIT=1`: with OpenMP threads it took 6.4 s per caption on a busy 4-core box, 0.13 s with one); each frame's text lasts until the next frame. The track language picks the model (`fre` → `fra`), else English, else the track is skipped. Success sets `streams.ocr = 1`, and players then list the track like a text track. Without OCR, picture tracks stay listed but disabled.
+- Clearing the subtitle cache resets `streams.ocr` and starts the job again for every library.
 
 ## 6a. Fast start and seek on large files
 

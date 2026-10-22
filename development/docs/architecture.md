@@ -83,7 +83,7 @@ The HLS design below is the M4 target.
 data/
   kinema.db
   cache/images/       TMDB art as fetched, keyed by size + TMDB path (MVP)
-  cache/subtitles/    WebVTT per file + mtime + stream (MVP)
+  cache/subtitles/    WebVTT per file version + stream (sidecars: path hash + size-mtime); .fail markers
   cache/thumbs/       frame grabs and sprites
   cache/hls/          live transcode sessions, purged on start
   logs/

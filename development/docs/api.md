@@ -31,18 +31,18 @@ This is Kinema's own API. It is not Plex-compatible.
 | PUT | `/items/{id}/tracks` | Admin, show only: `{audio, subtitle}` as positions among an episode's audio / subtitle streams; `null` follows the Languages settings, subtitle `-1` is off |
 | GET | `/files/{id}/plan?audio=&start=&hevc=&av1=&raw=` | `{mode: direct\|remux\|transcode, duration_s, audio, start, subtitle}`; audio and subtitle follow the show's track choice, then the Languages settings. `raw=true` always plans direct (a player that decodes anything, mpv) |
 | GET | `/stream/{id}?audio=&start=&hevc=&av1=&raw=` | Direct (Range) or fMP4 pipe, per the plan; `raw=true` always serves the file as it is |
-| GET | `/subtitles/{stream_id}` | Text subtitle as WebVTT, cached |
+| GET | `/subtitles/{stream_id}` | Text subtitle, or picture subtitle read by OCR (`ocr: true` on the stream), as WebVTT from the cache; a text track not cached yet is extracted once. 400 `media.subtitle_unsupported` for a picture track without OCR, `media.subtitle_failed` when conversion failed |
 | GET | `/images/{size}/{name}` | TMDB art, cached |
 | GET | `/items/{id}/thumb` | Video frame JPEG from the background thumbnail cache; 404 until made |
 | POST | `/libraries/{id}/thumbnails` | Admin: delete and regenerate a library's thumbnails |
 | POST | `/libraries/{id}/match` | Admin: look up unmatched titles again |
 | GET | `/server/info` | Public: `{name, version, public_url, tls_fingerprint, capabilities}`; apps read `public_url` to stream away from home and `tls_fingerprint` to recognise the same server on the LAN |
 | GET | `/`, `/index.html`, any client route | The web UI page with `__KINEMA_SERVER_NAME__` replaced by the HTML-escaped server name (`backend/src/web.rs`), so tab titles, bookmarks and link previews show it before scripts run |
-| GET | `/server/status` | Admin: dashboard data |
+| GET | `/server/status` | Admin: dashboard data; per library `scanning`, `generating_thumbnails`, `extracting_subtitles` |
 | POST | `/server/cache/{thumbnails\|subtitles\|images}/clear` | Admin: clear a cache |
 | GET | `/items/{id}/match?q=&year=` | Admin: TMDB candidates for a movie or show |
 | POST | `/items/{id}/match` | Admin: `{tmdb_id}`, replace the item's metadata with that result |
-| GET | `/settings` | Admin: `{server, tmdb_configured, ffmpeg_found, options}` |
+| GET | `/settings` | Admin: `{server, tmdb_configured, ffmpeg_found, hardware_encoder, ocr_languages, options}`; `ocr_languages` is null without `tesseract`. `server.subtitle_ocr` turns picture-subtitle OCR on |
 | PUT | `/settings/server` | Admin: save server options (clamped to allowed values) |
 | PUT | `/settings/tmdb` | Admin: `{tmdb_api_key}`, verified before saving |
 
