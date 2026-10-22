@@ -92,6 +92,7 @@ Same contract as the web player (`apps/web/src/features/player/PlayerPage.tsx`):
 7. Stop button (bottom bar): pauses, saves progress and leaves, like the web player's stop.
 8. Swipe gestures: a vertical swipe on the left half sets this window's brightness, on the right half the media volume. Volume goes to 200 %: above 100 % a `LoudnessEnhancer` on the player's audio session adds up to +12 dB (MX Player style). The player gets a fixed audio session id at creation because ExoPlayer leaves it unset. Swipes starting in the top or bottom 8 % are left to the system bars. Brightness goes back to the system level when the player closes; the volume stays.
 9. Background and picture-in-picture: see below.
+10. **Keyboard** (a hardware keyboard on a tablet or Chromebook; `onPreviewKeyEvent` on the player, focus taken on open and again after the track sheet closes): space or `k` play / pause, left / right seek 10 s, `f` or `t` toggle full screen (tablets only; the watch page is the theater view, so web's two toggles share one here). Same keys as the web player; `m`, up / down volume and `s` / `x` stop are not mapped. Ctrl, Alt and Meta combinations are left to the system, and holding a key repeats only the arrows.
 
 ### Playback service, notification and picture-in-picture
 

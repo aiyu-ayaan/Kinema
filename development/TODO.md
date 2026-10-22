@@ -78,7 +78,7 @@ See `docs/roadmap.md` for later milestones.
 - [x] Android + web: Skip intro, Skip credits
 - [ ] Admin UI to set or clear a marker (API only for now)
 - [ ] Credits over lit footage (no black, no shared song) are not found; consider a text-overlay or loudness check
-- [ ] Android tablet keyboard shortcuts (f, t, space) like the web player
+- [x] Android tablet keyboard shortcuts (f, t, space, k, arrows) like the web player; volume / mute / stop keys not mapped
 
 ## Cheaper HEVC playback (2026-10-21)
 Trigger: F1 (1080p HEVC Main 10) transcoded at ~90 % CPU on the Pi 5 because Chrome on Linux has no HEVC decoder.
