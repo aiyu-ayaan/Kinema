@@ -584,7 +584,7 @@ private fun Player(
                     .fillMaxSize()
                     .graphicsLayer {
                         alpha = (1f - dockProgress * 2.2f).coerceIn(0f, 1f)
-                        translationY = dockProgress * 80.dp.toPx()
+                        translationY = dockProgress.coerceAtLeast(0f) * 80.dp.toPx()
                     }
             ) {
                 WatchLayout(detail, onTracks) { modifier ->
@@ -618,13 +618,14 @@ private fun Player(
             val endX = screenWidthPx - miniWidthPx - marginEndPx
             val endY = screenHeightPx - miniHeightPx - marginBottomPx
 
-            val scale = lerp(1f, miniWidthPx / startW, dockProgress)
-            val curX = lerp(startX, endX, dockProgress)
-            val curY = lerp(startY, endY, dockProgress)
+            val progress = dockProgress.coerceIn(0f, 1f)
+            val scale = lerp(1f, miniWidthPx / startW, progress).coerceAtLeast(0.01f)
+            val curX = lerp(startX, endX, progress)
+            val curY = lerp(startY, endY, progress)
             val transX = curX - startX
             val transY = curY - startY
-            val cornerRadius = lerp(0f, with(density) { 16.dp.toPx() } / scale, dockProgress)
-            val elevation = lerp(0f, with(density) { 10.dp.toPx() }, dockProgress)
+            val cornerRadius = lerp(0f, with(density) { 16.dp.toPx() } / scale, progress).coerceAtLeast(0f)
+            val elevation = lerp(0f, with(density) { 10.dp.toPx() }, progress).coerceAtLeast(0f)
 
             Modifier
                 .offset { IntOffset(startX.roundToInt(), startY.roundToInt()) }
@@ -636,7 +637,7 @@ private fun Player(
                     this.translationX = transX
                     this.translationY = transY
                     this.shadowElevation = elevation
-                    this.shape = RoundedCornerShape(cornerRadius.toDp())
+                    this.shape = RoundedCornerShape(cornerRadius.toDp().coerceAtLeast(0.dp))
                     this.clip = true
                 }
         }
@@ -971,15 +972,16 @@ private fun VideoContainer(
     nav: Navigator,
 ) {
     val file = detail.files.first()
-    val isMini = dockProgress > 0.8f
-    val fullAlpha = (1f - dockProgress * 2.5f).coerceIn(0f, 1f)
-    val miniAlpha = ((dockProgress - 0.4f) / 0.6f).coerceIn(0f, 1f)
+    val progress = dockProgress.coerceIn(0f, 1f)
+    val isMini = progress > 0.8f
+    val fullAlpha = (1f - progress * 2.5f).coerceIn(0f, 1f)
+    val miniAlpha = ((progress - 0.4f) / 0.6f).coerceIn(0f, 1f)
 
     Box(
         modifier = modifier
             .background(Color.Black)
             .then(
-                if (isFull || dockProgress < 0.2f) {
+                if (isFull || progress < 0.2f) {
                     Modifier
                         .then(videoGestures)
                         .pointerTaps(onTap = onTap, onDoubleTap = onDoubleTap)
@@ -1001,7 +1003,7 @@ private fun VideoContainer(
             contentScale = if (fill) ContentScale.Crop else ContentScale.Fit,
         )
 
-        Subtitles(cues, time, lifted = showChrome && dockProgress < 0.2f, small = dockProgress > 0.5f)
+        Subtitles(cues, time, lifted = showChrome && progress < 0.2f, small = progress > 0.5f)
 
         // Full player overlays
         if (fullAlpha > 0f) {
