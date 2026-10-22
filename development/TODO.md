@@ -32,9 +32,11 @@
 - [x] Compose app (watch only): connect, trust, profiles, home hero, library, search, title page, settings
 - [x] Media3 player: direct / remux / transcode, audio + subtitle switch, resume, next episode, double-tap seek
 - [x] Predictive back on every page (Navigation 3) and inside the tab host
-- [ ] Picture-in-picture and a media session (lock-screen controls)
-- [ ] Seek inside the buffered part of a remux stream without restarting it
-- [ ] Translations (`values-<lang>/strings.xml`)
+- [x] Picture-in-picture (back / play / forward actions) and a media session (lock-screen controls); not run on a device yet
+- [x] Seek inside the buffered part of a remux stream: decision logic (`StreamSeek`) and player hook, only applies when the player reports the stream seekable
+- [ ] Make the piped fMP4 remux/transcode stream seekable inside the buffer for ExoPlayer (custom SeekMap + back buffer, or sidx/HLS) so the above takes effect; verify on a device
+- [x] Translations scaffolding: strings audited, es / fr / de / hi drafts for 51 core strings (machine quality, needs native review)
+- [ ] Finish and review the translations (Connect, Trust, Settings, Updates, About, watch page, plurals)
 
 ## Desktop app (2026-10-20)
 - [x] Electron scaffold (`apps/desktop`, `@kinema/desktop`) with isolated dev/prod flavors
@@ -77,7 +79,7 @@ See `docs/roadmap.md` for later milestones.
 - [x] Android + web: Skip intro, Skip credits
 - [ ] Admin UI to set or clear a marker (API only for now)
 - [ ] Credits over lit footage (no black, no shared song) are not found; consider a text-overlay or loudness check
-- [ ] Android tablet keyboard shortcuts (f, t, space) like the web player
+- [x] Android tablet keyboard shortcuts (f, t, space, k, arrows) like the web player; volume / mute / stop keys not mapped
 
 ## Cheaper HEVC playback (2026-10-21)
 Trigger: F1 (1080p HEVC Main 10) transcoded at ~90 % CPU on the Pi 5 because Chrome on Linux has no HEVC decoder.

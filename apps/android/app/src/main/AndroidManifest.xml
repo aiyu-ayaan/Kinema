@@ -23,10 +23,11 @@
         android:theme="@style/Theme.Kinema"
         android:usesCleartextTraffic="false">
 
-        <!-- Rotation and picture-in-picture are handled in Compose so the player keeps its stream. -->
+        <!-- Rotation, picture-in-picture and a keyboard being attached (tablet shortcuts) are handled in Compose, so
+             the activity is not recreated and the player keeps its stream. -->
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation"
             android:exported="true"
             android:launchMode="singleTop"
             android:resizeableActivity="true"
