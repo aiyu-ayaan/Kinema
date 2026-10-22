@@ -75,6 +75,8 @@ export interface Stream {
   width: number | null
   height: number | null
   is_default: boolean
+  /** A picture subtitle read by OCR on the server: it has a WebVTT like a text track. */
+  ocr?: boolean
 }
 
 export interface MediaFile {
@@ -177,6 +179,7 @@ export interface ServerOptions {
   transcode_threads: number
   transcode_hardware: boolean
   rescan_hours: number
+  subtitle_ocr: boolean
 }
 
 export interface SettingsView {
@@ -184,6 +187,8 @@ export interface SettingsView {
   tmdb_configured: boolean
   ffmpeg_found: boolean
   hardware_encoder: string | null
+  /** OCR language models when tesseract was found at startup. */
+  ocr_languages: string[] | null
   options: {
     presets: string[]
     max_heights: number[]
@@ -215,6 +220,7 @@ export interface ServerStatus {
     thumbnails: number
     scanning: boolean
     generating_thumbnails: boolean
+    extracting_subtitles: boolean
   }[]
   active_streams: number
   active_transcodes: number

@@ -46,8 +46,8 @@ function channelLabel(ch: number | null): string | null {
 /** "English · AC3 5.1 · Commentary" */
 const TEXT_SUBS = ['subrip', 'srt', 'ass', 'ssa', 'webvtt', 'vtt', 'mov_text', 'text']
 
-/** Text subtitles can be shown in the browser; image ones (PGS, VobSub) cannot. */
-export const isTextSub = (s: Stream) => TEXT_SUBS.includes(s.codec ?? '')
+/** Text subtitles can be shown in the browser; image ones (PGS, VobSub) only once the server read them by OCR. */
+export const isTextSub = (s: Stream) => TEXT_SUBS.includes(s.codec ?? '') || s.ocr === true
 
 export function trackLabel(s: Stream, n: number): string {
   const parts = [
