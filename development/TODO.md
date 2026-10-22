@@ -95,3 +95,16 @@ Trigger: F1 (1080p HEVC Main 10) transcoded at ~90 % CPU on the Pi 5 because Chr
 - [ ] Bundle mpv with the desktop app (Windows `mpv.exe`, Linux AppImage)
 - [ ] Optimized versions: pre-convert files no browser plays, at low priority, cached by fingerprint
 - [ ] LAN transcode helper (offload re-encodes to a machine with a GPU, like rffmpeg)
+
+## Transcode CPU (2026-10-22)
+Trigger: transcode-only viewing took every core while Plex stayed quiet on the same files.
+- [x] Throttle lead 60 s -> 30 s: the full-speed burst after every play or seek is half as long
+- [x] `-threads` per re-encode: setting `transcode_threads`, Auto = cores / `max_transcodes`, at least 4
+- [x] libx264 peak rate by output height (`-maxrate`/`-bufsize`), lookahead 10 for presets slower than veryfast
+- [x] GPU encode: NVENC, Quick Sync, VA-API found by a test encode at startup, settings switch
+- [x] NVENC measured on the i5-10200H laptop (GTX 1650): 13.6 -> 2.2 CPU-seconds per 20 s of 1080p
+- [ ] Measure x264 changes (lead, threads, maxrate) on real files, and everything on the Pi 5
+- [ ] Quick Sync: needs `-init_hw_device qsv` and hw frames; rejected as written on the laptop
+- [ ] VA-API: bundled ffmpeg aborts against the host libva (`vaMapBuffer2`); see the packaging spike
+- [ ] Per-stream fallback to libx264 when the GPU encoder fails after startup
+- [ ] AMF (AMD on Windows)

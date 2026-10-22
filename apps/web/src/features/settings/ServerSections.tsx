@@ -286,6 +286,14 @@ export function TranscoderSection() {
                 ))}
               </Select>
             </SettingRow>
+            <SettingRow
+              label={t('settings.transcoder.hardware')}
+              description={view.hardware_encoder ? t('settings.transcoder.hardwareFound', { name: view.hardware_encoder }) : t('settings.transcoder.hardwareNone')}
+            >
+              {view.hardware_encoder && (
+                <Switch checked={s.transcode_hardware} onChange={(v) => set({ transcode_hardware: v })} label={t('settings.transcoder.hardware')} />
+              )}
+            </SettingRow>
             <SettingRow label={t('settings.transcoder.threads')} description={t('settings.transcoder.threadsHint')} htmlFor="threads">
               <Select id="threads" value={s.transcode_threads} onChange={(e) => set({ transcode_threads: Number(e.target.value) })}>
                 {view.options.threads.map((n) => (

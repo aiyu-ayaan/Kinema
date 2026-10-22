@@ -84,6 +84,30 @@ pub fn has_v4l2_hevc_decoder() -> bool {
     }
 }
 
+/// GPU render nodes (`/dev/dri/renderD128`, ...), the devices VA-API encodes on. Linux only:
+/// Windows reaches the GPU through NVENC and Quick Sync without a device path.
+pub fn render_nodes() -> Vec<PathBuf> {
+    #[cfg(target_os = "linux")]
+    {
+        let mut nodes: Vec<PathBuf> = std::fs::read_dir("/dev/dri")
+            .into_iter()
+            .flatten()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| {
+                p.file_name()
+                    .is_some_and(|n| n.to_string_lossy().starts_with("renderD"))
+            })
+            .collect();
+        nodes.sort();
+        nodes
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        Vec::new()
+    }
+}
+
 /// Kernel and runtime pseudo-filesystems: never media, and walking them can hang
 /// (`/proc` has self-referencing links and files that block on read).
 pub fn is_virtual_fs(path: &Path) -> bool {

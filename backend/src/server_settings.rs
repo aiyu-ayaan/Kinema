@@ -36,6 +36,8 @@ pub struct ServerSettings {
     pub transcode_max_height: u32,
     /// Threads per conversion; 0 shares the cores between `max_transcodes`.
     pub transcode_threads: u32,
+    /// Encode on the GPU when ffmpeg found one at startup.
+    pub transcode_hardware: bool,
     /// Periodic full rescan for drives without filesystem events (network shares). 0 = off.
     pub rescan_hours: u32,
 }
@@ -57,6 +59,7 @@ impl Default for ServerSettings {
             transcode_crf: 22,
             transcode_max_height: 1080,
             transcode_threads: 0,
+            transcode_hardware: true,
             rescan_hours: 0,
         }
     }

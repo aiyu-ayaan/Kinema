@@ -1,5 +1,8 @@
 use crate::error::MediaError;
+use crate::playback::HwEncoder;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Default)]
 pub struct MediaBinaries {
@@ -9,6 +12,9 @@ pub struct MediaBinaries {
     /// HEVC re-encodes only. It may be another build than `ffmpeg`: the bundled static ffmpeg has
     /// no V4L2 request support, the distribution's Raspberry Pi build does.
     pub hevc_drm: Option<PathBuf>,
+    /// The first GPU encoder `ffmpeg` could use in a test encode; re-encodes fall back to libx264
+    /// without one.
+    pub hw_encoder: Option<HwEncoder>,
 }
 
 impl MediaBinaries {
@@ -22,11 +28,13 @@ impl MediaBinaries {
         let ffmpeg = Self::resolve_binary("ffmpeg", "KINEMA_FFMPEG")?;
         let ffprobe = Self::resolve_binary("ffprobe", "KINEMA_FFPROBE")?;
         let hevc_drm = find_hevc_drm(&ffmpeg);
+        let hw_encoder = find_hw_encoder(&ffmpeg);
 
         Ok(Self {
             ffmpeg,
             ffprobe,
             hevc_drm,
+            hw_encoder,
         })
     }
 
@@ -108,6 +116,57 @@ fn lists_drm(help: &str) -> bool {
     help.lines()
         .filter_map(|l| l.trim().strip_prefix("Supported hardware devices:"))
         .any(|devices| devices.split_whitespace().any(|d| d == "drm"))
+}
+
+/// An encoder listed by `ffmpeg -encoders` can still lack its driver, GPU or runtime, so each
+/// candidate encodes a few frames of black with the exact arguments a stream would use.
+/// shortcut: tested once at startup, so a GPU that fails later (driver reset, session limit) fails the
+/// stream instead of falling back; retry with libx264 per stream if that shows up.
+fn find_hw_encoder(ffmpeg: &Path) -> Option<HwEncoder> {
+    [HwEncoder::Nvenc, HwEncoder::Qsv]
+        .into_iter()
+        .chain(
+            kinema_core::platform::render_nodes()
+                .into_iter()
+                .map(HwEncoder::Vaapi),
+        )
+        .find(|e| test_encode(ffmpeg, e))
+}
+
+fn test_encode(ffmpeg: &Path, encoder: &HwEncoder) -> bool {
+    let child = Command::new(ffmpeg)
+        .args(["-hide_banner", "-loglevel", "error"])
+        .args(encoder.device_args())
+        .args([
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black:s=320x180:r=25:d=0.2",
+            "-vf",
+        ])
+        .arg(format!("scale=-2:180{}", encoder.upload()))
+        .args(encoder.codec_args(23, 2_000))
+        .args(["-f", "null", "-"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
+    let Ok(mut child) = child else {
+        return false;
+    };
+    // A wedged driver must not hold up startup.
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => return status.success(),
+            Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(50)),
+            _ => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return false;
+            }
+        }
+    }
 }
 
 fn which(name: &str) -> Result<PathBuf, ()> {

@@ -73,7 +73,22 @@ sequenceDiagram
 
 ## 4. Transcode
 
-- Hardware first: VAAPI (Intel/AMD), NVENC, QSV, VideoToolbox, detected at startup by test-encoding a short clip.
+- Hardware first: at startup `MediaBinaries::resolve` tries NVENC, then Quick Sync, then VA-API on each render node (`kinema_core::platform::render_nodes`, Linux only) by encoding 0.2 s of black with the exact arguments a stream uses (`playback::HwEncoder`), 10 s timeout each. The first that succeeds is `MediaBinaries::hw_encoder`; the log names it and the Transcoder settings page shows it, with a switch (`transcode_hardware`, on by default). Only the encode moves to the GPU: decoding, scaling and the audio stay on the CPU, and a Raspberry Pi HEVC re-encode through `hevc_drm` keeps libx264, since that ffmpeg build was not the one tested. Quality maps onto each encoder's own constant-quality knob: NVENC `-cq` (with the same peak rate as x264), Quick Sync `-global_quality`, VA-API `-qp`. Measured 2026-10-22 on the i5-10200H laptop with BtbN's ffmpeg 8.1 and a 20 s synthetic 1080p clip: libx264 veryfast with 4 threads 13.6 CPU-seconds, NVENC (GTX 1650) 2.2, output valid H.264 Main yuv420p. Quick Sync (rejected: rate control and format unsupported by the QSV runtime without an explicit `-init_hw_device`) and VA-API (the bundled ffmpeg aborts in libva, `vaMapBuffer2` missing from the host libva) failed their test encode on the same machine and are skipped, which is the fallback working; both are untested on a working setup. Shortcut: a GPU that fails after startup (driver reset, NVENC session limit) fails the stream instead of falling back to x264.
+
+```mermaid
+flowchart LR
+  Start[server start] --> N{NVENC test encode}
+  N -- ok --> HW[hw_encoder]
+  N -- fails --> Q{Quick Sync}
+  Q -- ok --> HW
+  Q -- fails --> V{VA-API, each /dev/dri/renderD*}
+  V -- ok --> HW
+  V -- none --> X[libx264]
+  HW --> Re{re-encode}
+  X --> Re
+  Re -- "setting on, no Pi drm decode" --> GPU[scale on CPU, encode on GPU]
+  Re -- otherwise --> CPU[libx264, -threads share]
+```
 - Software fallback: `libx264` with the admin's preset, CRF and max height (Transcoder settings). Threads: see the Threads entry below.
 - Output: HLS, 4 s segments, started at the requested position (`-ss` before `-i`).
 - Session limits: default 2 concurrent. A third request gets HTTP 503 with a retry hint.

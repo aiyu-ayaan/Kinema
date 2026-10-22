@@ -32,6 +32,8 @@ struct SettingsView {
     server: ServerSettings,
     tmdb_configured: bool,
     ffmpeg_found: bool,
+    /// The GPU encoder found at startup, e.g. "NVENC".
+    hardware_encoder: Option<&'static str>,
     options: Options,
 }
 
@@ -40,6 +42,11 @@ async fn view(state: &AppState) -> Json<SettingsView> {
         server: state.settings(),
         tmdb_configured: scan::tmdb_key(state).await.is_some(),
         ffmpeg_found: state.bins.is_some(),
+        hardware_encoder: state
+            .bins
+            .as_ref()
+            .and_then(|b| b.hw_encoder.as_ref())
+            .map(|e| e.name()),
         options: Options {
             presets: server_settings::PRESETS,
             max_heights: server_settings::MAX_HEIGHTS,

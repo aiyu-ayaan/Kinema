@@ -25,7 +25,7 @@
 ## M4: Remux and transcode
 - Capability negotiation, playback decision.
 - HLS remux, audio transcode, software video transcode.
-- Hardware encoder detection (VAAPI, NVENC, QSV).
+- Hardware encoder detection (VAAPI, NVENC, QSV). Done 2026-10-22 for the progressive MP4 stream.
 - WebVTT subtitles, track selection. Extracted at scan time; track switch is client-side with no reload.
 - Seek reuses live HLS segments; session restart only outside the cut range.
 - Optional OCR of PGS/VobSub to WebVTT at scan time (avoids burn-in restarts).

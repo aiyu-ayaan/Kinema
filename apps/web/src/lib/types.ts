@@ -175,6 +175,7 @@ export interface ServerOptions {
   transcode_crf: number
   transcode_max_height: number
   transcode_threads: number
+  transcode_hardware: boolean
   rescan_hours: number
 }
 
@@ -182,6 +183,7 @@ export interface SettingsView {
   server: ServerOptions
   tmdb_configured: boolean
   ffmpeg_found: boolean
+  hardware_encoder: string | null
   options: {
     presets: string[]
     max_heights: number[]

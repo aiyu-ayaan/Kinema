@@ -1,7 +1,7 @@
 //! Direct play first, remux (copy) second, re-encode last.
 
 use crate::MediaBinaries;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
@@ -176,6 +176,86 @@ pub struct Encode<'a> {
     pub max_height: u32,
     /// Decoder and encoder threads; 0 lets ffmpeg take every core.
     pub threads: u32,
+    /// Encode on the GPU when the server found one ([MediaBinaries::hw_encoder]).
+    pub hardware: bool,
+}
+
+/// A GPU H.264 encoder that passed a test encode at startup. It moves the encode, the costliest part
+/// of a re-encode, off the CPU; decoding and scaling stay there.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HwEncoder {
+    /// NVIDIA.
+    Nvenc,
+    /// Intel Quick Sync.
+    Qsv,
+    /// VA-API on a Linux render node: Intel and AMD.
+    Vaapi(PathBuf),
+}
+
+impl HwEncoder {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Nvenc => "NVENC",
+            Self::Qsv => "Quick Sync",
+            Self::Vaapi(_) => "VA-API",
+        }
+    }
+
+    /// Before `-i`.
+    pub fn device_args(&self) -> Vec<&std::ffi::OsStr> {
+        match self {
+            Self::Vaapi(device) => vec!["-vaapi_device".as_ref(), device.as_os_str()],
+            _ => Vec::new(),
+        }
+    }
+
+    /// Appended to the scale filter: frames in the layout and memory the encoder takes.
+    pub fn upload(&self) -> &'static str {
+        match self {
+            Self::Nvenc => ",format=yuv420p",
+            Self::Qsv => ",format=nv12",
+            Self::Vaapi(_) => ",format=nv12,hwupload",
+        }
+    }
+
+    /// The encoder at a CRF-like quality; each takes the same 16-30 scale closely enough.
+    pub fn codec_args(&self, crf: u32, kbps: u32) -> Vec<String> {
+        let crf = crf.to_string();
+        let args: &[&str] = match self {
+            Self::Nvenc => &[
+                "-c:v",
+                "h264_nvenc",
+                "-preset",
+                "p4",
+                "-rc",
+                "vbr",
+                "-b:v",
+                "0",
+                "-cq",
+                &crf,
+            ],
+            Self::Qsv => &[
+                "-c:v",
+                "h264_qsv",
+                "-preset",
+                "veryfast",
+                "-global_quality",
+                &crf,
+            ],
+            Self::Vaapi(_) => &["-c:v", "h264_vaapi", "-rc_mode", "CQP", "-qp", &crf],
+        };
+        let mut args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+        // QSV's ICQ and VA-API's CQP modes do not take a peak rate.
+        if *self == Self::Nvenc {
+            args.extend([
+                "-maxrate".into(),
+                format!("{kbps}k"),
+                "-bufsize".into(),
+                format!("{}k", kbps * 2),
+            ]);
+        }
+        args
+    }
 }
 
 /// Peak video bitrate in kbit/s for an output height (0 = source, counted as 4K). CRF alone lets a
@@ -265,6 +345,11 @@ pub fn stream_command(
         .hevc_drm
         .as_ref()
         .filter(|_| reencode && video.is_some_and(|v| v.codec == Some("hevc")));
+    // The Raspberry Pi's decoding ffmpeg is another build than the one the encoder was tested with.
+    let hw_encode = bins
+        .hw_encoder
+        .as_ref()
+        .filter(|_| reencode && encode.hardware && hw_decode.is_none());
     let mut cmd = Command::new(hw_decode.unwrap_or(&bins.ffmpeg));
     kinema_core::platform::configure_playback_process(cmd.as_std_mut());
     cmd.args(["-hide_banner", "-loglevel", "error", "-nostdin"]);
@@ -289,6 +374,9 @@ pub fn stream_command(
     if let Some(n) = &threads {
         cmd.args(["-threads", n]);
     }
+    if let Some(e) = hw_encode {
+        cmd.args(e.device_args());
+    }
     cmd.arg("-i").arg(path);
     if let Some(v) = video {
         cmd.arg("-map").arg(format!("0:{}", v.index));
@@ -305,21 +393,27 @@ pub fn stream_command(
                 "scale=-2:ih".to_string()
             };
             let kbps = max_kbps(encode.max_height);
-            cmd.args(["-c:v", "libx264", "-preset", encode.preset, "-crf"])
-                .arg(encode.crf.to_string())
-                .arg("-maxrate")
-                .arg(format!("{kbps}k"))
-                .arg("-bufsize")
-                .arg(format!("{}k", kbps * 2))
-                .args(["-pix_fmt", "yuv420p", "-vf"])
-                .arg(scale);
-            // Slower presets look 20-40 frames ahead; a live stream gains little from more than
-            // veryfast's 10, and each lookahead frame is analysed on top of the encode.
-            if !matches!(encode.preset, "ultrafast" | "superfast" | "veryfast") {
-                cmd.args(["-rc-lookahead", "10"]);
-            }
-            if let Some(n) = &threads {
-                cmd.args(["-threads", n]);
+            if let Some(e) = hw_encode {
+                cmd.args(e.codec_args(encode.crf, kbps))
+                    .arg("-vf")
+                    .arg(format!("{scale}{}", e.upload()));
+            } else {
+                cmd.args(["-c:v", "libx264", "-preset", encode.preset, "-crf"])
+                    .arg(encode.crf.to_string())
+                    .arg("-maxrate")
+                    .arg(format!("{kbps}k"))
+                    .arg("-bufsize")
+                    .arg(format!("{}k", kbps * 2))
+                    .args(["-pix_fmt", "yuv420p", "-vf"])
+                    .arg(scale);
+                // Slower presets look 20-40 frames ahead; a live stream gains little from more than
+                // veryfast's 10, and each lookahead frame is analysed on top of the encode.
+                if !matches!(encode.preset, "ultrafast" | "superfast" | "veryfast") {
+                    cmd.args(["-rc-lookahead", "10"]);
+                }
+                if let Some(n) = &threads {
+                    cmd.args(["-threads", n]);
+                }
             }
         }
     }
@@ -396,12 +490,14 @@ mod tests {
             ffmpeg: "ffmpeg".into(),
             ffprobe: "ffprobe".into(),
             hevc_drm: None,
+            hw_encoder: None,
         };
         let encode = Encode {
             preset: "veryfast",
             crf: 23,
             max_height: 0,
             threads: 0,
+            hardware: true,
         };
         let has_flag = |start: f64, copy_video: bool| {
             let cmd = stream_command(
@@ -427,12 +523,14 @@ mod tests {
             ffmpeg: "ffmpeg".into(),
             ffprobe: "ffprobe".into(),
             hevc_drm: Some("/usr/bin/ffmpeg".into()),
+            hw_encoder: None,
         };
         let encode = Encode {
             preset: "veryfast",
             crf: 23,
             max_height: 0,
             threads: 0,
+            hardware: true,
         };
         let hevc = Track {
             codec: Some("hevc"),
@@ -467,12 +565,14 @@ mod tests {
             ffmpeg: "ffmpeg".into(),
             ffprobe: "ffprobe".into(),
             hevc_drm: None,
+            hw_encoder: None,
         };
         let encode = Encode {
             preset: "veryfast",
             crf: 23,
             max_height: 0,
             threads: 3,
+            hardware: true,
         };
         let count = |copy_video: bool| {
             let cmd = stream_command(
@@ -493,6 +593,47 @@ mod tests {
         assert_eq!(max_kbps(0), 20_000);
         assert_eq!(transcode_threads(5, 2), 5);
         assert!(transcode_threads(0, 8) >= 4);
+    }
+
+    #[test]
+    fn gpu_encoder_replaces_x264_when_enabled() {
+        let bins = MediaBinaries {
+            ffmpeg: "ffmpeg".into(),
+            ffprobe: "ffprobe".into(),
+            hevc_drm: None,
+            hw_encoder: Some(HwEncoder::Vaapi("/dev/dri/renderD128".into())),
+        };
+        let args = |hardware: bool| {
+            let encode = Encode {
+                preset: "veryfast",
+                crf: 23,
+                max_height: 1080,
+                threads: 0,
+                hardware,
+            };
+            let cmd = stream_command(
+                &bins,
+                Path::new("a.mkv"),
+                0.0,
+                Some(H264),
+                Some(AAC),
+                false,
+                true,
+                encode,
+            );
+            cmd.as_std()
+                .get_args()
+                .map(|a| a.to_string_lossy().into_owned())
+                .collect::<Vec<_>>()
+        };
+        let gpu = args(true);
+        let device = gpu.iter().position(|a| a == "-vaapi_device").unwrap();
+        assert!(device < gpu.iter().position(|a| a == "-i").unwrap());
+        assert!(gpu.contains(&"h264_vaapi".to_string()));
+        assert!(gpu.iter().any(|a| a.ends_with(",format=nv12,hwupload")));
+        let cpu = args(false);
+        assert!(cpu.contains(&"libx264".to_string()));
+        assert!(!cpu.contains(&"-vaapi_device".to_string()));
     }
 
     #[test]

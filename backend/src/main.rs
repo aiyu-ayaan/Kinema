@@ -71,6 +71,10 @@ async fn main() -> anyhow::Result<()> {
                     hw.display()
                 );
             }
+            match &b.hw_encoder {
+                Some(e) => info!("Hardware encoder for transcodes: {}", e.name()),
+                None => info!("No hardware encoder found; transcodes encode with libx264"),
+            }
             Some(Arc::new(b))
         }
         Err(e) => {

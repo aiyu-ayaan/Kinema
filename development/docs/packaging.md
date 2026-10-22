@@ -52,7 +52,7 @@ Windows: `Kinema.exe`, `ffmpeg.exe`, `ffprobe.exe`, `web\`, `licenses\` in one f
 | Windows | NVENC, QSV, AMF (AMD) |
 | Docker | pass devices: `--device /dev/dri` for VAAPI/QSV, `--gpus all` (NVIDIA toolkit) for NVENC |
 
-Host GPU drivers cannot be bundled. Software x264 is always the fallback.
+Host GPU drivers cannot be bundled. Software x264 is always the fallback. Detection and the encoder arguments: `media-pipeline.md` § 4. AMF (AMD on Windows) is not tried yet; AMD on Linux goes through VA-API.
 
 **Raspberry Pi 5 (HEVC decode only).** The Pi 5 has a hardware HEVC decoder (`rpi-hevc-dec`, V4L2 stateless) and no video encoder. The bundled static ffmpeg cannot use it; Raspberry Pi OS's own `ffmpeg` package can, through `-hwaccel drm`. At startup the resolver checks for the kernel decoder (`kinema_core::platform::has_v4l2_hevc_decoder`) and then asks the bundled ffmpeg, then the one on PATH, whether `ffmpeg -h decoder=hevc` lists `drm`. The first that does becomes `MediaBinaries::hevc_drm` and runs HEVC re-encodes only; everything else keeps the bundled build. On a Pi: `sudo apt install ffmpeg` and restart Kinema; the log says `HEVC hardware decode for transcodes: /usr/bin/ffmpeg (drm)`. Measured on F1 (1080p HEVC Main 10): 47.9 to 31.7 CPU-seconds per 20 s of video, 1.4x to 1.8x real time. Spike in M6: confirm the pinned static ffmpeg can load host VAAPI libraries on common distros. If it cannot, the AppImage switches to a dynamically linked glibc ffmpeg build, which changes nothing else.
 

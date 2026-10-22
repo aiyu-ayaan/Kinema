@@ -266,6 +266,7 @@ async fn stream(
                 settings.transcode_threads,
                 settings.max_transcodes,
             ),
+            hardware: settings.transcode_hardware,
         },
     )
     .spawn()?;
