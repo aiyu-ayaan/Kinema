@@ -99,6 +99,18 @@ Planned (automatic):
 - AppImage: embedded zsync info, `appimageupdatetool` (delta downloads instead of the whole file).
 - All signed: release assets carry SHA-256 sums and a minisign signature.
 
+## mpv in the desktop app
+
+The desktop app (Electron, `apps/desktop`) bundles mpv for **Play in mpv** (`media-pipeline.md` § 3). mpv is GPL (this build) or LGPL and runs as a separate process, never linked, so Kinema's license is unaffected.
+
+- **Pins:** `scripts/mpv.lock` holds the version and, per platform (`windows-x64`, `linux-x86_64`, `linux-aarch64`), the URL, SHA-256 and archive format (`7z` for Windows, `appimage` for Linux).
+- **Fetch:** `scripts/fetch-mpv.mjs` runs first in `build:prod`, `build:dev` and `build:win` of `@kinema/desktop`. It downloads over HTTPS, checks the SHA-256 (a mismatch fails the build), extracts into `apps/desktop/build/mpv/` (git-ignored) and writes `NOTICE-mpv.txt` (license, source link, exact build). Windows archives are extracted with `7zip-bin` (an electron-builder dependency). The Linux AppImage is extracted with `--appimage-extract` on the build machine, so each architecture builds natively, and a small `mpv` wrapper starts its `AppRun`.
+- **Bundle:** electron-builder `extraResources` copies that folder to `resources/mpv/` in the AppImage, the .deb and the Windows install.
+- **Resolution** (`apps/desktop/src/mpv.js`, `findMpv`): `KINEMA_MPV`, then `$APPDIR/usr/bin/mpv` (AppImage) and `resources/mpv/mpv[.exe]`, plus `mpv.exe` next to the app on Windows, then `PATH`. mpv starts without `APPDIR`/`APPIMAGE`/`ARGV0`/`OWD` so its own AppRun is not confused by the app's.
+- **Missing mpv:** the page hides Play in mpv. If a play still fails (binary gone, crash at start), the page shows the message from `apps/desktop/src/locales/en.json` and a **Play in the app instead** button that opens the in-page player at the same position.
+- **Pinning or bumping:** `node scripts/fetch-mpv.mjs --pin <platform> <url>` downloads, prints the SHA-256 and writes it to the lock; compare it with the publisher's checksum before committing. `KINEMA_SKIP_MPV=1` builds without mpv. A platform with no pin is skipped with a warning (the app then uses mpv from `PATH`).
+- **Status:** the lock is **not pinned yet**. The candidate builds (zhongfly/mpv-winbuild for Windows, pkgforge-dev/mpv-AppImage for Linux) could not be reached when this was written, and no hash was invented. Until it is pinned, installers ship without mpv. The AppRun wrapper and the nested layout are untested with a real mpv build.
+
 ## Build and CI
 
 ```
@@ -138,5 +150,6 @@ flowchart TB
 ## Open items
 
 - Spike: static ffmpeg loading host VAAPI libraries.
+- Pin mpv in `scripts/mpv.lock` (see mpv in the desktop app) and try the bundled copy by hand on Linux and Windows.
 - Code signing for Windows (Authenticode) and the signing key for releases.
 - macOS target, after the three above ship.
