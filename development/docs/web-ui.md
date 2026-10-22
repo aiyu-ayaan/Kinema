@@ -47,9 +47,13 @@ Matches the target reference screen:
 - Poster cards: 2:3 art, title, year or `S1 · E5`, watched check, partial-progress bar.
 - Dark theme default, light theme optional.
 
+## Playlists, collections and shelves
+
+`/playlists` lists a profile's playlists and the shared ones and creates new ones; `/playlists/{id}` plays, reorders, removes, renames, shares and deletes (owner) or just plays (others). `/collections/{id}` is a poster grid of a franchise. Home gets genre shelves (each with Hide, and a "Hidden shelves" line to bring them back), a Collections row and a Playlists row. The item page action row has Add to playlist (playable items), and for admins Add to collection, Edit details (text fields plus a lock toggle per field) and Fix match. Settings, Libraries has a per-library "Folder scan mode" dialog (poll or watch, interval) and Settings, Home shelves manages the shelves. Code: `features/playlists/`, `features/item/EditMetadata.tsx`, `features/settings/{LibraryFolders,ShelvesSection}.tsx`.
+
 ## Watch page
 
-`/play/{id}` is a YouTube-style watch page (`features/player/PlayerPage.tsx`, `WatchPanels.tsx`): the video across the window with the title, links and story under it, and the up-next list beside it from 1024 px (under it below that). The list is the season's episodes with pinned season chips, or more titles from the library for a movie. `t` toggles theater mode (video across the full width, details and list under it, kept per browser), `f` full screen. Skip intro, Skip credits and the Up next card follow the markers (media-pipeline.md §7).
+`/play/{id}` is a YouTube-style watch page (`features/player/PlayerPage.tsx`, `WatchPanels.tsx`): the video across the window with the title, links and story under it, and the up-next list beside it from 1024 px (under it below that). The list is the season's episodes with pinned season chips, or more titles from the library for a movie. `t` toggles theater mode (video across the full width, details and list under it, kept per browser), `f` full screen. Skip intro, Skip credits and the Up next card follow the markers (media-pipeline.md §7). Hovering or dragging on the seek bar shows a scrub preview (`ScrubPreview.tsx`, `useScrubTiles.ts`, `lib/scrub.ts`): the frame at that time cut from the server's sprite sheets (`/items/{id}/timeline.vtt`, media-pipeline.md §5), with the time. The first request makes the server build the sheets, so the preview appears later (the player asks again every 15 s, up to 40 times); until then, or for a file that cannot have them, the bubble is the time alone. Admins get a flag button in the controls that opens the Skip markers panel (`MarkerEditor.tsx`): per marker (intro, credits) the current range and where it came from, start and end fields (type `1:23` or press Now to take the playback time), Save (`PUT /items/{id}/markers/{kind}`, kept over detection) and Clear (`DELETE`, the server looks again). The panel acts on the file the player opened (`files[0]`).
 
 ## Data flow
 
@@ -68,6 +72,15 @@ Query keys follow `['libraries']`, `['items', libraryId, filters]`, `['home']`. 
 ## MVP screens
 
 Sign-in / first-run setup, Home, Library grid, Item (movie, show, season, episode), Search, Settings (admin: libraries, folder picker, TMDB key), Settings › Updates (`/settings/updates`) and Settings › About Kinema (`/settings/about`: version, developer, link to `/settings/about/acknowledgements`, the credits in `src/lib/credits.ts`), Player (route-split chunk). Strings live in `src/locales/en.json` and go through `t()` in `src/lib/i18n.ts`. UI kit mirrors Domus: `components/ui/{Button,Field,Card,Modal}`.
+
+## Profiles and sharing screens (2026-10-22)
+
+- Picker: profiles that open with one tap from this device go straight in; a profile without a lock seen from outside the home network is dimmed with "Home network only" (server flags `opens_without_lock`, `home_only`).
+- `/profile` (`features/profiles/ProfilePage.tsx`, from the avatar pill in the top bar): the profile's own track languages and Export or import.
+- Settings › Profiles: the editor has Household rules (content limit, unrated titles, Skip the PIN at home) and Languages; each row has Export or import (admin options: include / restore PIN and password).
+- Title page (admin): Share (expiry, label; the link is shown once) and Rating (manual certification).
+- Settings › Share links: every link with state and Revoke.
+- `/s/{token}` (`features/shares/SharePage.tsx`, lazy): public, rendered before the auth check; title, seasons / episodes of the target, native `<video>` with WebVTT tracks through `/api/share/{token}/...`.
 
 ## Flavors
 

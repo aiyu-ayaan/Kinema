@@ -228,6 +228,16 @@ export function LanguagesSection() {
           <SettingRow label={t('settings.languages.subtitle')} description={t('settings.languages.subtitleHint')} htmlFor="sub-lang">
             <TrackLanguage id="sub-lang" value={s.preferred_subtitle_language} onChange={(v) => set({ preferred_subtitle_language: v })} codes={view.options.track_languages} />
           </SettingRow>
+          <SettingRow
+            label={t('settings.languages.ocr')}
+            description={
+              view.ocr_languages
+                ? t('settings.languages.ocrFound', { languages: view.ocr_languages.join(', ') })
+                : t('settings.languages.ocrNone')
+            }
+          >
+            {view.ocr_languages && <Switch checked={s.subtitle_ocr} onChange={(v) => set({ subtitle_ocr: v })} label={t('settings.languages.ocr')} />}
+          </SettingRow>
         </>
       )}
     </ServerForm>

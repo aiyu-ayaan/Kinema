@@ -4,6 +4,7 @@ export const storageKeys = {
   token: isDev ? 'kinema.dev.token' : 'kinema.token',
   theme: isDev ? 'kinema.dev.theme' : 'kinema.theme',
   theater: isDev ? 'kinema.dev.theater' : 'kinema.theater',
+  playlist: isDev ? 'kinema.dev.playlist' : 'kinema.playlist',
 }
 
 export function initializeFlavor(): void {

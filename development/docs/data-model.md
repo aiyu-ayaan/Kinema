@@ -26,6 +26,8 @@ CREATE TABLE libraries (
 CREATE TABLE library_roots (
   library_id INTEGER NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,
   path TEXT NOT NULL,
+  poll INTEGER NOT NULL DEFAULT 0,               -- 1: list the folder on a timer instead of watching it (migration 20261022500002)
+  poll_interval_min INTEGER NOT NULL DEFAULT 5,  -- 1..1440
   PRIMARY KEY (library_id, path)
 );
 
@@ -47,6 +49,9 @@ CREATE TABLE items (
   tvmaze_id INTEGER,               -- shows matched on TVmaze when TMDB had no key or no match
   poster TEXT,                     -- image cache key
   backdrop TEXT,
+  locked_fields TEXT NOT NULL DEFAULT '',  -- comma separated: title,year,summary,rating,poster,backdrop,genres (migration 20261022500001)
+  content_rating TEXT,             -- certification; '' = looked up, unrated (migration 20261022300001)
+  content_rating_manual INTEGER NOT NULL DEFAULT 0,  -- set by an admin, TMDB never replaces it
   added_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -75,8 +80,18 @@ CREATE TABLE markers (
   kind TEXT NOT NULL CHECK (kind IN ('intro','credits')),
   start_s REAL NOT NULL,
   end_s REAL NOT NULL,
-  source TEXT NOT NULL,            -- chapter|audio|black|manual; detection never replaces manual
+  source TEXT NOT NULL,            -- chapter|audio|black|text|manual; detection never replaces manual (migration 20261022400001 re-queues files without credits once for `text`)
   PRIMARY KEY (file_id, kind)
+);
+
+-- Keyframes of a file's first video stream (media-pipeline.md 6a), migration 20261022100001.
+-- Valid while fingerprint matches files.fingerprint; a stale row is rebuilt by the keyframe job.
+CREATE TABLE keyframe_index (
+  file_id INTEGER PRIMARY KEY REFERENCES files(id) ON DELETE CASCADE,
+  fingerprint TEXT NOT NULL,
+  source TEXT NOT NULL,            -- cues|stss|packets|none (none: no cheap source, not retried)
+  has_b_frames INTEGER NOT NULL DEFAULT 0,
+  times BLOB NOT NULL              -- little-endian u32 milliseconds, ascending (14 KB for 2 h at 2 s GOPs)
 );
 
 CREATE TABLE streams (
@@ -89,7 +104,11 @@ CREATE TABLE streams (
   channels INTEGER,
   width INTEGER,
   height INTEGER,
-  is_default INTEGER NOT NULL DEFAULT 0
+  is_default INTEGER NOT NULL DEFAULT 0,
+  title TEXT, profile TEXT,
+  external_path TEXT,              -- sidecar subtitle file, NULL for embedded
+  external_fingerprint TEXT,       -- sidecar "size-mtime"; a change re-syncs sidecars without a probe
+  ocr INTEGER NOT NULL DEFAULT 0   -- picture subtitle read by OCR into the WebVTT cache
 );
 
 CREATE TABLE genres (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE);
@@ -134,6 +153,22 @@ CREATE TABLE playlist_items (
   PRIMARY KEY (playlist_id, position)
 );
 
+-- Franchise groups (migration 20261022500003). tmdb_id is set for groups TMDB reported, NULL for manual ones.
+CREATE TABLE collections (id INTEGER PRIMARY KEY, name TEXT NOT NULL, tmdb_id INTEGER UNIQUE, created_at INTEGER NOT NULL);
+CREATE TABLE collection_items (
+  collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+  item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  PRIMARY KEY (collection_id, item_id)
+);
+
+-- Home shelves: titled genre queries. Admin defines them, a profile hides any for itself.
+CREATE TABLE shelves (id INTEGER PRIMARY KEY, title TEXT NOT NULL, genre TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL);
+CREATE TABLE shelf_hidden (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  shelf_id INTEGER NOT NULL REFERENCES shelves(id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, shelf_id)
+);
+
 CREATE TABLE user_library_access (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   library_id INTEGER NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,
@@ -142,20 +177,34 @@ CREATE TABLE user_library_access (
 
 CREATE TABLE share_links (
   id INTEGER PRIMARY KEY,
-  token_hash TEXT NOT NULL UNIQUE,
-  created_by INTEGER NOT NULL REFERENCES users(id),
-  target_kind TEXT NOT NULL,       -- item|playlist|library
+  token_hash TEXT NOT NULL UNIQUE, -- SHA-256 of the secret verifier
+  created_by INTEGER NOT NULL REFERENCES users(id),  -- trigger deletes links with the user
+  target_kind TEXT NOT NULL,       -- 'item' (movie/show/season/episode/video)
   target_id INTEGER NOT NULL,
   expires_at INTEGER,
-  max_uses INTEGER,
-  uses INTEGER NOT NULL DEFAULT 0
+  max_uses INTEGER,                -- unused for now
+  uses INTEGER NOT NULL DEFAULT 0, -- unused for now
+  selector TEXT UNIQUE,            -- public half of the token (migration 20261022300001)
+  created_at INTEGER NOT NULL DEFAULT 0,
+  revoked_at INTEGER,
+  label TEXT
 );
 
 CREATE TABLE sessions (
   id TEXT PRIMARY KEY,             -- random 256-bit, stored hashed
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   created_at INTEGER NOT NULL,
-  expires_at INTEGER NOT NULL
+  expires_at INTEGER NOT NULL,
+  lan_only INTEGER NOT NULL DEFAULT 0  -- opened without a lock at home: LAN only
+);
+
+-- Per-profile languages, content limit and LAN unlock (migration 20261022300001).
+CREATE TABLE profile_prefs (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  audio_language TEXT, subtitle_language TEXT, subtitle_mode TEXT,  -- NULL follows the server
+  max_rating INTEGER,              -- minimum-age scale 0..18, NULL = no limit
+  allow_unrated INTEGER NOT NULL DEFAULT 0,
+  lan_unlock INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE jobs (

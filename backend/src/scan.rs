@@ -3,10 +3,10 @@
 
 use crate::state::AppState;
 use kinema_db::items::{self, Meta, NewItem, NewStream};
-use kinema_db::{libraries, settings};
+use kinema_db::{collections, libraries, settings};
 use kinema_meta::TmdbClient;
 use kinema_meta::tvmaze::{self, TvmazeClient};
-use kinema_scanner::{FoundFile, parse};
+use kinema_scanner::{FoundFile, MediaWalk, Sidecar, parse};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -19,14 +19,17 @@ pub fn is_scanning(state: &AppState, library_id: i64) -> bool {
 }
 
 /// Starts a scan, or asks the running one to go again when it finishes.
-/// Thumbnails and skip markers for whatever the scan found follow in their own background jobs.
+/// Keyframe indexes, thumbnails, subtitles and skip markers for whatever the scan found follow in their own
+/// background jobs.
 pub fn spawn_scan(state: AppState, library_id: i64) {
     let jobs = state.scans.clone();
     jobs.spawn(library_id, move || {
         let state = state.clone();
         async move {
             scan(&state, library_id).await?;
+            crate::keyframes::spawn(state.clone(), library_id);
             crate::thumbs::spawn(state.clone(), library_id);
+            crate::subtitles::spawn(state.clone(), library_id);
             crate::markers::spawn(state, library_id);
             Ok(())
         }
@@ -97,6 +100,22 @@ pub fn watch(state: &AppState, library_id: i64, roots: &[String]) {
     }
 }
 
+/// Starts the watcher for the folders of a library that are not polled (see `poll_roots`).
+/// With none left the watcher is dropped.
+pub fn watch_lib(state: &AppState, lib: &libraries::Library) {
+    let roots: Vec<String> = lib
+        .root_options
+        .iter()
+        .filter(|o| !o.poll)
+        .map(|o| o.path.clone())
+        .collect();
+    if roots.is_empty() {
+        unwatch(state, lib.id);
+    } else {
+        watch(state, lib.id, &roots);
+    }
+}
+
 /// Applies the watch setting to every library.
 pub async fn rewatch_all(state: &AppState) {
     if let Ok(mut watchers) = state.watchers.lock() {
@@ -104,8 +123,79 @@ pub async fn rewatch_all(state: &AppState) {
     }
     if let Ok(libs) = libraries::list(&state.db).await {
         for lib in libs {
-            watch(state, lib.id, &lib.roots);
+            watch_lib(state, &lib);
         }
+    }
+}
+
+/// How often the poller wakes to see which polled folders are due.
+const POLL_TICK: Duration = Duration::from_secs(30);
+
+/// A folder is polled again once `interval_min` minutes passed since its last poll; one never
+/// polled is due at once (its first snapshot is the baseline).
+fn poll_due(since_last: Option<Duration>, interval_min: i64) -> bool {
+    let wait = Duration::from_secs(
+        interval_min.clamp(libraries::POLL_MIN, libraries::POLL_MAX) as u64 * 60,
+    );
+    since_last.is_none_or(|d| d >= wait)
+}
+
+/// Polls folders marked "poll" (network shares that send no filesystem events). A poll lists
+/// directories and compares them with the last snapshot; only a difference triggers a scan.
+/// One folder at a time, so even many shares cost little.
+pub async fn poll_roots(state: AppState) {
+    use kinema_scanner::poll;
+    let mut last: HashMap<(i64, String), (std::time::Instant, poll::Snapshot)> = HashMap::new();
+    loop {
+        let libs = libraries::list(&state.db).await.unwrap_or_default();
+        let polled: HashSet<(i64, String)> = libs
+            .iter()
+            .flat_map(|l| {
+                l.root_options
+                    .iter()
+                    .filter(|o| o.poll)
+                    .map(|o| (l.id, o.path.clone()))
+            })
+            .collect();
+        last.retain(|k, _| polled.contains(k));
+        for lib in &libs {
+            for o in lib.root_options.iter().filter(|o| o.poll) {
+                let key = (lib.id, o.path.clone());
+                let since = last.get(&key).map(|(at, _)| at.elapsed());
+                if !poll_due(since, o.poll_interval_min) {
+                    continue;
+                }
+                let root = PathBuf::from(&o.path);
+                let snap =
+                    tokio::task::spawn_blocking(move || poll::snapshot(&root, poll::MAX_ENTRIES))
+                        .await;
+                let Ok(snap) = snap else { continue };
+                if !snap.reachable {
+                    // Not mounted right now: keep the old baseline, retry next interval.
+                    if let Some((at, _)) = last.get_mut(&key) {
+                        *at = std::time::Instant::now();
+                    }
+                    continue;
+                }
+                if snap.truncated {
+                    warn!(
+                        "library {}: {} has more than {} entries; only the first are polled",
+                        lib.name,
+                        o.path,
+                        poll::MAX_ENTRIES
+                    );
+                }
+                let changed = last
+                    .get(&key)
+                    .is_some_and(|(_, old)| !poll::diff(old, &snap).is_empty());
+                last.insert(key, (std::time::Instant::now(), snap));
+                if changed {
+                    info!("library {}: {} changed, scanning", lib.name, o.path);
+                    spawn_scan(state.clone(), lib.id);
+                }
+            }
+        }
+        tokio::time::sleep(POLL_TICK).await;
     }
 }
 
@@ -137,23 +227,35 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
         })
         .collect();
     let walk_roots = roots.clone();
-    let found: Vec<(PathBuf, FoundFile)> = tokio::task::spawn_blocking(move || {
-        walk_roots
-            .iter()
-            .flat_map(|root| {
-                kinema_scanner::walk_videos(root)
-                    .into_iter()
-                    .map(|f| (root.clone(), f))
-            })
-            .collect()
-    })
-    .await?;
+    let (found, subtitle_files): (Vec<(PathBuf, FoundFile)>, Vec<FoundFile>) =
+        tokio::task::spawn_blocking(move || {
+            let mut found = Vec::new();
+            let mut subs = Vec::new();
+            for root in &walk_roots {
+                let MediaWalk { videos, subtitles } = kinema_scanner::walk_media(root);
+                found.extend(videos.into_iter().map(|f| (root.clone(), f)));
+                subs.extend(subtitles);
+            }
+            (found, subs)
+        })
+        .await?;
+    let subs_by_dir = kinema_scanner::subtitles_by_dir(&subtitle_files);
+    let sidecars_of = |video: &Path| {
+        let in_dir = video
+            .parent()
+            .and_then(|d| subs_by_dir.get(d))
+            .map(Vec::as_slice)
+            .unwrap_or_default();
+        kinema_scanner::sidecars_for(video, in_dir)
+    };
+    let stored_sidecars = items::library_sidecars(&state.db, library_id).await?;
 
     let series_dirs = numbered_series_dirs(&found);
     let mut seen = HashSet::new();
     let mut to_probe = Vec::new();
     let mut added = 0usize;
     let mut moved = 0usize;
+    let mut resubbed = 0usize;
     for (root, f) in &found {
         let path = f.path.to_string_lossy().into_owned();
         seen.insert(path.clone());
@@ -161,8 +263,21 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
         let fingerprint = format!("{}-{}", f.size, f.mtime);
         match items::file_by_path(&state.db, &path).await? {
             Some(existing) if existing.size == f.size as i64 && existing.mtime == f.mtime => {
+                let sidecars = sidecars_of(&f.path);
                 if existing.probe_status == "pending" {
-                    to_probe.push((existing.id, f.path.clone()));
+                    to_probe.push((existing.id, f.path.clone(), sidecars));
+                } else if existing.probe_status == "ok" {
+                    // A subtitle added, edited or removed next to an unchanged video:
+                    // update its sidecar streams without probing the video again.
+                    let stored = stored_sidecars
+                        .get(&existing.id)
+                        .map(Vec::as_slice)
+                        .unwrap_or_default();
+                    if sidecars_changed(stored, &sidecars) {
+                        items::replace_sidecars(&state.db, existing.id, &sidecar_streams(sidecars))
+                            .await?;
+                        resubbed += 1;
+                    }
                 }
                 // Filed as a movie by an older parser: move it under its show.
                 if let (Some(ep), Some(item_id)) = (
@@ -178,7 +293,7 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
             Some(existing) => {
                 items::reset_file(&state.db, existing.id, f.size as i64, f.mtime, &fingerprint)
                     .await?;
-                to_probe.push((existing.id, f.path.clone()));
+                to_probe.push((existing.id, f.path.clone(), sidecars_of(&f.path)));
             }
             None => {
                 let item_id =
@@ -192,7 +307,7 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
                     &fingerprint,
                 )
                 .await?;
-                to_probe.push((id, f.path.clone()));
+                to_probe.push((id, f.path.clone(), sidecars_of(&f.path)));
                 added += 1;
             }
         }
@@ -210,7 +325,8 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
         items::delete_files(&state.db, &gone).await?;
     }
     info!(
-        "library {} scanned: {} files, {added} new, {moved} regrouped, {} removed, {} to probe",
+        "library {} scanned: {} files, {added} new, {moved} regrouped, {} removed, {} to probe, \
+         {resubbed} with changed subtitle files",
         lib.name,
         found.len(),
         if roots_ok { gone.len() } else { 0 },
@@ -350,12 +466,41 @@ async fn create_item(
     Ok(id)
 }
 
-async fn probe_all(state: &AppState, files: Vec<(i64, PathBuf)>) {
+/// Did the sidecar subtitles of a video change since they were stored?
+fn sidecars_changed(stored: &[(String, Option<String>)], found: &[Sidecar]) -> bool {
+    stored.len() != found.len()
+        || stored.iter().zip(found).any(|((path, fp), sc)| {
+            *path != sc.path.to_string_lossy() || fp.as_deref() != Some(sc.fingerprint.as_str())
+        })
+}
+
+/// Sidecars as subtitle streams, indexed after any embedded stream.
+fn sidecar_streams(sidecars: Vec<Sidecar>) -> Vec<NewStream> {
+    sidecars
+        .into_iter()
+        .enumerate()
+        .map(|(n, sc)| NewStream {
+            idx: 10_000 + n as i64,
+            kind: "subtitle".into(),
+            codec: sc
+                .path
+                .extension()
+                .map(|e| e.to_string_lossy().to_lowercase()),
+            language: sc.language,
+            title: sc.title,
+            external_path: Some(sc.path.to_string_lossy().into_owned()),
+            external_fingerprint: Some(sc.fingerprint),
+            ..Default::default()
+        })
+        .collect()
+}
+
+async fn probe_all(state: &AppState, files: Vec<(i64, PathBuf, Vec<Sidecar>)>) {
     let Some(bins) = state.bins.clone() else {
         return;
     };
     let mut set = JoinSet::new();
-    for (id, path) in files {
+    for (id, path, sidecars) in files {
         let state = state.clone();
         let bins = bins.clone();
         set.spawn(async move {
@@ -378,31 +523,10 @@ async fn probe_all(state: &AppState, files: Vec<(i64, PathBuf)>) {
                             width: s.width,
                             height: s.height,
                             is_default: s.is_default,
-                            external_path: None,
+                            ..Default::default()
                         })
                         .collect();
-                    let sidecars = {
-                        let path = path.clone();
-                        tokio::task::spawn_blocking(move || {
-                            kinema_scanner::sidecar_subtitles(&path)
-                        })
-                        .await
-                        .unwrap_or_default()
-                    };
-                    for (n, sc) in sidecars.into_iter().enumerate() {
-                        streams.push(NewStream {
-                            idx: 10_000 + n as i64,
-                            kind: "subtitle".into(),
-                            codec: sc
-                                .path
-                                .extension()
-                                .map(|e| e.to_string_lossy().to_lowercase()),
-                            language: sc.language,
-                            title: sc.title,
-                            external_path: Some(sc.path.to_string_lossy().into_owned()),
-                            ..Default::default()
-                        });
-                    }
+                    streams.extend(sidecar_streams(sidecars));
                     items::save_probe(
                         &state.db,
                         id,
@@ -464,6 +588,7 @@ async fn fetch_metadata(state: &AppState, library_id: i64) -> anyhow::Result<()>
         };
         match found {
             Ok(Some(d)) => {
+                let collection = d.collection.clone();
                 let meta = Meta {
                     tmdb_id: Some(d.tmdb_id),
                     title: Some(d.title).filter(|t| !t.is_empty()),
@@ -478,6 +603,10 @@ async fn fetch_metadata(state: &AppState, library_id: i64) -> anyhow::Result<()>
                     ..Default::default()
                 };
                 items::save_meta(db, target.id, &meta).await?;
+                if let Some((collection_id, name)) = collection {
+                    collections::assign_tmdb(db, target.id, collection_id, &name).await?;
+                }
+                items::set_content_rating(db, target.id, d.certification.as_deref()).await?;
             }
             Ok(None) if is_show => match tvmaze_show(&tvmaze, &target).await {
                 Ok(Some(show)) => {
@@ -508,6 +637,17 @@ async fn fetch_metadata(state: &AppState, library_id: i64) -> anyhow::Result<()>
     }
 
     if let Some(tmdb) = &tmdb {
+        // Titles matched before certifications were stored: look each up once (bounded per
+        // scan so a big library catches up over a few scans, not in one burst).
+        for (id, kind, tmdb_id) in items::needing_content_rating(db, library_id, 200).await? {
+            match tmdb.by_id(&kind, tmdb_id).await {
+                Ok(d) => items::set_content_rating(db, id, d.certification.as_deref()).await?,
+                Err(e) => {
+                    warn!("tmdb certification {kind}/{tmdb_id}: {e}");
+                    break;
+                }
+            }
+        }
         for (show_id, tmdb_id) in items::shows_with_bare_episodes(db, library_id).await? {
             for (season_id, season_no) in items::numbered_children(db, show_id).await? {
                 let season = match tmdb.season(tmdb_id, season_no).await {
@@ -604,4 +744,57 @@ async fn save_season(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn polled_folders_are_due_after_their_interval() {
+        assert!(poll_due(None, 5));
+        assert!(!poll_due(Some(Duration::from_secs(299)), 5));
+        assert!(poll_due(Some(Duration::from_secs(300)), 5));
+        // Out-of-range intervals are clamped, never a busy loop or a never-polled folder.
+        assert!(!poll_due(Some(Duration::from_secs(30)), 0));
+        assert!(poll_due(Some(Duration::from_secs(60)), 0));
+        assert!(!poll_due(Some(Duration::from_secs(86_399)), 1_000_000));
+    }
+
+    fn sc(path: &str, fp: &str) -> Sidecar {
+        Sidecar {
+            path: PathBuf::from(path),
+            language: None,
+            title: None,
+            fingerprint: fp.into(),
+        }
+    }
+
+    #[test]
+    fn sidecar_changes() {
+        let stored = vec![("/m/A.en.srt".to_string(), Some("1-2".to_string()))];
+        assert!(!sidecars_changed(&stored, &[sc("/m/A.en.srt", "1-2")]));
+        // Edited, added, removed, and stored before fingerprints existed.
+        assert!(sidecars_changed(&stored, &[sc("/m/A.en.srt", "3-4")]));
+        assert!(sidecars_changed(
+            &stored,
+            &[sc("/m/A.en.srt", "1-2"), sc("/m/A.fr.srt", "1-2")]
+        ));
+        assert!(sidecars_changed(&stored, &[]));
+        assert!(sidecars_changed(
+            &[("/m/A.en.srt".to_string(), None)],
+            &[sc("/m/A.en.srt", "1-2")]
+        ));
+        assert!(!sidecars_changed(&[], &[]));
+    }
+
+    #[test]
+    fn sidecar_streams_carry_their_version() {
+        let s = sidecar_streams(vec![sc("/m/A.en.SRT", "1-2"), sc("/m/A.fr.ass", "3-4")]);
+        assert_eq!(s[0].idx, 10_000);
+        assert_eq!(s[1].idx, 10_001);
+        assert_eq!(s[0].codec.as_deref(), Some("srt"));
+        assert_eq!(s[1].external_fingerprint.as_deref(), Some("3-4"));
+        assert_eq!(s[1].kind, "subtitle");
+    }
 }

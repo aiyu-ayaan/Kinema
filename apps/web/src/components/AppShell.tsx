@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowCircleUp, GearSix, HardDrives, House, List, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
+import { ArrowCircleUp, GearSix, HardDrives, House, List, ListBullets, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
 import { Avatar } from './ui/Avatar'
 import { SettingsNav } from '@/features/settings/SettingsNav'
 import { UpdatePrompt } from './UpdatePrompt'
@@ -119,6 +119,7 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3">
       <NavItem to="/" end icon={House} label={t('nav.home')} onClick={onNavigate} />
+      <NavItem to="/playlists" icon={ListBullets} label={t('nav.playlists')} onClick={onNavigate} />
       {libraries && libraries.length > 0 && (
         <p className="mt-4 px-3 pb-1 text-caption font-semibold uppercase tracking-wider text-subtle">{t('nav.libraries')}</p>
       )}
@@ -174,10 +175,15 @@ function UserMenu() {
         title={t(dark ? 'theme.light' : 'theme.dark')}
         icon={dark ? <Sun size={18} /> : <Moon size={18} />}
       />
-      <span className="hidden h-8 items-center gap-2 rounded-full border border-border bg-raised ps-1 pe-3 text-label font-medium sm:flex">
+      <Link
+        to="/profile"
+        title={t('profile.open')}
+        className="flex h-8 items-center gap-2 rounded-full border border-border bg-raised ps-1 pe-1 text-label font-medium hover:border-border-strong sm:pe-3"
+      >
         {user && <Avatar name={user.name} color={user.avatar} size={24} />}
-        {user?.name}
-      </span>
+        <span className="hidden sm:inline">{user?.name}</span>
+        <span className="sr-only sm:hidden">{t('profile.open')}</span>
+      </Link>
       {/* Signing out returns to the profile picker, which is how profiles switch. */}
       <Button variant="ghost" onClick={signOut} aria-label={t('auth.switchProfile')} title={t('auth.switchProfile')} icon={<UserSwitch size={18} />} />
       {typeof window !== 'undefined' && (window.kinema?.chooseServer || window.desktop?.chooseServer) && (

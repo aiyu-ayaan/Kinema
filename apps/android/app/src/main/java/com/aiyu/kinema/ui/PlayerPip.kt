@@ -29,6 +29,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import com.aiyu.kinema.R
+import com.aiyu.kinema.playback.Playback
 import kotlin.math.roundToInt
 
 fun Context.findActivity(): ComponentActivity? {
@@ -41,6 +42,9 @@ fun Context.findActivity(): ComponentActivity? {
 }
 
 private const val ACTION_TOGGLE = "com.aiyu.kinema.PIP_TOGGLE"
+private const val ACTION_BACK = "com.aiyu.kinema.PIP_BACK"
+private const val ACTION_FORWARD = "com.aiyu.kinema.PIP_FORWARD"
+private const val SKIP_S = 10.0
 
 /** Android refuses picture-in-picture shapes wider than 2.39:1 or taller than 1:2.39. */
 private fun pipAspect(width: Float, height: Int): Rational {
@@ -48,19 +52,39 @@ private fun pipAspect(width: Float, height: Int): Rational {
     return Rational((ratio * 10_000).roundToInt(), 10_000)
 }
 
+private fun pipAction(activity: ComponentActivity, code: Int, action: String, icon: Int, label: Int): RemoteAction {
+    val text = activity.getString(label)
+    val intent = PendingIntent.getBroadcast(
+        activity, code, Intent(action).setPackage(activity.packageName),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
+    return RemoteAction(Icon.createWithResource(activity, icon), text, text, intent)
+}
+
+/** Back 10 s, play/pause, forward 10 s; only play/pause when the system allows a single button. */
+private fun pipParams(activity: ComponentActivity, playing: Boolean, aspect: Rational, autoEnter: Boolean?): PictureInPictureParams {
+    val toggle = pipAction(
+        activity, 1, ACTION_TOGGLE,
+        if (playing) R.drawable.ic_pip_pause else R.drawable.ic_pip_play,
+        if (playing) R.string.player_pause else R.string.action_play,
+    )
+    val actions = if (activity.maxNumPictureInPictureActions >= 3) {
+        listOf(
+            pipAction(activity, 0, ACTION_BACK, R.drawable.ic_pip_back, R.string.player_back10),
+            toggle,
+            pipAction(activity, 2, ACTION_FORWARD, R.drawable.ic_pip_forward, R.string.player_forward10),
+        )
+    } else listOf(toggle)
+    return PictureInPictureParams.Builder()
+        .setAspectRatio(aspect)
+        .setActions(actions)
+        .apply { if (autoEnter != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setAutoEnterEnabled(autoEnter) }
+        .build()
+}
+
 fun enterPip(activity: ComponentActivity, playing: Boolean, aspect: Rational = Rational(16, 9)) {
     if (activity.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
-        val toggleLabel = activity.getString(if (playing) R.string.player_pause else R.string.action_play)
-        val toggle = PendingIntent.getBroadcast(
-            activity, 0, Intent(ACTION_TOGGLE).setPackage(activity.packageName),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-        val icon = Icon.createWithResource(activity, if (playing) R.drawable.ic_pip_pause else R.drawable.ic_pip_play)
-        val params = PictureInPictureParams.Builder()
-            .setAspectRatio(aspect)
-            .setActions(listOf(RemoteAction(icon, toggleLabel, toggleLabel, toggle)))
-            .build()
-        runCatching { activity.enterPictureInPictureMode(params) }
+        runCatching { activity.enterPictureInPictureMode(pipParams(activity, playing, aspect, null)) }
     }
 }
 
@@ -77,19 +101,7 @@ fun rememberPictureInPicture(player: Player, enabled: Boolean, playing: Boolean)
     val canEnter by rememberUpdatedState(supported && enabled)
     val isPlaying by rememberUpdatedState(playing)
 
-    fun params(): PictureInPictureParams {
-        val toggleLabel = activity.getString(if (isPlaying) R.string.player_pause else R.string.action_play)
-        val toggle = PendingIntent.getBroadcast(
-            activity, 0, Intent(ACTION_TOGGLE).setPackage(activity.packageName),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-        val icon = Icon.createWithResource(activity, if (isPlaying) R.drawable.ic_pip_pause else R.drawable.ic_pip_play)
-        return PictureInPictureParams.Builder()
-            .setAspectRatio(aspect)
-            .setActions(listOf(RemoteAction(icon, toggleLabel, toggleLabel, toggle)))
-            .apply { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setAutoEnterEnabled(canEnter && isPlaying) }
-            .build()
-    }
+    fun params() = pipParams(activity, isPlaying, aspect, canEnter && isPlaying)
 
     // Keeps the window's shape and its play/pause button current, and arms auto-enter on Android 12+.
     LaunchedEffect(supported, enabled, playing, aspect) {
@@ -113,13 +125,20 @@ fun rememberPictureInPicture(player: Player, enabled: Boolean, playing: Boolean)
         }
         val toggle = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                if (player.isPlaying) player.pause() else player.play()
+                // Seeks go through the screen's logic: a remux or transcode stream may have to restart.
+                val controls = Playback.controls
+                when (intent.action) {
+                    ACTION_BACK -> controls?.seekBy?.invoke(-SKIP_S)
+                    ACTION_FORWARD -> controls?.seekBy?.invoke(SKIP_S)
+                    else -> if (player.isPlaying) player.pause() else player.play()
+                }
             }
         }
         player.addListener(sizes)
         activity.addOnPictureInPictureModeChangedListener(modes)
         activity.addOnUserLeaveHintListener(leaving)
-        ContextCompat.registerReceiver(activity, toggle, IntentFilter(ACTION_TOGGLE), ContextCompat.RECEIVER_NOT_EXPORTED)
+        val filter = IntentFilter().apply { addAction(ACTION_TOGGLE); addAction(ACTION_BACK); addAction(ACTION_FORWARD) }
+        ContextCompat.registerReceiver(activity, toggle, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         onDispose {
             player.removeListener(sizes)
             activity.removeOnPictureInPictureModeChangedListener(modes)

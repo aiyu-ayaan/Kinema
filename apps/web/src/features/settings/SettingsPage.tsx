@@ -6,7 +6,9 @@ import { LibrariesSection } from './LibrariesSection'
 import { GeneralSection, LanguagesSection, LibrarySection, MetadataSection, ScheduledSection, TranscoderSection } from './ServerSections'
 import { settingsGroups, type SectionPath } from './sections'
 import { DashboardSection, NetworkSection, TroubleshootingSection } from './StatusSections'
+import { ShelvesSection } from './ShelvesSection'
 import { UsersSection } from './UsersSection'
+import { SharesSection } from '@/features/shares/SharesSection'
 
 const elements: Record<SectionPath, JSX.Element> = {
   dashboard: <DashboardSection />,
@@ -18,7 +20,9 @@ const elements: Record<SectionPath, JSX.Element> = {
   network: <NetworkSection />,
   scheduled: <ScheduledSection />,
   libraries: <LibrariesSection />,
+  shelves: <ShelvesSection />,
   users: <UsersSection />,
+  shares: <SharesSection />,
   troubleshooting: <TroubleshootingSection />,
   updates: <UpdatesSection />,
   about: <AboutSection />,

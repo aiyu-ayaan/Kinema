@@ -84,7 +84,7 @@ stateDiagram-v2
 Same contract as the web player (`apps/web/src/features/player/PlayerPage.tsx`):
 
 1. `GET /files/{id}/plan` with `hevc` / `av1` from `MediaCodecList` decoders.
-2. `direct`: stream the file with Range from 0 and seek locally. `remux` / `transcode`: stream from the requested time; `plan.start` is where the output really begins, so the title time is `start + player position`. Seeks outside the stream restart it.
+2. `direct`: stream the file with Range from 0 and seek locally. `remux` / `transcode`: stream from the requested time; `plan.start` is where the output really begins, so the title time is `start + player position`. A seek inside the part the stream already buffered jumps locally and leaves the server's ffmpeg running (`StreamSeek.bufferedTargetMs`, tested in `StreamSeekTest`); outside it, or while a stream loads, the stream restarts. ExoPlayer maps every seek in a stream it reports as unseekable to t=0, and the piped fragmented MP4 (`empty_moov`, no `sidx`) is such a stream, so the local jump only applies when the player says the stream is seekable (`isCurrentMediaItemSeekable`); otherwise it restarts as before. Not yet confirmed on a device.
 3. Text subtitles come as WebVTT from `/subtitles/{id}` and are drawn over the video at the title time; picture subtitles are listed but disabled.
 4. Progress every 10 s and on leaving; watched at 92 %; the end opens the next episode. **Skip intro** shows while a detected intro plays (media-pipeline.md §7). The **Up next** card (next episode's still, a countdown shade, Play now, hide) slides in from the credits start, or for the last 60 s without credits; a movie shows **Skip credits** instead.
 5. Phones: landscape, immersive, screen kept on while open; restored on close. Only the last player to close restores the window, because "next episode" opens the new player before the old one leaves.
@@ -92,6 +92,7 @@ Same contract as the web player (`apps/web/src/features/player/PlayerPage.tsx`):
 7. Stop button (bottom bar): pauses, saves progress and leaves, like the web player's stop.
 8. Swipe gestures: a vertical swipe on the left half sets this window's brightness, on the right half the media volume. Volume goes to 200 %: above 100 % a `LoudnessEnhancer` on the player's audio session adds up to +12 dB (MX Player style). The player gets a fixed audio session id at creation because ExoPlayer leaves it unset. Swipes starting in the top or bottom 8 % are left to the system bars. Brightness goes back to the system level when the player closes; the volume stays.
 9. Background and picture-in-picture: see below.
+10. **Keyboard** (a hardware keyboard on a tablet or Chromebook; `onPreviewKeyEvent` on the player, focus taken on open and again after the track sheet closes): space or `k` play / pause, left / right seek 10 s, `f` or `t` toggle full screen (tablets only; the watch page is the theater view, so web's two toggles share one here). Same keys as the web player; `m`, up / down volume and `s` / `x` stop are not mapped. Ctrl, Alt and Meta combinations are left to the system, and holding a key repeats only the arrows.
 
 ### Playback service, notification and picture-in-picture
 
@@ -104,13 +105,14 @@ flowchart LR
   Session --> Sys[Lock screen · Bluetooth · headset]
   Notif -->|custom commands| Hand
   Hand -->|Controls.seekBy / next / stop| Screen
-  Screen --> PiP[Picture-in-picture<br/>auto-enter on leave · play/pause action]
+  Screen --> PiP[Picture-in-picture<br/>auto-enter on leave · -10 s · play/pause · +10 s]
+  PiP -->|broadcast actions| Hand
 ```
 
 - The player screen creates the ExoPlayer (audio focus, pause on headphones unplugged) and hands it to `Playback` (`playback/PlaybackService.kt`), which starts `PlaybackService`. The service wraps it in a `PlaybackSessionPlayer` (overriding timeline, duration, position, and seek) for `MediaSession`; Media3 then runs the service in the foreground (`mediaPlayback` type) while something plays and posts the system media notification with full seekbar support, real stream duration, and position syncing across direct play, remux, and transcode. Its buttons are Media3 `CommandButton`s: back and forward 10 s in the compact view, next episode and stop when expanded.
 - The next episode's screen attaches before the previous one detaches; `detach` ignores a player that is no longer current, and the service swaps the session's player (`MediaSession.setPlayer`).
 - The notification and lock screen show the title, poster, and interactive scrubbable seekbar.
-- Picture-in-picture (Settings › Playback, on by default): leaving the app while a video plays shrinks it into a window (auto-enter on Android 12+, `onUserLeaveHint` before). Users can also enter PiP directly via the dedicated PiP button on the player top bar or by swiping down from the upper area of the video. The window shows video and subtitles with a play/pause action. Closing the window pauses playback. With the setting off, leaving the app keeps the sound playing with the notification and seekbar.
+- Picture-in-picture (Settings › Playback, on by default): leaving the app while a video plays shrinks it into a window (auto-enter on Android 12+, `onUserLeaveHint` before). Users can also enter PiP directly via the dedicated PiP button on the player top bar or by swiping down from the upper area of the video. The window shows video and subtitles with back 10 s, play/pause and forward 10 s actions (only play/pause where the system allows one action); the skips go through the screen's seek logic like the notification's. The activity declares `keyboard|navigation` in `configChanges` so attaching a tablet keyboard does not recreate it and restart the stream. Closing the window pauses playback. With the setting off, leaving the app keeps the sound playing with the notification and seekbar.
 - Swiping the app away from recents pauses and stops the service.
 - Known limit: Compose does not recompose while the activity is stopped, so "next episode" or the end of an episode pressed from the notification with the app fully in the background (not in picture-in-picture) takes effect when the app comes back. Stop pauses right away.
 
@@ -150,8 +152,11 @@ Update downloads the APK into the cache with a plain OkHttp client (the app's ow
 
 Every user-facing string is in `app/src/main/res/values/strings.xml` (English). A translation is a `values-<lang>/strings.xml`.
 
+Audit (2026-10-22): no user-facing literal is left in the Kotlin code. What remains is deliberate: animation `label`s (debug names), the example address placeholder `192.168.1.10:3000`, proper nouns and library names in the About screens, `error("No repository")`-style programmer errors, and the messages the server sends (`ApiException`, shown as received; the server's own i18n is separate). The two update HTTP errors moved to `update_github_status` and `update_download_status`.
+
+Translations: `values-es`, `values-fr`, `values-de`, `values-hi`, each with the same 51 strings (actions, errors, tabs, sign-in, search, title actions, player controls and messages, appearance and playback settings). **Machine-quality drafts, needs review by a native speaker** (Hindi most of all) before any release counts on them. Everything not translated (plurals, Connect, Trust, Settings › Connection, Updates, About, watch page) falls back to English; `tools:ignore="MissingTranslation"` on the default file keeps lint quiet about that until a language is complete. To add a language: copy a `values-<lang>/strings.xml`, keep the `name`s and the `%1$s` placeholders, use typographic apostrophes (`’`) so nothing needs escaping, and add plurals with the language's own categories.
+
 ## Shortcuts
 
-- shortcut: no picture-in-picture or background audio session; add a `MediaSessionService` when lock-screen controls are wanted.
-- shortcut: remux/transcode seeks always restart the stream, even inside the buffer.
+- shortcut: remux/transcode seeks still restart the stream in practice, because ExoPlayer sees the piped fragmented MP4 as unseekable. Fix: a custom `SeekMap` (seekable inside the buffer, with the duration from the plan, plus a back buffer in `DefaultLoadControl`), or a `sidx`/HLS output from the server.
 - shortcut: no offline downloads.

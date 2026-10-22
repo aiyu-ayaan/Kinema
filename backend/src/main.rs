@@ -11,16 +11,23 @@ use tower_http::services::ServeDir;
 use tracing::{info, warn};
 
 mod access;
+#[cfg(test)]
+mod access_tests;
 mod auth;
 mod discovery;
 mod error;
+mod hls;
 mod i18n;
 mod jobs;
+mod keyframes;
 mod markers;
+mod net;
 mod routes;
 mod scan;
 mod server_settings;
+mod sprites;
 mod state;
+mod subtitles;
 mod thumbs;
 mod tls;
 mod web;
@@ -46,6 +53,11 @@ async fn main() -> anyhow::Result<()> {
     let listener = bind(&config.server.host, config.server.port)?;
     config.server.port = listener.local_addr()?.port();
     let config = Arc::new(config);
+    for proxy in &config.network.trusted_proxies {
+        if net::Cidr::parse(proxy).is_none() {
+            warn!("Ignoring network.trusted_proxies entry {proxy:?}: not an IP address or CIDR");
+        }
+    }
 
     // Ensure data directory exists
     std::fs::create_dir_all(&config.data_dir).context("Failed to create data directory")?;
@@ -83,6 +95,16 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
+    let ocr = kinema_media::ocr::OcrTool::detect().map(Arc::new);
+    match &ocr {
+        Some(t) => info!(
+            "Subtitle OCR: {} ({})",
+            t.tesseract.display(),
+            t.languages.join(", ")
+        ),
+        None => info!("tesseract not found; picture subtitles (PGS, VobSub) cannot be read"),
+    }
+
     let rustls = if config.tls.enabled {
         Some(tls::load(&config).await?)
     } else {
@@ -98,6 +120,10 @@ async fn main() -> anyhow::Result<()> {
         scans: jobs::Jobs::new("scan"),
         thumb_jobs: jobs::Jobs::new("thumbnails"),
         marker_jobs: jobs::Jobs::new("skip markers"),
+        subtitle_jobs: jobs::Jobs::new("subtitles"),
+        ocr,
+        keyframe_jobs: jobs::Jobs::new("keyframe index"),
+        hls: hls::HlsSessions::default(),
         watchers: Arc::new(Mutex::new(HashMap::new())),
         changes,
         probe_slots: Arc::new(Semaphore::new(2)),
@@ -112,12 +138,15 @@ async fn main() -> anyhow::Result<()> {
             .and_then(|(_, fp)| fp.as_deref().map(Arc::from)),
     };
 
+    hls::purge(&state);
     // Watch every library and catch up on changes made while the server was off.
     tokio::spawn(scan::debounce_changes(state.clone(), changes_rx));
     tokio::spawn(scan::scheduled_rescans(state.clone()));
     tokio::spawn(discovery::run(state.clone()));
+    // Polled folders: the first snapshot is the baseline, taken as the startup scans below begin.
+    tokio::spawn(scan::poll_roots(state.clone()));
     for lib in kinema_db::libraries::list(&state.db).await? {
-        scan::watch(&state, lib.id, &lib.roots);
+        scan::watch_lib(&state, &lib);
         scan::spawn_scan(state.clone(), lib.id);
     }
 
@@ -169,15 +198,17 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let addr = listener.local_addr()?;
+    // The peer address decides LAN-only profiles (net.rs).
+    let service = app.into_make_service_with_connect_info::<std::net::SocketAddr>();
     if let Some((rustls, _)) = rustls {
         info!("Kinema server listening on https://{}", addr);
         axum_server::from_tcp_rustls(listener, rustls)
-            .serve(app.into_make_service())
+            .serve(service)
             .await?;
     } else {
         warn!("TLS is off: traffic is unencrypted. Only do this behind a TLS-terminating proxy.");
         info!("Kinema server listening on http://{}", addr);
-        axum::serve(tokio::net::TcpListener::from_std(listener)?, app).await?;
+        axum::serve(tokio::net::TcpListener::from_std(listener)?, service).await?;
     }
 
     Ok(())

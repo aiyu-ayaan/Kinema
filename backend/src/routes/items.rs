@@ -1,7 +1,9 @@
 use crate::access;
 use crate::auth::{AdminUser, AuthUser};
 use crate::error::{ApiError, ApiResult};
+use crate::routes::collections::{self, CollectionSummary, GenreShelf};
 use crate::routes::libraries::{LibraryView, view};
+use crate::routes::playlists::{self, PlaylistSummary};
 use crate::state::AppState;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
@@ -21,6 +23,7 @@ pub fn router() -> Router<AppState> {
         .route("/items/:id/watched", put(watched))
         .route("/items/:id/tracks", put(set_tracks))
         .route("/items/:id/track-choice", put(set_track_choice))
+        .route("/items/:id/content-rating", put(set_content_rating))
         .route(
             "/items/:id/markers/:kind",
             put(set_marker).delete(clear_marker),
@@ -38,13 +41,18 @@ struct Shelf {
 struct Home {
     continue_watching: Vec<ItemCard>,
     shelves: Vec<Shelf>,
+    /// The profile's own playlists and shared ones.
+    playlists: Vec<PlaylistSummary>,
+    collections: Vec<CollectionSummary>,
+    /// Admin-defined genre rows ("Oh, The Horror!") the profile has not hidden.
+    genre_shelves: Vec<GenreShelf>,
 }
 
 async fn home(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiResult<Json<Home>> {
-    let visible = access::visible(&state, &user).await?;
+    let policy = access::policy(&state, &user).await?;
     let mut shelves = Vec::new();
     for lib in libraries::list(&state.db).await? {
-        if !access::allows(&visible, lib.id) {
+        if !policy.allows_library(lib.id) {
             continue;
         }
         let movies = lib.item_count > lib.show_count;
@@ -58,7 +66,8 @@ async fn home(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiRes
             if !on {
                 continue;
             }
-            let items = items::recently_added(&state.db, user.id, lib.id, kind, 24).await?;
+            let mut items = items::recently_added(&state.db, user.id, lib.id, kind, 24).await?;
+            policy.retain(&mut items);
             if !items.is_empty() {
                 shelves.push(Shelf {
                     library: view(&state, lib.clone()),
@@ -68,13 +77,14 @@ async fn home(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiRes
             }
         }
     }
+    let mut continue_watching = items::continue_watching(&state.db, user.id, 20).await?;
+    policy.retain(&mut continue_watching);
     Ok(Json(Home {
-        continue_watching: items::continue_watching(&state.db, user.id, 20)
-            .await?
-            .into_iter()
-            .filter(|i| access::allows(&visible, i.library_id))
-            .collect(),
+        continue_watching,
         shelves,
+        playlists: playlists::summaries(&state, &user, &policy).await?,
+        collections: collections::summaries(&state, &user, &policy).await?,
+        genre_shelves: collections::home_shelves(&state, &user, &policy).await?,
     }))
 }
 
@@ -92,9 +102,8 @@ async fn search(
     if q.is_empty() {
         return Ok(Json(Vec::new()));
     }
-    let visible = access::visible(&state, &user).await?;
     let mut hits = items::search(&state.db, user.id, q, 50).await?;
-    hits.retain(|i| access::allows(&visible, i.library_id));
+    access::policy(&state, &user).await?.retain(&mut hits);
     Ok(Json(hits))
 }
 
@@ -111,6 +120,10 @@ struct FileView {
 struct Detail {
     item: ItemCard,
     genres: Vec<String>,
+    /// Fields an admin edited by hand; scans and refreshes never overwrite them.
+    locked_fields: Vec<String>,
+    /// Franchise collections the title belongs to.
+    collections: Vec<kinema_db::collections::Collection>,
     files: Vec<FileView>,
     children: Vec<ItemCard>,
     cast: Vec<items::CastMember>,
@@ -136,10 +149,11 @@ async fn detail(
     Path(id): Path<i64>,
 ) -> ApiResult<Json<Detail>> {
     let db = &state.db;
+    let policy = access::policy(&state, &user).await?;
     let item = items::card(db, user.id, id)
         .await?
+        .filter(|c| policy.allows(c))
         .ok_or_else(ApiError::not_found)?;
-    access::check_library(&state, &user, item.library_id).await?;
     let mut files = Vec::new();
     for file in items::item_files(db, id).await? {
         let streams = items::streams(db, file.id).await?;
@@ -154,14 +168,17 @@ async fn detail(
     if item.kind == "episode"
         && let Some(parent) = item.parent_id
     {
-        let siblings = items::children(db, user.id, parent).await?;
+        let mut siblings = items::children(db, user.id, parent).await?;
+        policy.retain(&mut siblings);
         if let Some(pos) = siblings.iter().position(|s| s.id == id) {
             prev_id = pos.checked_sub(1).map(|p| siblings[p].id);
             next_id = siblings.get(pos + 1).map(|s| s.id);
         }
     }
     let next_up = match item.kind.as_str() {
-        "show" | "season" => items::next_up(db, user.id, id).await?,
+        "show" | "season" => items::next_up(db, user.id, id)
+            .await?
+            .filter(|c| policy.allows(c)),
         _ => None,
     };
     let tracks = if item.kind == "show" {
@@ -177,9 +194,13 @@ async fn detail(
         None
     };
     let cast = items::item_cast(db, id).await?;
+    let mut children = items::children(db, user.id, id).await?;
+    policy.retain(&mut children);
     Ok(Json(Detail {
         genres: items::genres(db, id).await?,
-        children: items::children(db, user.id, id).await?,
+        locked_fields: items::locked_fields(db, id).await?,
+        collections: kinema_db::collections::of_item(db, id).await?,
+        children,
         files,
         item,
         cast,
@@ -296,6 +317,40 @@ async fn set_marker(
         return Err(ApiError::bad_request("markers.invalid"));
     }
     markers::set_manual(&state.db, file.id, &kind, Some((b.start_s, b.end_s))).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Deserialize)]
+struct ContentRatingBody {
+    /// "PG-13", "TV-14", "16"...; null or "" clears the override.
+    content_rating: Option<String>,
+}
+
+/// Admin: sets a title's certification by hand (for files TMDB does not rate). It is kept
+/// over metadata and applies to every season and episode that has none of its own.
+async fn set_content_rating(
+    State(state): State<AppState>,
+    _: AdminUser,
+    Path(id): Path<i64>,
+    Json(b): Json<ContentRatingBody>,
+) -> ApiResult<StatusCode> {
+    items::kind_of(&state.db, id)
+        .await?
+        .ok_or_else(ApiError::not_found)?;
+    let rating = b
+        .content_rating
+        .as_deref()
+        .map(str::trim)
+        .filter(|r| !r.is_empty());
+    let valid = |r: &str| {
+        r.len() <= 16
+            && r.chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '+' | ' '))
+    };
+    if rating.is_some_and(|r| !valid(r)) {
+        return Err(ApiError::bad_request("items.content_rating_invalid"));
+    }
+    items::set_manual_content_rating(&state.db, id, rating).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

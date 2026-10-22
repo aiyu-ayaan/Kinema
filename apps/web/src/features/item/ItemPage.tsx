@@ -9,8 +9,12 @@ import { Badge, Skeleton } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { api, frameUrl, imageUrl, sharperImageUrl } from '@/lib/api'
 import { useIsAdmin } from '@/lib/auth'
+import { AddToList } from '@/features/playlists/AddToList'
+import { EditMetadata } from './EditMetadata'
 import { FixMatch } from './FixMatch'
 import { SeriesTracks } from './SeriesTracks'
+import { ContentRatingButton } from './ContentRating'
+import { ShareButton } from '@/features/shares/ShareButton'
 import { clock, fileSize, progressOf, runtime, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import { useMpv } from '@/lib/mpv'
@@ -290,9 +294,23 @@ export function ItemPage() {
           {(canPlay || nextUp) && <WatchedButton id={item.id} watched={canPlay ? item.watched : !!nextUp?.watched} />}
           <CopyLinkButton />
           {admin && data.tracks && <SeriesTracks showId={item.id} tracks={data.tracks} />}
+          {playable && <AddToList itemId={item.id} kind="playlist" />}
+          {admin && (item.kind === 'movie' || item.kind === 'show' || item.kind === 'video') && <AddToList itemId={item.id} kind="collection" />}
+          {admin && <EditMetadata detail={data} />}
           {admin && (item.kind === 'movie' || item.kind === 'show') && <FixMatch item={item} />}
+          {admin && (item.kind === 'movie' || item.kind === 'show' || item.kind === 'video') && <ContentRatingButton item={item} />}
+          {admin && <ShareButton item={item} />}
         </div>
       </Hero>
+      {data.collections.length > 0 && (
+        <p className="flex flex-wrap gap-x-4 gap-y-1 text-label">
+          {data.collections.map((c) => (
+            <Link key={c.id} to={`/collections/${c.id}`} className="text-primary hover:underline">
+              {t('collection.belongs', { name: c.name })}
+            </Link>
+          ))}
+        </p>
+      )}
       {item.kind === 'show' && (
         <section>
           <h2 className="mb-4 text-title font-semibold">{t('item.seasons')}</h2>

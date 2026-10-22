@@ -14,6 +14,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -76,6 +77,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -85,6 +88,16 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.nativeKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -119,6 +132,7 @@ import com.aiyu.kinema.core.ItemDetail
 import com.aiyu.kinema.core.PlayCaps
 import com.aiyu.kinema.core.PlaybackPlan
 import com.aiyu.kinema.core.Stream
+import com.aiyu.kinema.core.StreamSeek
 import com.aiyu.kinema.core.parseVtt
 import com.aiyu.kinema.playback.Playback
 import com.aiyu.kinema.ui.theme.PlayerTheme
@@ -338,7 +352,17 @@ private fun Player(detail: ItemDetail, startAt: Double, large: Boolean, fullscre
         if (plan?.mode == "direct") {
             time = target
             player.seekTo((target * 1000).toLong())
-        } else load(audio, target)
+        } else {
+            // Inside what this stream already holds: jump there and leave the server's ffmpeg running. Not while a
+            // stream is loading: the player still reports the old one.
+            val local = if (buffering) null else StreamSeek.bufferedTargetMs(
+                target, offset, player.currentPosition, player.bufferedPosition, player.isCurrentMediaItemSeekable,
+            )
+            if (local != null) {
+                time = target
+                player.seekTo(local)
+            } else load(audio, target)
+        }
     }
 
     DisposableEffect(player) {
@@ -506,12 +530,34 @@ private fun Player(detail: ItemDetail, startAt: Double, large: Boolean, fullscre
         }
     } }
 
-    if (immersive) {
-        Box(Modifier.fillMaxSize()) {
-            video(Modifier.fillMaxSize())
-            UpNextPanel(upNext, detail) { upNext = false; poke++ }
+    // Hardware keyboard on a tablet, like the web player: space or k plays and pauses, arrows seek 10 s, f and t go
+    // full screen or back to the watch page (one toggle here: the watch page is already the "theater" view).
+    val keys = remember { FocusRequester() }
+    // Again after the track sheet closes: its window took the focus.
+    LaunchedEffect(tracks) { if (!tracks) runCatching { keys.requestFocus() } }
+    fun onKey(e: KeyEvent): Boolean {
+        if (e.type != KeyEventType.KeyDown || e.isCtrlPressed || e.isAltPressed || e.isMetaPressed || tracks || error != null) return false
+        // Holding a key repeats it: only the arrows mean something then.
+        val repeat = e.nativeKeyEvent.repeatCount > 0
+        when (e.key) {
+            Key.DirectionLeft -> seek(now() - 10)
+            Key.DirectionRight -> seek(now() + 10)
+            Key.Spacebar, Key.K -> if (!repeat) { if (player.isPlaying) player.pause() else player.play() }
+            Key.F, Key.T -> if (!large) return false else if (!repeat) onFullscreen()
+            else -> return false
         }
-    } else WatchLayout(detail, onTracks, video)
+        chrome = true
+        poke++
+        return true
+    }
+    Box(Modifier.fillMaxSize().onPreviewKeyEvent(::onKey).focusRequester(keys).focusable()) {
+        if (immersive) {
+            Box(Modifier.fillMaxSize()) {
+                video(Modifier.fillMaxSize())
+                UpNextPanel(upNext, detail) { upNext = false; poke++ }
+            }
+        } else WatchLayout(detail, onTracks, video)
+    }
 
     // A pick is saved for this profile, so the web app and other phones start the title the same way.
     fun saveTracks(audioIdx: Int?, subtitle: Long?) {

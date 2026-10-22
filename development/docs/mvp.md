@@ -19,7 +19,7 @@ What the first working build does, how it is wired, and the shortcuts it takes. 
 - Browse: home (Continue Watching, Recently Added per library), library grid with sort, show, season and episode pages, title search.
 - Playback: direct play, remux or transcode chosen per file and browser. Audio track switch, subtitle switch, resume, progress every 10 s, watched at 92 %, next episode on end, stop button (Plex-style: pauses, reports progress, exits full screen, navigates back; shortcuts: s, x, Escape). Web volume goes to 200 %: the upper half boosts through a Web Audio gain node with a limiter, built on first boost only (Up / Down arrows step 5 %). Android: swipe gestures for brightness and volume with boost, a stop button, a media service with notification controls and picture-in-picture (`android.md`).
 
-Not in the MVP: more users and profiles, HLS, hardware encoding, scrub thumbnails, bitmap subtitles (PGS/VobSub are listed but disabled), Safari for remuxed streams (see below).
+Not in the MVP: more users and profiles, HLS, hardware encoding, scrub thumbnails, bitmap subtitles without `tesseract` (PGS/VobSub are listed but disabled unless OCR read them), Safari for remuxed streams (see below).
 
 ## Architecture
 
@@ -95,7 +95,7 @@ Stream copy can only start at a seek point (a keyframe, or a Matroska cue). The 
 
 ### Subtitles
 
-Text tracks (embedded or sidecar) are converted to WebVTT once and cached in `data/cache/subtitles/{file}-{mtime}-{stream}.vtt`. The player draws cues itself rather than through `<track>`, because remuxed streams start at a non-zero source time. Switching a subtitle never touches the video.
+Text tracks (embedded or sidecar) are converted to WebVTT once, by a background job after each scan, and cached in `data/cache/subtitles/` keyed by file version (see media-pipeline.md § 6). Picture tracks can be read by OCR when `tesseract` is installed and the Languages setting is on. The player draws cues itself rather than through `<track>`, because remuxed streams start at a non-zero source time. Switching a subtitle never touches the video.
 
 ### Process lifetime
 
@@ -111,7 +111,7 @@ Admin-only, at `/settings/<section>`, grouped like a server control panel. While
 | General | server name | sign-in screen, browser title, `/server/info` |
 | Library | watch for changes, generate thumbnails, frame position | `scan::watch`, `thumbs.rs` |
 | Metadata | TMDB key, metadata language | `TmdbClient::language` |
-| Languages | preferred audio, subtitle mode (off / always / when audio is foreign), preferred subtitle | `plan` picks the start tracks; a show's own choice (Audio & subtitles on the show page, admin) wins |
+| Languages | preferred audio, subtitle mode (off / always / when audio is foreign), preferred subtitle, read picture subtitles (OCR, needs `tesseract`) | `plan` picks the start tracks; a show's own choice (Audio & subtitles on the show page, admin) wins |
 | Transcoder | simultaneous conversions, x264 preset, quality (CRF), max height | `stream` (503 when full), `playback::Encode` |
 | Network | listen address, LAN URL (read-only; set in `kinema.toml`) | status |
 | Scheduled Tasks | rescan every N hours | `scan::scheduled_rescans` |
@@ -145,7 +145,6 @@ flowchart LR
 | Progressive fMP4 instead of HLS | Safari does not play non-ranged fMP4; each far seek restarts ffmpeg | HLS with keyframe index (M4) |
 | Fingerprint = size + mtime | A renamed file is re-added and re-probed | head/tail hash (M1 spec) |
 | LIKE search | Slow beyond tens of thousands of items | FTS5 `items_fts` |
-| Sidecar subtitles read only at probe time | A new `.srt` next to an unchanged video is not seen until the video changes | include sidecars in the walk |
 | Session cookie name is not flavor-specific | Dev and prod on the same host share the media cookie | per-flavor cookie name |
 | Watch state of a file moved from a "movie" to an episode is dropped | Progress on wrongly-filed episodes resets once | carry watch state across moves |
 | Settings are server-wide | Family profiles share language and transcoder choices | per-profile preferences |

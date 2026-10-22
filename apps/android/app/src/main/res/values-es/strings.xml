@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Starting point, machine-quality: needs review by a native speaker. Strings missing here fall back to English. -->
+<resources>
+    <string name="action_back">Atrás</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_details">Detalles</string>
+    <string name="action_play">Reproducir</string>
+    <string name="action_resume">Continuar</string>
+    <string name="action_retry">Reintentar</string>
+    <string name="action_save">Guardar</string>
+    <string name="error_title">Algo salió mal</string>
+    <string name="error_generic">No funcionó. Inténtalo de nuevo.</string>
+    <string name="error_offline">No se puede conectar con el servidor. Comprueba que está en marcha y que este teléfono está en la misma red, o indica una dirección pública.</string>
+    <string name="connect_action">Conectar</string>
+    <string name="unlock_action">Iniciar sesión</string>
+    <string name="profiles_title">¿Quién está viendo?</string>
+    <string name="tab_home">Inicio</string>
+    <string name="tab_library">Biblioteca</string>
+    <string name="tab_search">Buscar</string>
+    <string name="tab_settings">Ajustes</string>
+    <string name="home_continue">Seguir viendo</string>
+    <string name="search_hint">Películas, series, episodios</string>
+    <string name="search_clear">Borrar</string>
+    <string name="item_watched">Visto</string>
+    <string name="item_mark_watched">Marcar como visto</string>
+    <string name="item_mark_unwatched">Marcar como no visto</string>
+    <string name="item_from_start">Reproducir desde el principio</string>
+    <string name="player_pause">Pausar</string>
+    <string name="player_stop">Detener</string>
+    <string name="player_back10">Retroceder 10 segundos</string>
+    <string name="player_forward10">Avanzar 10 segundos</string>
+    <string name="player_next">Siguiente episodio</string>
+    <string name="player_skip_intro">Saltar intro</string>
+    <string name="player_skip_credits">Saltar créditos</string>
+    <string name="player_pip">Imagen en imagen</string>
+    <string name="player_fullscreen">Pantalla completa</string>
+    <string name="player_exit_fullscreen">Salir de pantalla completa</string>
+    <string name="player_tracks">Audio y subtítulos</string>
+    <string name="player_audio">Audio</string>
+    <string name="player_subtitles">Subtítulos</string>
+    <string name="player_subtitles_off">Desactivados</string>
+    <string name="player_fill">Rellenar la pantalla</string>
+    <string name="player_fit">Ajustar a la pantalla</string>
+    <string name="player_error_title">No se puede reproducir</string>
+    <string name="player_error">El vídeo se detuvo. Comprueba la conexión e inténtalo de nuevo.</string>
+    <string name="player_no_file">Este título no tiene ningún archivo reproducible.</string>
+    <string name="settings_appearance">Apariencia</string>
+    <string name="settings_theme_system">Sistema</string>
+    <string name="settings_theme_light">Claro</string>
+    <string name="settings_theme_dark">Oscuro</string>
+    <string name="settings_playback">Reproducción</string>
+    <string name="settings_pip">Imagen en imagen</string>
+    <string name="settings_pip_on">Al salir de la app, el vídeo sigue en una ventana pequeña. Al cerrar la ventana se pausa.</string>
+    <string name="settings_pip_off">Al salir de la app, el sonido sigue con controles en la notificación.</string>
+</resources>

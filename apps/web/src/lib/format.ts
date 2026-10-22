@@ -18,6 +18,13 @@ export function clock(seconds: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`
 }
 
+/** "83", "1:23" or "1:02:03" back to seconds; null for anything else. */
+export function parseClock(text: string): number | null {
+  const parts = text.trim().split(':')
+  if (parts.length > 3 || parts.some((p) => !/^\d+(\.\d+)?$/.test(p))) return null
+  return parts.reduce((acc, p) => acc * 60 + Number(p), 0)
+}
+
 const languageNames = (() => {
   try {
     return new Intl.DisplayNames([navigator.language, 'en'], { type: 'language' })
@@ -46,8 +53,8 @@ function channelLabel(ch: number | null): string | null {
 /** "English · AC3 5.1 · Commentary" */
 const TEXT_SUBS = ['subrip', 'srt', 'ass', 'ssa', 'webvtt', 'vtt', 'mov_text', 'text']
 
-/** Text subtitles can be shown in the browser; image ones (PGS, VobSub) cannot. */
-export const isTextSub = (s: Stream) => TEXT_SUBS.includes(s.codec ?? '')
+/** Text subtitles can be shown in the browser; image ones (PGS, VobSub) only once the server read them by OCR. */
+export const isTextSub = (s: Stream) => TEXT_SUBS.includes(s.codec ?? '') || s.ocr === true
 
 export function trackLabel(s: Stream, n: number): string {
   const parts = [

@@ -362,6 +362,130 @@ pub fn credits_from_black(runs: &[Span], duration: f64) -> Option<f64> {
         .map(|m| m.start)
 }
 
+/// What one keyframe of the closing minutes looks like, for credits over lit footage (no black, no shared song).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Look {
+    /// Seconds from the file's start.
+    pub t: f64,
+    /// Mean luma change from the previous keyframe (0-255): small over a still or slowly moving backdrop, large
+    /// across cuts and camera moves.
+    pub diff: f64,
+    /// Mean of the edge map (0-255): zero on black or flat colour, a few units where there is lettering.
+    pub edge: f64,
+}
+
+/// A keyframe is credit-like with a luma change up to this (rolling text over a still measured 1-8, story 20-140).
+const STILL_DIFF_MAX: f64 = 15.0;
+/// ... and at least this much edge detail (credit text over a lit still measured 1.4-9; flat or black frames 0).
+const TEXT_EDGE_MIN: f64 = 1.5;
+/// Credits may hold a few odd keyframes (a title card, a flash): this share of them must still be credit-like.
+const LIKE_SHARE: f64 = 0.85;
+/// ... and no more than this many odd keyframes in a row.
+const MAX_ODD_RUN: usize = 2;
+/// Shorter than this is a title card or a stinger, not credits.
+const MIN_CREDITS_S: f64 = 40.0;
+/// Fewer keyframes than this say too little (a file with one keyframe every minute).
+const MIN_LOOKS: usize = 8;
+/// The last keyframe must lie this close to the end: credits run out with the file.
+const END_REACH_S: f64 = 45.0;
+
+/// Edge detail and stability of the keyframes from `from` to the end: one ffmpeg run on keyframes only, scaled to
+/// 480 px before the filters, so 4K costs the decode of a few hundred frames and little more.
+pub async fn tail_looks(
+    bins: &MediaBinaries,
+    path: &Path,
+    from: f64,
+) -> Result<Vec<Look>, MediaError> {
+    let mut cmd = std::process::Command::new(&bins.ffmpeg);
+    cmd.args([
+        "-hide_banner",
+        "-nostats",
+        "-loglevel",
+        "info",
+        "-nostdin",
+        "-skip_frame",
+        "nokey",
+        "-ss",
+    ])
+    .arg(format!("{:.3}", from.max(0.0)))
+    .arg("-copyts")
+    .arg("-i")
+    .arg(path)
+    .args([
+        "-map",
+        "0:v:0",
+        "-an",
+        "-sn",
+        "-vf",
+        // signalstats' YDIF compares with the previous frame it saw, here the previous keyframe. The second
+        // signalstats overwrites the first's keys, so the luma change is printed before the edge map is made.
+        "scale=480:-2,signalstats,metadata@luma=print:key=lavfi.signalstats.YDIF,\
+         edgedetect=mode=wires:low=0.1:high=0.3,signalstats,metadata@edge=print:key=lavfi.signalstats.YAVG",
+        "-f",
+        "null",
+        "-",
+    ]);
+    let out = run(cmd).await?;
+    Ok(parse_looks(&String::from_utf8_lossy(&out.stderr)))
+}
+
+fn parse_looks(log: &str) -> Vec<Look> {
+    let number = |line: &str, key: &str| -> Option<f64> {
+        let rest = &line[line.find(key)? + key.len()..];
+        rest.split_whitespace().next()?.parse().ok()
+    };
+    let (mut t, mut diff) = (None, None);
+    let mut looks = Vec::new();
+    for line in log.lines() {
+        if let Some(v) = number(line, "pts_time:") {
+            t = Some(v);
+        } else if let Some(v) = number(line, "lavfi.signalstats.YDIF=") {
+            diff = Some(v);
+        } else if let Some(edge) = number(line, "lavfi.signalstats.YAVG=")
+            && let (Some(t), Some(diff)) = (t, diff)
+        {
+            looks.push(Look { t, diff, edge });
+        }
+    }
+    // The first keyframe has nothing to differ from.
+    if !looks.is_empty() {
+        looks.remove(0);
+    }
+    looks
+}
+
+/// Where credits over lit footage start: the longest tail of keyframes that is mostly still with lettering on it
+/// and runs to the end. Black runs and shared audio are checked first; this only runs when they find nothing.
+/// Heuristic: busy backdrops (credits over a moving scene) and a still last scene can fool it either way.
+pub fn credits_from_looks(looks: &[Look], duration: f64) -> Option<f64> {
+    if looks.len() < MIN_LOOKS || looks.last()?.t < duration - END_REACH_S {
+        return None;
+    }
+    let like = |l: &Look| l.diff <= STILL_DIFF_MAX && l.edge >= TEXT_EDGE_MIN;
+    let (mut liked, mut seen) = (0usize, 0usize);
+    let (mut start, mut gap) = (None, 0);
+    // Walk back from the end; every keyframe that is credit-like and keeps the share up is a candidate start, and
+    // the earliest one wins. A few odd keyframes in a row are forgiven, a longer stretch ends the walk, so the
+    // share cannot buy a way back through a whole scene.
+    for (i, l) in looks.iter().enumerate().rev() {
+        seen += 1;
+        if like(l) {
+            liked += 1;
+            gap = 0;
+            if liked as f64 >= LIKE_SHARE * seen as f64 && seen >= MIN_LOOKS {
+                start = Some(i);
+            }
+        } else {
+            gap += 1;
+            if gap > MAX_ODD_RUN {
+                break;
+            }
+        }
+    }
+    let first = looks[start?].t;
+    (duration - first >= MIN_CREDITS_S && first >= duration / 2.0).then_some(first)
+}
+
 async fn run(mut cmd: std::process::Command) -> Result<std::process::Output, MediaError> {
     kinema_core::platform::configure_low_priority_process(&mut cmd);
     let out = tokio::process::Command::from(cmd)
@@ -482,6 +606,152 @@ mod tests {
         let p = fingerprint(&quiet);
         assert!(p.iter().all(|&h| h == 0));
         assert!(shared(&p, &p, 10).is_none());
+    }
+
+    /// Keyframes every 2 s from `from` to `to`, all alike.
+    fn looks(from: f64, to: f64, diff: f64, edge: f64) -> Vec<Look> {
+        let n = ((to - from) / 2.0) as usize;
+        (0..n)
+            .map(|i| Look {
+                t: from + 2.0 * i as f64,
+                diff,
+                edge,
+            })
+            .collect()
+    }
+
+    /// Story keyframes: cuts and camera moves, so the luma changes a lot between them.
+    fn story(from: f64, to: f64) -> Vec<Look> {
+        looks(from, to, 45.0, 8.0)
+    }
+
+    #[test]
+    fn parses_the_look_log() {
+        let log = "[metadata@luma @ 0x1] frame:0    pts:2912256 pts_time:237\n\
+                   [metadata@luma @ 0x1] lavfi.signalstats.YDIF=0\n\
+                   [metadata@edge @ 0x2] frame:0    pts:2912256 pts_time:237\n\
+                   [metadata@edge @ 0x2] lavfi.signalstats.YAVG=4.52088\n\
+                   [metadata@luma @ 0x1] frame:1    pts:2936832 pts_time:239\n\
+                   [metadata@luma @ 0x1] lavfi.signalstats.YDIF=3.5\n\
+                   [metadata@edge @ 0x2] frame:1    pts:2936832 pts_time:239\n\
+                   [metadata@edge @ 0x2] lavfi.signalstats.YAVG=5.9\n";
+        // The first keyframe has no predecessor to differ from and is dropped.
+        assert_eq!(
+            parse_looks(log),
+            vec![Look {
+                t: 239.0,
+                diff: 3.5,
+                edge: 5.9
+            }]
+        );
+        assert!(parse_looks("no filter output").is_empty());
+    }
+
+    #[test]
+    fn finds_credits_over_a_still_backdrop() {
+        // 0-5400 s of story, then rolling text over a still: little change, plenty of edges.
+        let mut v = story(4900.0, 5280.0);
+        v.extend(looks(5280.0, 5400.0, 4.0, 5.0));
+        assert_eq!(credits_from_looks(&v, 5400.0), Some(5280.0));
+    }
+
+    #[test]
+    fn credits_may_hold_odd_keyframes() {
+        let mut v = story(4900.0, 5280.0);
+        let mut c = looks(5280.0, 5400.0, 4.0, 5.0);
+        // A flash and a title card in the middle, one keyframe each.
+        c[20].diff = 60.0;
+        c[40].edge = 0.0;
+        v.extend(c);
+        assert_eq!(credits_from_looks(&v, 5400.0), Some(5280.0));
+    }
+
+    #[test]
+    fn a_dark_scene_in_the_story_does_not_stretch_the_credits() {
+        // 20 s of still, lettered keyframes before the real credits, cut off by 12 s of story.
+        let mut v = story(4900.0, 5000.0);
+        v.extend(looks(5000.0, 5020.0, 4.0, 5.0));
+        v.extend(story(5020.0, 5032.0));
+        v.extend(looks(5032.0, 5400.0, 4.0, 5.0));
+        assert_eq!(credits_from_looks(&v, 5400.0), Some(5032.0));
+    }
+
+    #[test]
+    fn story_alone_has_no_credits() {
+        assert_eq!(credits_from_looks(&story(4900.0, 5400.0), 5400.0), None);
+    }
+
+    #[test]
+    fn a_still_scene_that_ends_early_is_not_credits() {
+        // Static lettered shots in the middle of the tail, then story to the end.
+        let mut v = story(4900.0, 5000.0);
+        v.extend(looks(5000.0, 5100.0, 4.0, 5.0));
+        v.extend(story(5100.0, 5400.0));
+        assert_eq!(credits_from_looks(&v, 5400.0), None);
+    }
+
+    #[test]
+    fn black_or_flat_frames_are_not_lettering() {
+        // Nothing on screen (the black-run check handles real black credits).
+        let mut v = story(4900.0, 5280.0);
+        v.extend(looks(5280.0, 5400.0, 0.0, 0.0));
+        assert_eq!(credits_from_looks(&v, 5400.0), None);
+    }
+
+    #[test]
+    fn too_short_or_too_sparse_is_not_credits() {
+        // 30 s is a title card or a stinger.
+        let mut v = story(4900.0, 5370.0);
+        v.extend(looks(5370.0, 5400.0, 4.0, 5.0));
+        assert_eq!(credits_from_looks(&v, 5400.0), None);
+        // A file with a keyframe every 30 s gives too few samples to say.
+        let sparse: Vec<Look> = (0..6)
+            .map(|i| Look {
+                t: 5250.0 + 30.0 * i as f64,
+                diff: 4.0,
+                edge: 5.0,
+            })
+            .collect();
+        assert_eq!(credits_from_looks(&sparse, 5400.0), None);
+    }
+
+    #[test]
+    fn credits_must_run_to_the_end_and_start_in_the_second_half() {
+        let mut v = story(4900.0, 5000.0);
+        v.extend(looks(5000.0, 5200.0, 4.0, 5.0));
+        // The last keyframe is 200 s before the end: a still scene, not the credits.
+        assert_eq!(credits_from_looks(&v, 5400.0), None);
+        // Still and lettered from the very start of a short file: first half, not credits.
+        assert_eq!(
+            credits_from_looks(&looks(0.0, 400.0, 4.0, 5.0), 400.0),
+            None
+        );
+    }
+
+    /// Real ffmpeg on a real file, for tuning the thresholds:
+    /// `KINEMA_CREDITS_FILE=/path/movie.mkv cargo test -p kinema-media look_at_a_file -- --ignored --nocapture`.
+    #[tokio::test]
+    #[ignore = "needs ffmpeg and KINEMA_CREDITS_FILE"]
+    async fn look_at_a_file() {
+        let (Ok(file), Ok(bins)) = (
+            std::env::var("KINEMA_CREDITS_FILE"),
+            MediaBinaries::resolve(),
+        ) else {
+            return;
+        };
+        let path = Path::new(&file);
+        let info = crate::probe::probe(&bins, path).await.expect("probe");
+        let duration = info.duration_s.expect("duration");
+        let from = (duration - 480.0).max(duration / 2.0);
+        let found = tail_looks(&bins, path, from).await.expect("looks");
+        for l in &found {
+            println!("{:8.1}s diff {:6.2} edge {:6.2}", l.t, l.diff, l.edge);
+        }
+        println!(
+            "{} keyframes, credits at {:?} of {duration:.0} s",
+            found.len(),
+            credits_from_looks(&found, duration)
+        );
     }
 
     #[test]

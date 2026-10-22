@@ -8,6 +8,7 @@ import {
   CircleNotch,
   ClockCounterClockwise,
   ClockClockwise,
+  FlagBanner,
   Pause,
   Play,
   Rectangle,
@@ -18,16 +19,21 @@ import {
   Check,
 } from '@phosphor-icons/react'
 import { EpisodeLinks } from '@/components/media/EpisodeLinks'
+import { activePlaylist, nextInList } from '@/lib/activePlaylist'
 import { api, type PlayCaps } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { hasTopLeftWindowControls, hasTopRightWindowControls } from '@/lib/desktop'
 import { storageKeys } from '@/lib/flavor'
 import { clock, isTextSub, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
+import { useIsAdmin } from '@/lib/auth'
 import { mpvBridge, useMpv } from '@/lib/mpv'
 import type { ItemDetail, PlaybackPlan, Stream } from '@/lib/types'
 import { parseVtt, type Cue } from '@/lib/vtt'
+import { MarkerEditor } from './MarkerEditor'
 import { MpvPlayer } from './MpvPlayer'
+import { ScrubPreview } from './ScrubPreview'
+import { useScrubTiles } from './useScrubTiles'
 import { SkipPill, UP_NEXT_S, UpNextCard, UpNextList, WatchDetails } from './WatchPanels'
 
 
@@ -112,7 +118,8 @@ function TrackMenu({
           {option(t('player.subtitlesOff'), sub == null, () => onSub(null))}
           {subs.map((s, i) => {
             const text = isTextSub(s)
-            return option(trackLabel(s, i + 1), s.id === sub, () => onSub(s.id), !text, text ? undefined : t('player.subtitleImage'))
+            const note = !text ? t('player.subtitleImage') : s.ocr ? t('player.subtitleOcr') : undefined
+            return option(trackLabel(s, i + 1), s.id === sub, () => onSub(s.id), !text, note)
           })}
         </ul>
       </div>
@@ -169,6 +176,10 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     })
   }, [])
   const [menu, setMenu] = useState(false)
+  const [markerPanel, setMarkerPanel] = useState(false)
+  const [hoverFrac, setHoverFrac] = useState<number | null>(null)
+  const tiles = useScrubTiles(item.id)
+  const isAdmin = useIsAdmin()
   const [chrome, setChrome] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -346,16 +357,27 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     [report, qc],
   )
 
-  // Subtitles are fetched once per track and drawn over the video.
+  // Subtitles are fetched once per track and drawn over the video: switching never touches the
+  // video stream, and switching back to a track already seen needs no request.
+  const cueCache = useRef(new Map<number, Cue[]>())
   useEffect(() => {
     if (subId == null) {
       setCues([])
       return
     }
+    const cached = cueCache.current.get(subId)
+    if (cached) {
+      setCues(cached)
+      return
+    }
     let cancelled = false
     api
       .subtitleText(subId)
-      .then((text) => !cancelled && setCues(parseVtt(text)))
+      .then((text) => {
+        const parsed = parseVtt(text)
+        cueCache.current.set(subId, parsed)
+        if (!cancelled) setCues(parsed)
+      })
       .catch(() => !cancelled && setCues([]))
     return () => {
       cancelled = true
@@ -371,7 +393,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     hideTimer.current = window.setTimeout(() => setChrome(false), 3000)
   }, [])
   useEffect(() => () => window.clearTimeout(hideTimer.current), [])
-  const showChrome = chrome || !playing || menu
+  const showChrome = chrome || !playing || menu || markerPanel
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -429,6 +451,8 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   const upNextDue = remaining != null && remaining >= 0 && (credits ? time >= credits.start_s : remaining <= UP_NEXT_S)
   const upNextSpan = credits && duration ? duration - credits.start_s : UP_NEXT_S
   const fill = duration ? `${(shown / duration) * 100}%` : '0%'
+  // Preview above the bar: where the pointer hovers, or where a drag is.
+  const previewFrac = duration ? (scrub != null ? scrub / duration : hoverFrac) : null
   const title = item.kind === 'episode' ? (item.show_title ?? item.title) : item.title
   const subtitle = item.kind === 'episode' ? `${subtitleOf(item)} · ${item.title}` : item.year ? String(item.year) : null
 
@@ -460,7 +484,10 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
           <div
             ref={shellRef}
             onMouseMove={poke}
-            onClick={() => menu && setMenu(false)}
+            onClick={() => {
+              if (menu) setMenu(false)
+              if (markerPanel) setMarkerPanel(false)
+            }}
             className={cn('relative aspect-video w-full overflow-hidden bg-black text-white', theater ? 'max-h-[calc(100dvh-120px)]' : 'max-h-[calc(100dvh-140px)] lg:rounded-lg', !showChrome && 'cursor-none')}
           >
             <video
@@ -613,6 +640,12 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
               </div>
             )}
 
+            {isAdmin && markerPanel && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <MarkerEditor itemId={item.id} markers={file.markers ?? []} time={time} duration={duration} />
+              </div>
+            )}
+
             {/* Bottom controls */}
             <div
               onClick={(e) => e.stopPropagation()}
@@ -621,27 +654,37 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
               {duration ? (
                 <div className="flex items-center gap-3 px-2">
                   <span className="w-16 text-end text-label tabular text-white/80">{clock(shown)}</span>
-                  <input
-                    type="range"
-                    className="range flex-1"
-                    min={0}
-                    max={duration}
-                    step={1}
-                    value={shown}
-                    style={{ ['--fill' as string]: fill }}
-                    aria-label={t('player.seek')}
-                    onChange={(e) => setScrub(Number(e.target.value))}
-                    onPointerUp={(e) => {
-                      const target = Number(e.currentTarget.value)
-                      seek(target)
-                      setScrub(null)
+                  <div
+                    className="relative flex-1"
+                    onPointerMove={(e) => {
+                      const r = e.currentTarget.getBoundingClientRect()
+                      if (r.width > 0) setHoverFrac(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)))
                     }}
-                    onKeyUp={(e) => {
-                      const target = Number(e.currentTarget.value)
-                      seek(target)
-                      setScrub(null)
-                    }}
-                  />
+                    onPointerLeave={() => setHoverFrac(null)}
+                  >
+                    <input
+                      type="range"
+                      className="range w-full"
+                      min={0}
+                      max={duration}
+                      step={1}
+                      value={shown}
+                      style={{ ['--fill' as string]: fill }}
+                      aria-label={t('player.seek')}
+                      onChange={(e) => setScrub(Number(e.target.value))}
+                      onPointerUp={(e) => {
+                        const target = Number(e.currentTarget.value)
+                        seek(target)
+                        setScrub(null)
+                      }}
+                      onKeyUp={(e) => {
+                        const target = Number(e.currentTarget.value)
+                        seek(target)
+                        setScrub(null)
+                      }}
+                    />
+                    {previewFrac != null && <ScrubPreview tiles={tiles} time={previewFrac * duration} frac={previewFrac} />}
+                  </div>
                   <span className="w-16 text-label tabular text-white/60">{clock(duration)}</span>
                 </div>
               ) : null}
@@ -687,6 +730,11 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
                   )}
                 </div>
                 <div className="ms-auto flex items-center gap-1">
+                  {isAdmin && (
+                    <IconButton label={t('player.markers.open')} onClick={() => setMarkerPanel((o) => !o)} className={markerPanel ? 'bg-white/15' : undefined}>
+                      <FlagBanner size={22} weight={markerPanel ? 'fill' : 'regular'} />
+                    </IconButton>
+                  )}
                   {onTracks && (
                     <IconButton label={t('player.tracks')} onClick={onTracks} className={menu ? 'bg-white/15' : undefined}>
                       <Subtitles size={22} weight={subId != null ? 'fill' : 'regular'} />
@@ -731,6 +779,15 @@ export function PlayerPage() {
   const id = Number(useParams().id)
   const [params] = useSearchParams()
   const { data, error } = useQuery({ queryKey: ['item', id], queryFn: () => api.item(id), staleTime: 0 })
+  const listId = activePlaylist.id
+  const list = useQuery({ queryKey: ['playlist', listId], queryFn: () => api.playlist(listId as number), enabled: listId != null })
+  const listIds = list.data?.items.map((i) => i.id)
+  const playlist = listIds?.includes(id) ? { next: nextInList(listIds, id) } : null
+  // Playing something outside the playlist (or a playlist that is gone) leaves playlist mode.
+  const leftList = listId != null && ((listIds && !listIds.includes(id)) || list.isError)
+  useEffect(() => {
+    if (leftList) activePlaylist.set(null)
+  }, [leftList])
   if (error || (data && data.files.length === 0)) {
     return (
       <div className="fixed inset-0 z-sheet flex items-center justify-center bg-black p-6 text-center text-white/80">
@@ -738,7 +795,8 @@ export function PlayerPage() {
       </div>
     )
   }
-  if (!data) {
+  // Held until the playlist is known, so the player never starts with the wrong "up next".
+  if (!data || (listId != null && list.isLoading)) {
     return (
       <div className="fixed inset-0 z-sheet flex items-center justify-center bg-black">
         <CircleNotch size={48} className="animate-spin text-primary" aria-label={t('common.loading')} />
@@ -748,8 +806,10 @@ export function PlayerPage() {
   const explicit = params.get('t')
   const resume = data.item.watched ? 0 : (data.item.position_s ?? 0)
   const startAt = explicit != null ? Number(explicit) || 0 : resume
-  if (params.get('mpv') === '1' && mpvBridge) return <MpvPlayer key={id} detail={data} startAt={startAt} />
-  return <Player key={id} detail={data} startAt={startAt} />
+  // Playing from a playlist: its next entry replaces the next episode.
+  const detail = playlist ? { ...data, next_id: playlist.next } : data
+  if (params.get('mpv') === '1' && mpvBridge) return <MpvPlayer key={id} detail={detail} startAt={startAt} />
+  return <Player key={id} detail={detail} startAt={startAt} />
 }
 
 export default PlayerPage

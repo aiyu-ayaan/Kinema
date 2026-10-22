@@ -1,6 +1,7 @@
 use crate::{DbError, now};
 use serde::Serialize;
 use sqlx::SqlitePool;
+use std::collections::HashMap;
 
 /// What a poster card or list row needs. Episodes and seasons inherit missing
 /// art from their parents; an episode's still lives in `backdrop`.
@@ -26,9 +27,11 @@ pub struct ItemCard {
     pub duration_s: Option<f64>,
     pub child_count: i64,
     pub added_at: i64,
+    /// Certification, inherited from the season or show when the item has none.
+    pub content_rating: Option<String>,
 }
 
-const CARD_SELECT: &str =
+pub(crate) const CARD_SELECT: &str =
     "SELECT i.id, i.library_id, i.parent_id, i.kind, i.title, i.year, i.season_no, i.episode_no,
   i.summary, i.rating,
   COALESCE(i.poster, p.poster, g.poster) AS poster,
@@ -38,7 +41,8 @@ const CARD_SELECT: &str =
   w.position_s, COALESCE(w.watched, 0) AS watched,
   (SELECT MAX(f.duration_s) FROM files f WHERE f.item_id = i.id) AS duration_s,
   (SELECT COUNT(*) FROM items c WHERE c.parent_id = i.id) AS child_count,
-  i.added_at
+  i.added_at,
+  COALESCE(i.content_rating, p.content_rating, g.content_rating) AS content_rating
 FROM items i
 LEFT JOIN items p ON p.id = i.parent_id
 LEFT JOIN items g ON g.id = p.parent_id
@@ -207,6 +211,11 @@ pub struct Stream {
     pub is_default: bool,
     #[serde(skip)]
     pub external_path: Option<String>,
+    /// Sidecar version ("size-mtime"); part of the subtitle cache key.
+    #[serde(skip)]
+    pub external_fingerprint: Option<String>,
+    /// A picture subtitle read by OCR into WebVTT: players may show it like a text track.
+    pub ocr: bool,
 }
 
 /// Stream fields written by a probe; `id` and `file_id` are assigned on insert.
@@ -223,6 +232,7 @@ pub struct NewStream {
     pub height: Option<i64>,
     pub is_default: bool,
     pub external_path: Option<String>,
+    pub external_fingerprint: Option<String>,
 }
 
 const FILE_COLS: &str =
@@ -325,26 +335,26 @@ pub async fn library_files(
     .await?)
 }
 
+const STREAM_COLS: &str = "id, file_id, idx, type, codec, profile, language, title, channels,
+    width, height, is_default, external_path, external_fingerprint, ocr";
+
 pub async fn streams(pool: &SqlitePool, file_id: i64) -> Result<Vec<Stream>, DbError> {
-    Ok(sqlx::query_as(
-        "SELECT id, file_id, idx, type, codec, profile, language, title, channels, width, height,
-           is_default, external_path
-         FROM streams WHERE file_id = ?1 ORDER BY external_path IS NOT NULL, idx",
-    )
+    Ok(sqlx::query_as(&format!(
+        "SELECT {STREAM_COLS}
+         FROM streams WHERE file_id = ?1 ORDER BY external_path IS NOT NULL, idx"
+    ))
     .bind(file_id)
     .fetch_all(pool)
     .await?)
 }
 
 pub async fn stream(pool: &SqlitePool, id: i64) -> Result<Option<Stream>, DbError> {
-    Ok(sqlx::query_as(
-        "SELECT id, file_id, idx, type, codec, profile, language, title, channels, width, height,
-           is_default, external_path
-         FROM streams WHERE id = ?1",
+    Ok(
+        sqlx::query_as(&format!("SELECT {STREAM_COLS} FROM streams WHERE id = ?1"))
+            .bind(id)
+            .fetch_optional(pool)
+            .await?,
     )
-    .bind(id)
-    .fetch_optional(pool)
-    .await?)
 }
 
 pub async fn insert_file(
@@ -411,27 +421,129 @@ pub async fn save_probe(
         .execute(&mut *tx)
         .await?;
     for s in streams {
-        sqlx::query(
-            "INSERT INTO streams (file_id, idx, type, codec, profile, language, title, channels,
-               width, height, is_default, external_path)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
-        )
-        .bind(file_id)
-        .bind(s.idx)
-        .bind(&s.kind)
-        .bind(&s.codec)
-        .bind(&s.profile)
-        .bind(&s.language)
-        .bind(&s.title)
-        .bind(s.channels)
-        .bind(s.width)
-        .bind(s.height)
-        .bind(s.is_default)
-        .bind(&s.external_path)
-        .execute(&mut *tx)
-        .await?;
+        insert_stream(&mut tx, file_id, s).await?;
     }
     tx.commit().await?;
+    Ok(())
+}
+
+async fn insert_stream(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    file_id: i64,
+    s: &NewStream,
+) -> Result<(), DbError> {
+    sqlx::query(
+        "INSERT INTO streams (file_id, idx, type, codec, profile, language, title, channels,
+           width, height, is_default, external_path, external_fingerprint)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+    )
+    .bind(file_id)
+    .bind(s.idx)
+    .bind(&s.kind)
+    .bind(&s.codec)
+    .bind(&s.profile)
+    .bind(&s.language)
+    .bind(&s.title)
+    .bind(s.channels)
+    .bind(s.width)
+    .bind(s.height)
+    .bind(s.is_default)
+    .bind(&s.external_path)
+    .bind(&s.external_fingerprint)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+/// (path, fingerprint) of each sidecar subtitle stored for the probed files of a library,
+/// keyed by file id, so a scan can tell which sidecars were added, changed or removed.
+pub async fn library_sidecars(
+    pool: &SqlitePool,
+    library_id: i64,
+) -> Result<HashMap<i64, Vec<(String, Option<String>)>>, DbError> {
+    let rows: Vec<(i64, String, Option<String>)> = sqlx::query_as(
+        "SELECT s.file_id, s.external_path, s.external_fingerprint
+         FROM streams s JOIN files f ON f.id = s.file_id JOIN items i ON i.id = f.item_id
+         WHERE i.library_id = ?1 AND s.external_path IS NOT NULL
+         ORDER BY s.file_id, s.idx",
+    )
+    .bind(library_id)
+    .fetch_all(pool)
+    .await?;
+    let mut out: HashMap<i64, Vec<(String, Option<String>)>> = HashMap::new();
+    for (file_id, path, fp) in rows {
+        out.entry(file_id).or_default().push((path, fp));
+    }
+    Ok(out)
+}
+
+/// Swaps a file's sidecar subtitle streams for `sidecars`, leaving its probed streams alone:
+/// a subtitle file added next to an unchanged video needs no new probe.
+pub async fn replace_sidecars(
+    pool: &SqlitePool,
+    file_id: i64,
+    sidecars: &[NewStream],
+) -> Result<(), DbError> {
+    let mut tx = pool.begin().await?;
+    sqlx::query("DELETE FROM streams WHERE file_id = ?1 AND external_path IS NOT NULL")
+        .bind(file_id)
+        .execute(&mut *tx)
+        .await?;
+    for s in sidecars {
+        insert_stream(&mut tx, file_id, s).await?;
+    }
+    tx.commit().await?;
+    Ok(())
+}
+
+/// A subtitle stream with what the background extraction needs of its file.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct SubtitleJob {
+    pub stream_id: i64,
+    pub file_id: i64,
+    pub idx: i64,
+    pub codec: Option<String>,
+    pub language: Option<String>,
+    pub external_path: Option<String>,
+    pub external_fingerprint: Option<String>,
+    pub ocr: bool,
+    pub path: String,
+    pub size: i64,
+    pub mtime: i64,
+    pub duration_s: Option<f64>,
+}
+
+/// Every subtitle stream of a library's probed files, grouped by file.
+pub async fn library_subtitles(
+    pool: &SqlitePool,
+    library_id: i64,
+) -> Result<Vec<SubtitleJob>, DbError> {
+    Ok(sqlx::query_as(
+        "SELECT s.id AS stream_id, s.file_id, s.idx, s.codec, s.language, s.external_path,
+           s.external_fingerprint, s.ocr, f.path, f.size, f.mtime, f.duration_s
+         FROM streams s JOIN files f ON f.id = s.file_id JOIN items i ON i.id = f.item_id
+         WHERE i.library_id = ?1 AND f.probe_status = 'ok' AND s.type = 'subtitle'
+         ORDER BY i.added_at DESC, f.id, s.idx",
+    )
+    .bind(library_id)
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn set_stream_ocr(pool: &SqlitePool, stream_id: i64, ocr: bool) -> Result<(), DbError> {
+    sqlx::query("UPDATE streams SET ocr = ?2 WHERE id = ?1")
+        .bind(stream_id)
+        .bind(ocr)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// The subtitle cache was cleared: OCR results are gone with it.
+pub async fn clear_stream_ocr(pool: &SqlitePool) -> Result<(), DbError> {
+    sqlx::query("UPDATE streams SET ocr = 0 WHERE ocr = 1")
+        .execute(pool)
+        .await?;
     Ok(())
 }
 
@@ -695,8 +807,158 @@ pub struct Meta {
     pub cast: Option<Vec<CastMember>>,
 }
 
-/// Fills metadata; `None` fields keep what the scanner found.
+/// Fields a user can edit and lock. A locked field is never overwritten by a rescan,
+/// a TMDB refresh or Fix match.
+pub const LOCKABLE: &[&str] = &[
+    "title", "year", "summary", "rating", "poster", "backdrop", "genres",
+];
+
+fn is_locked(locked: &str, field: &str) -> bool {
+    locked.split(',').any(|f| f == field)
+}
+
+/// Keeps only known field names, in `LOCKABLE` order, without duplicates.
+pub fn normalize_locked<S: AsRef<str>>(fields: &[S]) -> String {
+    LOCKABLE
+        .iter()
+        .filter(|f| fields.iter().any(|g| g.as_ref() == **f))
+        .copied()
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+impl Meta {
+    /// Drops every field the item has locked, so saving the rest cannot touch them.
+    pub fn without_locked(&self, locked: &str) -> Meta {
+        let mut m = self.clone();
+        if is_locked(locked, "title") {
+            m.title = None;
+        }
+        if is_locked(locked, "year") {
+            m.year = None;
+        }
+        if is_locked(locked, "summary") {
+            m.summary = None;
+        }
+        if is_locked(locked, "rating") {
+            m.rating = None;
+        }
+        if is_locked(locked, "poster") {
+            m.poster = None;
+        }
+        if is_locked(locked, "backdrop") {
+            m.backdrop = None;
+        }
+        if is_locked(locked, "genres") {
+            m.genres.clear();
+        }
+        m
+    }
+}
+
+/// SQL that resets a column to NULL unless the row has it locked.
+fn reset_unless_locked(field: &str) -> String {
+    format!(
+        "{field} = CASE WHEN instr(',' || locked_fields || ',', ',{field},') > 0 THEN {field} ELSE NULL END"
+    )
+}
+
+pub async fn locked_fields(pool: &SqlitePool, id: i64) -> Result<Vec<String>, DbError> {
+    let s: Option<String> = sqlx::query_scalar("SELECT locked_fields FROM items WHERE id = ?1")
+        .bind(id)
+        .fetch_optional(pool)
+        .await?;
+    Ok(s.unwrap_or_default()
+        .split(',')
+        .filter(|f| !f.is_empty())
+        .map(str::to_string)
+        .collect())
+}
+
+/// Replaces the item's locked set (unknown names are ignored).
+pub async fn set_locked_fields<S: AsRef<str>>(
+    pool: &SqlitePool,
+    id: i64,
+    fields: &[S],
+) -> Result<(), DbError> {
+    sqlx::query("UPDATE items SET locked_fields = ?2 WHERE id = ?1")
+        .bind(id)
+        .bind(normalize_locked(fields))
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// A manual edit. Every field given is saved and locked.
+#[derive(Debug, Clone, Default)]
+pub struct Edit {
+    pub title: Option<String>,
+    pub year: Option<i64>,
+    pub summary: Option<String>,
+    pub rating: Option<f64>,
+}
+
+pub async fn edit_meta(pool: &SqlitePool, id: i64, e: &Edit) -> Result<(), DbError> {
+    let mut tx = pool.begin().await?;
+    let mut lock: Vec<&str> = Vec::new();
+    if let Some(title) = &e.title {
+        sqlx::query("UPDATE items SET title = ?2, sort_title = ?3 WHERE id = ?1")
+            .bind(id)
+            .bind(title)
+            .bind(sort_title(title))
+            .execute(&mut *tx)
+            .await?;
+        lock.push("title");
+    }
+    if let Some(year) = e.year {
+        sqlx::query("UPDATE items SET year = ?2 WHERE id = ?1")
+            .bind(id)
+            .bind(Some(year).filter(|y| *y > 0))
+            .execute(&mut *tx)
+            .await?;
+        lock.push("year");
+    }
+    if let Some(summary) = &e.summary {
+        sqlx::query("UPDATE items SET summary = ?2 WHERE id = ?1")
+            .bind(id)
+            .bind(Some(summary.as_str()).filter(|s| !s.trim().is_empty()))
+            .execute(&mut *tx)
+            .await?;
+        lock.push("summary");
+    }
+    if let Some(rating) = e.rating {
+        sqlx::query("UPDATE items SET rating = ?2 WHERE id = ?1")
+            .bind(id)
+            .bind(Some(rating).filter(|r| *r > 0.0))
+            .execute(&mut *tx)
+            .await?;
+        lock.push("rating");
+    }
+    let current: String = sqlx::query_scalar("SELECT locked_fields FROM items WHERE id = ?1")
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await?
+        .unwrap_or_default();
+    let mut all: Vec<&str> = current.split(',').collect();
+    all.extend(lock);
+    sqlx::query("UPDATE items SET locked_fields = ?2, updated_at = ?3 WHERE id = ?1")
+        .bind(id)
+        .bind(normalize_locked(&all))
+        .bind(now())
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Fills metadata; `None` fields keep what the scanner found, and locked fields are never touched.
 pub async fn save_meta(pool: &SqlitePool, id: i64, m: &Meta) -> Result<(), DbError> {
+    let locked: String = sqlx::query_scalar("SELECT locked_fields FROM items WHERE id = ?1")
+        .bind(id)
+        .fetch_optional(pool)
+        .await?
+        .unwrap_or_default();
+    let m = &m.without_locked(&locked);
     let cast_json = m.cast.as_ref().and_then(|c| serde_json::to_string(c).ok());
     let mut tx = pool.begin().await?;
     sqlx::query(
@@ -752,24 +1014,37 @@ pub async fn save_meta(pool: &SqlitePool, id: i64, m: &Meta) -> Result<(), DbErr
 /// match survives. For a show, seasons and episodes are reset and looked up again.
 pub async fn clear_meta(pool: &SqlitePool, id: i64) -> Result<(), DbError> {
     let mut tx = pool.begin().await?;
-    sqlx::query("DELETE FROM item_genres WHERE item_id = ?1")
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
+    // Locked fields survive: the user edited them by hand.
     sqlx::query(
-        "UPDATE items SET tmdb_id = NULL, tvmaze_id = NULL, year = NULL, summary = NULL, rating = NULL,
-           runtime_s = NULL, poster = NULL, backdrop = NULL, cast_json = NULL WHERE id = ?1",
+        "DELETE FROM item_genres WHERE item_id = ?1
+           AND NOT EXISTS (SELECT 1 FROM items WHERE id = ?1 AND instr(',' || locked_fields || ',', ',genres,') > 0)",
     )
     .bind(id)
     .execute(&mut *tx)
     .await?;
-    sqlx::query(
-        "UPDATE items SET meta_tried = 0, summary = NULL, rating = NULL, runtime_s = NULL,
-           poster = NULL, backdrop = NULL, cast_json = NULL,
-           title = CASE kind WHEN 'episode' THEN 'Episode ' || episode_no ELSE title END,
-           sort_title = CASE kind WHEN 'episode' THEN 'episode ' || episode_no ELSE sort_title END
+    sqlx::query(&format!(
+        "UPDATE items SET tmdb_id = NULL, tvmaze_id = NULL, {}, {}, {}, {}, {}, runtime_s = NULL, cast_json = NULL WHERE id = ?1",
+        reset_unless_locked("year"),
+        reset_unless_locked("summary"),
+        reset_unless_locked("rating"),
+        reset_unless_locked("poster"),
+        reset_unless_locked("backdrop"),
+    ))
+    .bind(id)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(&format!(
+        "UPDATE items SET meta_tried = 0, runtime_s = NULL, cast_json = NULL, {}, {}, {}, {},
+           title = CASE WHEN instr(',' || locked_fields || ',', ',title,') > 0 THEN title
+                        WHEN kind = 'episode' THEN 'Episode ' || episode_no ELSE title END,
+           sort_title = CASE WHEN instr(',' || locked_fields || ',', ',title,') > 0 THEN sort_title
+                             WHEN kind = 'episode' THEN 'episode ' || episode_no ELSE sort_title END
          WHERE parent_id = ?1 OR parent_id IN (SELECT id FROM items WHERE parent_id = ?1)",
-    )
+        reset_unless_locked("summary"),
+        reset_unless_locked("rating"),
+        reset_unless_locked("poster"),
+        reset_unless_locked("backdrop"),
+    ))
     .bind(id)
     .execute(&mut *tx)
     .await?;
@@ -1020,4 +1295,153 @@ pub async fn set_track_choice(
         .execute(pool)
         .await?;
     Ok(())
+}
+
+// ---- content ratings ----
+
+/// Certification from a metadata lookup. Leaves an admin's manual rating alone. A lookup
+/// without one stores "" (looked up, unrated) unless a rating is already known, so the
+/// backfill below does not ask again.
+pub async fn set_content_rating(
+    pool: &SqlitePool,
+    item_id: i64,
+    certification: Option<&str>,
+) -> Result<(), DbError> {
+    let c = certification.map(str::trim).unwrap_or_default();
+    sqlx::query(
+        "UPDATE items SET content_rating = ?2
+         WHERE id = ?1 AND content_rating_manual = 0 AND (?2 != '' OR content_rating IS NULL)",
+    )
+    .bind(item_id)
+    .bind(c)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// Matched movies and shows never checked for a certification (matched before ratings
+/// were stored): (id, kind, tmdb_id).
+pub async fn needing_content_rating(
+    pool: &SqlitePool,
+    library_id: i64,
+    limit: i64,
+) -> Result<Vec<(i64, String, i64)>, DbError> {
+    Ok(sqlx::query_as(
+        "SELECT id, kind, tmdb_id FROM items
+         WHERE library_id = ?1 AND parent_id IS NULL AND kind IN ('movie', 'show')
+           AND tmdb_id IS NOT NULL AND content_rating IS NULL AND content_rating_manual = 0
+         LIMIT ?2",
+    )
+    .bind(library_id)
+    .bind(limit)
+    .fetch_all(pool)
+    .await?)
+}
+
+/// Admin override; None clears it so metadata can fill it again on the next match.
+pub async fn set_manual_content_rating(
+    pool: &SqlitePool,
+    item_id: i64,
+    certification: Option<&str>,
+) -> Result<(), DbError> {
+    sqlx::query(
+        "UPDATE items SET content_rating = ?2, content_rating_manual = (?2 IS NOT NULL)
+         WHERE id = ?1",
+    )
+    .bind(item_id)
+    .bind(certification)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn pool() -> SqlitePool {
+        // One connection: every in-memory connection is its own empty database.
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        crate::run_migrations(&pool).await.unwrap();
+        pool
+    }
+
+    fn sidecar(path: &str, fp: &str) -> NewStream {
+        NewStream {
+            idx: 10_000,
+            kind: "subtitle".into(),
+            codec: Some("srt".into()),
+            external_path: Some(path.into()),
+            external_fingerprint: Some(fp.into()),
+            ..Default::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn sidecars_are_replaced_without_touching_probed_streams() {
+        let db = pool().await;
+        let lib = crate::libraries::create(&db, "Movies", "movie", &[])
+            .await
+            .unwrap();
+        let item = find_or_create(
+            &db,
+            lib,
+            NewItem::Movie {
+                title: "Film",
+                year: None,
+            },
+        )
+        .await
+        .unwrap();
+        let file = insert_file(&db, item, "/m/Film.mkv", 10, 1, "10-1")
+            .await
+            .unwrap();
+        let video = NewStream {
+            idx: 0,
+            kind: "video".into(),
+            ..Default::default()
+        };
+        let pgs = NewStream {
+            idx: 2,
+            kind: "subtitle".into(),
+            codec: Some("hdmv_pgs_subtitle".into()),
+            ..Default::default()
+        };
+        save_probe(
+            &db,
+            file,
+            None,
+            Some(60.0),
+            None,
+            &[video, pgs, sidecar("/m/Film.en.srt", "5-1")],
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            library_sidecars(&db, lib).await.unwrap()[&file],
+            vec![("/m/Film.en.srt".to_string(), Some("5-1".to_string()))]
+        );
+
+        replace_sidecars(&db, file, &[sidecar("/m/Film.fr.srt", "7-2")])
+            .await
+            .unwrap();
+        let all = streams(&db, file).await.unwrap();
+        assert_eq!(all.len(), 3);
+        assert_eq!(
+            all.last().and_then(|s| s.external_path.as_deref()),
+            Some("/m/Film.fr.srt")
+        );
+
+        let subs = library_subtitles(&db, lib).await.unwrap();
+        assert_eq!(subs.len(), 2);
+        let image = subs.iter().find(|s| s.idx == 2).unwrap();
+        set_stream_ocr(&db, image.stream_id, true).await.unwrap();
+        assert!(stream(&db, image.stream_id).await.unwrap().unwrap().ocr);
+        clear_stream_ocr(&db).await.unwrap();
+        assert!(!stream(&db, image.stream_id).await.unwrap().unwrap().ocr);
+    }
 }

@@ -217,17 +217,53 @@ pub async fn create_session(
     user_id: i64,
     ttl_s: i64,
 ) -> Result<(), DbError> {
+    create_session_scoped(pool, token_hash, user_id, ttl_s, false).await
+}
+
+/// `lan_only`: opened without a lock from the LAN, so it must not work from anywhere else.
+pub async fn create_session_scoped(
+    pool: &SqlitePool,
+    token_hash: &str,
+    user_id: i64,
+    ttl_s: i64,
+    lan_only: bool,
+) -> Result<(), DbError> {
     let t = now();
     sqlx::query(
-        "INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)",
+        "INSERT INTO sessions (id, user_id, created_at, expires_at, lan_only)
+         VALUES (?1, ?2, ?3, ?4, ?5)",
     )
     .bind(token_hash)
     .bind(user_id)
     .bind(t)
     .bind(t + ttl_s)
+    .bind(lan_only)
     .execute(pool)
     .await?;
     Ok(())
+}
+
+#[derive(sqlx::FromRow)]
+struct SessionRow {
+    #[sqlx(flatten)]
+    user: User,
+    lan_only: bool,
+}
+
+/// The session's profile and whether the session is LAN-only.
+pub async fn session_lookup(
+    pool: &SqlitePool,
+    token_hash: &str,
+) -> Result<Option<(User, bool)>, DbError> {
+    let row: Option<SessionRow> = sqlx::query_as(&format!(
+        "SELECT {USER_COLS}, s.lan_only FROM sessions s JOIN users u ON u.id = s.user_id
+         WHERE s.id = ?1 AND s.expires_at > ?2"
+    ))
+    .bind(token_hash)
+    .bind(now())
+    .fetch_optional(pool)
+    .await?;
+    Ok(row.map(|r| (r.user, r.lan_only)))
 }
 
 pub async fn session_user(pool: &SqlitePool, token_hash: &str) -> Result<Option<User>, DbError> {
@@ -244,6 +280,15 @@ pub async fn session_user(pool: &SqlitePool, token_hash: &str) -> Result<Option<
 /// Signs a profile out everywhere, e.g. after its lock changed.
 pub async fn delete_user_sessions(pool: &SqlitePool, user_id: i64) -> Result<(), DbError> {
     sqlx::query("DELETE FROM sessions WHERE user_id = ?1")
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Ends the sessions a profile opened without its lock on the LAN.
+pub async fn delete_lan_sessions(pool: &SqlitePool, user_id: i64) -> Result<(), DbError> {
+    sqlx::query("DELETE FROM sessions WHERE user_id = ?1 AND lan_only = 1")
         .bind(user_id)
         .execute(pool)
         .await?;

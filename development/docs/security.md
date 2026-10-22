@@ -7,7 +7,11 @@
 | Path traversal via stream or image endpoints | Clients never send paths, only IDs. Server resolves paths from the DB and checks they sit under a library root after canonicalization. |
 | Malicious media files exploiting ffmpeg | Run ffmpeg/ffprobe as child processes with restricted env, no network (`-protocol_whitelist file,pipe`), time and memory limits, and an optional seccomp or bubblewrap sandbox. |
 | Credential theft | argon2id hashes, hashed session tokens, rate-limited login, lockout after repeated failures. |
-| Share link guessing | 128-bit random tokens, hashed in DB, per-IP rate limit, expiry and use caps. |
+| Share link guessing | Selector (64 bit) + verifier (256 bit) from the OS RNG; only SHA-256 of the verifier is stored and compared in constant time; every failure is the same 404; links expire (≤ 90 days) and are revocable, and a running share stream stops within 10 s of revocation. Not yet: per-IP rate limit, use caps. |
+| Share link reaching beyond its title | Share routes are separate from the session API, accept no session, and check on every request that the item / file / subtitle / image sits under the target and that the creator's own library and rating policy still allows it. |
+| Unlocked profile opened from the internet | One-tap profiles and `lan_unlock` work only from LAN addresses (`net.rs`); sessions opened that way are `lan_only` and refused from elsewhere. Forwarded headers count only from `[network] trusted_proxies`; from anyone else they make the request remote, so a same-host reverse proxy fails closed. CGNAT and global IPv6 are not LAN. |
+| Child profile reaching restricted titles | Content limits are enforced server side on every listing, detail, progress, plan, stream, subtitle and thumbnail path (`access.rs` `Policy`), answering 404; a profile cannot change its own limit, also not by importing a file. |
+| Profile export leaking credentials | Exports leave out PIN / password hashes unless an admin asks (`include_lock=true`); imports of hashes need an explicit admin flag and a well-formed argon2 hash. |
 | Cross-profile data leaks | Every query on watch state, playlists and library access filters by authenticated user. |
 | CSRF | `SameSite=Lax` cookies plus a custom header required on state-changing requests. |
 | XSS via metadata | Metadata is data, never HTML. The UI escapes all fields. CSP header with no inline scripts. |

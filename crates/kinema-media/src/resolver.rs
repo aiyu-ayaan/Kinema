@@ -169,7 +169,7 @@ fn test_encode(ffmpeg: &Path, encoder: &HwEncoder) -> bool {
     }
 }
 
-fn which(name: &str) -> Result<PathBuf, ()> {
+pub(crate) fn which(name: &str) -> Result<PathBuf, ()> {
     if let Some(paths) = std::env::var_os("PATH") {
         for path in std::env::split_paths(&paths) {
             let full_path = path.join(name);

@@ -27,6 +27,7 @@
 - Streaming: `tokio::fs::File` + `ReaderStream` with a 256 KiB buffer; `Range` parsed once; `sendfile` through hyper when available.
 - ffprobe: one process per file, bounded parallelism of 2 on HDD, 4 on SSD (autodetected via `/sys/block/*/queue/rotational`).
 - Thumbnail: input seeking and keyframe-only decode.
+- Scrub sprites: keyframe-only decode of the whole file once, on first scrub, at `nice 19`. Measured on a synthetic 20 min 1080p H.264 file (GOP 240, 1.9 GB, 4-core VM): 3.3 s wall, 1.9 s CPU for 2 sheets. Real footage with HEVC 4K decodes slower per keyframe; not measured.
 - Allocator: `mimalloc` or `jemalloc` optional feature.
 - Release profile: `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, `strip = true`, `opt-level = 3`.
 - Avoid holding the DB writer across awaits; batch inserts in transactions of ~500 rows during scans.
@@ -34,6 +35,7 @@
 ## Throttling
 
 - A live re-encode is held to 30 s ahead of real time, then paced to playback (see `media-pipeline.md` § 4).
+- An HLS run (remux or re-encode) is stopped (SIGSTOP) once it is 30 s past the last segment asked for and continued when the player nears; idle sessions end after 60 s (`media-pipeline.md` 6a). Not on Windows yet.
 - Each re-encode gets a share of the cores (`-threads`, Auto = cores / `max_transcodes`), so even the full-speed lead never takes the whole machine.
 
 - Scan and thumbnail workers pause while any transcode session is active or while system load per core exceeds 0.8.

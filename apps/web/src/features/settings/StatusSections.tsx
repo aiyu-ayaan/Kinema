@@ -55,6 +55,7 @@ function LibraryProgress({ lib }: { lib: ServerStatus['libraries'][number] }) {
           {lib.name}
           {lib.scanning && <Badge tone="primary">{t('library.scanning')}</Badge>}
           {lib.generating_thumbnails && <Badge tone="info">{t('library.thumbnailsRunning')}</Badge>}
+          {lib.extracting_subtitles && <Badge tone="info">{t('library.subtitlesRunning')}</Badge>}
         </p>
         <div className="mt-1.5 flex items-center gap-3">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-raised" aria-hidden>
@@ -71,7 +72,7 @@ function LibraryProgress({ lib }: { lib: ServerStatus['libraries'][number] }) {
 export function DashboardSection() {
   const { data } = useStatus()
   if (!data) return <Skeleton className="h-96" />
-  const busy = data.libraries.filter((l) => l.scanning || l.generating_thumbnails).length
+  const busy = data.libraries.filter((l) => l.scanning || l.generating_thumbnails || l.extracting_subtitles).length
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

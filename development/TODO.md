@@ -20,10 +20,10 @@
 - [x] Player: direct play / remux / transcode, exact seek offset, audio switch, WebVTT subtitles, resume, next episode
 - [ ] Safari playback of remuxed streams (needs HLS, M4)
 - [x] Family profiles: picker, PIN, lockout, per-profile library access
-- [ ] Per-profile language preferences; LAN-only unlocked profiles
+- [x] Per-profile language preferences; LAN-only unlocked profiles (2026-10-22, see below)
 - [x] Fix-match UI for wrong TMDB matches
 - [x] Episodes inside Movies libraries grouped as shows; Movies / TV Shows sidebar sub-entries
-- [ ] Sidecar subtitles picked up without a video change
+- [x] Sidecar subtitles picked up without a video change
 
 ## Android app (2026-10-19)
 - [x] HTTPS by default with a self-signed certificate; fingerprint on the dashboard, pinned by the app
@@ -32,9 +32,11 @@
 - [x] Compose app (watch only): connect, trust, profiles, home hero, library, search, title page, settings
 - [x] Media3 player: direct / remux / transcode, audio + subtitle switch, resume, next episode, double-tap seek
 - [x] Predictive back on every page (Navigation 3) and inside the tab host
-- [ ] Picture-in-picture and a media session (lock-screen controls)
-- [ ] Seek inside the buffered part of a remux stream without restarting it
-- [ ] Translations (`values-<lang>/strings.xml`)
+- [x] Picture-in-picture (back / play / forward actions) and a media session (lock-screen controls); not run on a device yet
+- [x] Seek inside the buffered part of a remux stream: decision logic (`StreamSeek`) and player hook, only applies when the player reports the stream seekable
+- [ ] Make the piped fMP4 remux/transcode stream seekable inside the buffer for ExoPlayer (custom SeekMap + back buffer, or sidx/HLS) so the above takes effect; verify on a device
+- [x] Translations scaffolding: strings audited, es / fr / de / hi drafts for 51 core strings (machine quality, needs native review)
+- [ ] Finish and review the translations (Connect, Trust, Settings, Updates, About, watch page, plurals)
 
 ## Desktop app (2026-10-20)
 - [x] Electron scaffold (`apps/desktop`, `@kinema/desktop`) with isolated dev/prod flavors
@@ -44,12 +46,18 @@
 - [x] Web integration: server change button on profile picker, setup, settings, and user menu
 
 ## Playback speed (Plex pain points)
-- [ ] Store keyframe/Cues index at probe time (M1)
+- [x] Store keyframe/Cues index at probe time (M1): Matroska Cues, MP4 stss, bounded ffprobe packet scan; remux plan start from it
 - [ ] Direct play: ranged `sendfile`, no session (M1)
-- [ ] Scan-time subtitle extraction to cached WebVTT (M4)
-- [ ] Client-side subtitle track switch, no player reload (M4)
-- [ ] HLS seek reuses existing segments; keep idle session 60 s (M4)
-- [ ] Optional OCR of PGS/VobSub to WebVTT (M4)
+- [x] Scan-time subtitle extraction to cached WebVTT (M4)
+- [x] Client-side subtitle track switch, no player reload (M4)
+- [x] Optional OCR of PGS/VobSub to WebVTT (M4)
+- [ ] Android: offer picture subtitles that have `ocr: true` (web and desktop mpv do)
+- [ ] Bundle `tesseract` (+ eng model) in AppImage / Windows / Docker, or document installing it
+- [ ] Prune subtitle cache entries of old file versions (they stay until the cache is cleared)
+- [ ] OCR: check accuracy on real Blu-ray PGS and DVD VobSub (only a generated PGS sample was tested)
+- [x] HLS seek reuses existing segments; keep idle session 60 s (M4): server side, `/api/hls/{id}/index.m3u8` + `{n}.ts`
+- [ ] Pause HLS runs on Windows (`platform::suspend_process`, e.g. NtSuspendProcess); unthrottled there for now
+- [ ] fMP4 HLS segments (HEVC copy for players without HEVC-in-TS)
 
 ## Packaging (end goal)
 - [x] Decisions: GPL ffmpeg as separate process; static musl (Linux) + MSVC (Windows); aarch64 in first release
@@ -75,9 +83,9 @@ See `docs/roadmap.md` for later milestones.
 - [x] Web: watch page with up-next list, theater mode (t), full window width
 - [x] Server: intro / credits markers from chapters, audio shared across a season, black frames; admin override API
 - [x] Android + web: Skip intro, Skip credits
-- [ ] Admin UI to set or clear a marker (API only for now)
-- [ ] Credits over lit footage (no black, no shared song) are not found; consider a text-overlay or loudness check
-- [ ] Android tablet keyboard shortcuts (f, t, space) like the web player
+- [ ] Admin UI to set or clear a marker: built in the web player (flag button, `MarkerEditor.tsx`); tsc/eslint clean and the API calls curl-tested, but not yet clicked through in a browser. Android has none
+- [ ] Credits over lit footage: stable picture + edge detail check added (`source = text`, media-pipeline.md §7); tuned and tested on synthetic ffmpeg footage only. Check it on real films and episodes (`KINEMA_CREDITS_FILE=... look_at_a_file`), adjust thresholds; busy-backdrop credits still missed; no loudness check
+- [x] Android tablet keyboard shortcuts (f, t, space, k, arrows) like the web player; volume / mute / stop keys not mapped
 
 ## Cheaper HEVC playback (2026-10-21)
 Trigger: F1 (1080p HEVC Main 10) transcoded at ~90 % CPU on the Pi 5 because Chrome on Linux has no HEVC decoder.
@@ -92,7 +100,9 @@ Trigger: F1 (1080p HEVC Main 10) transcoded at ~90 % CPU on the Pi 5 because Chr
 - [x] Transcode froze the picture after a seek while the clock ran (2026-10-22): copied audio started at the keyframe before the seek, video at the seek point; audio is now re-encoded in a transcode. Checked in Chrome and the desktop app (Electron 33): F1 seeks resume in ~1 s at 24 fps
 - [ ] Deploy to the Pi: `sudo apt install ffmpeg` is already there; restart Kinema and check the `HEVC hardware decode` log line
 - [ ] Try the mpv path by hand in the desktop app (mpv not installed on the dev laptop; proxy and raw seeks tested with ffmpeg)
-- [ ] Bundle mpv with the desktop app (Windows `mpv.exe`, Linux AppImage)
+- [x] Bundle mpv with the desktop app: resolver order, fetch script, lock, extraResources, notice, in-app fallback (`scripts/fetch-mpv.mjs`)
+- [ ] Pin `scripts/mpv.lock` (Windows x64, Linux x86_64 and aarch64): `node scripts/fetch-mpv.mjs --pin <platform> <url>`, compare with the publisher checksum; until then installers ship without mpv
+- [ ] Try the bundled mpv by hand: AppImage, .deb and Windows install start it from `resources/mpv` (the nested AppRun wrapper is untested)
 - [ ] Optimized versions: pre-convert files no browser plays, at low priority, cached by fingerprint
 - [ ] LAN transcode helper (offload re-encodes to a machine with a GPU, like rffmpeg)
 
@@ -108,3 +118,40 @@ Trigger: transcode-only viewing took every core while Plex stayed quiet on the s
 - [ ] VA-API: bundled ffmpeg aborts against the host libva (`vaMapBuffer2`); see the packaging spike
 - [ ] Per-stream fallback to libx264 when the GPU encoder fails after startup
 - [ ] AMF (AMD on Windows)
+
+## Locked fields, polling, playlists (2026-10-22)
+- [x] `items.locked_fields`: edited fields survive rescans, TMDB refresh and Fix match; Edit details dialog with a lock per field
+- [x] Per-root polling for NFS/SMB (`library_roots.poll`, interval 1 to 1440 min, default 5), directory-hash diff, bounded at 500k entries
+- [x] Playlists: CRUD, add from the item page, playlist page with reorder, owner-only edits, shared read-only, autoplay of the next entry
+- [x] Collections: TMDB `belongs_to_collection` on match, manual admin collections, Home row and collection page
+- [x] Genre shelves on Home ("Oh, The Horror!" seeded), admin settings, per-profile hide
+- [ ] Add to playlist from poster cards and the watch page, not only the item page
+- [ ] Drag and drop reordering in playlists (buttons only now), shuffle at play time, playlists of music tracks
+- [ ] Remove a single title from a collection in the UI (API only)
+- [ ] Keep an edited title when a new file of the same release is scanned (grouping still uses the parsed name)
+- [ ] Upload or pick a custom poster and backdrop (only locking the current art exists)
+- [ ] Android: playlists, collections and genre shelves
+- [ ] Smart playlists, share links for playlists
+- [ ] Try polling on a real NFS/SMB mount (tested on a local folder only)
+
+## Scrub thumbnails (2026-10-22)
+- [x] Server: lazy sprite sheets + WebVTT index per file (keyframe-only, `nice 19`, shared background slot, one run per file, cached by id+mtime+size), `GET /items/{id}/timeline.vtt` and `/items/{id}/sprites/{n}` behind auth; curl-tested end to end on a synthetic file
+- [ ] Web: hover / drag preview on the seek bar (`ScrubPreview.tsx`); tsc/eslint clean, not yet seen in a browser
+- [ ] Measure sprite generation on real 4K HEVC / long files and on the Pi 5
+- [ ] Android player: use the same sprites for its seek bar
+- [ ] Sprites for audio-only or very sparse-GOP files (one keyframe per minute gives repeated tiles)
+
+## Profiles and household (2026-10-22)
+- [x] Per-profile audio / subtitle language and subtitle mode, used by the plan (`profile_prefs`)
+- [x] LAN-only unlocked profiles: no-lock profiles and `lan_unlock` PIN skip only from LAN; `lan_only` sessions; `[network] trusted_proxies`
+- [x] Content limits per profile (age scale, unrated toggle) on every listing, search, item and stream path; TMDB certifications + admin override
+- [x] Share links: selector + hashed verifier, constant-time check, expiry, revoke, scoped `/api/share/{token}/...` routes; admin UI and `/s/{token}` page
+- [x] Profile export / import (watch history, preferences; lock hashes only on explicit admin request)
+- [x] Access-control tests over the router (`backend/src/access_tests.rs`)
+- [ ] Share links: per-IP rate limit, max uses, per-link transcode cap
+- [ ] Non-admin users creating share links for titles they can see (admin only for now)
+- [ ] Content limits in SQL instead of after the query, so limited profiles get full search / shelf pages
+- [ ] Android app: show `home_only` profiles and handle `auth.lan_session` (picker and re-sign-in)
+- [ ] Global IPv6 on the home network is treated as remote; consider matching the server's own /64 prefixes
+- [ ] Re-match keeps the old certification when the new match has none
+- [ ] `/api/images/...` serves any cached artwork key to any signed-in profile (posters of titles above a limit)

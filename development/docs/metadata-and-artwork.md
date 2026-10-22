@@ -66,4 +66,10 @@ Read `.nfo` (Kodi style XML) and embedded tags when present, so existing librari
 
 - New items: matched within seconds of probe.
 - Existing: refresh on user request, or every 30 days for items with recent TMDB changes.
-- Never overwrite fields the user edited manually (`locked_fields` column planned).
+- Never overwrite fields the user edited manually: see Locked fields below.
+
+## Locked fields
+
+`items.locked_fields` holds a comma separated list of `title`, `year`, `summary`, `rating`, `poster`, `backdrop`, `genres`. `PATCH /api/items/{id}/metadata` saves the given text fields and locks them; `PUT /api/items/{id}/locks` sets exactly which fields are locked (lock a poster as it is, unlock a title). `items::save_meta` drops locked fields before writing, which covers the scanner's TMDB and TVmaze passes, season and episode refreshes and Fix match. `items::clear_meta` (the reset before a re-match) keeps locked columns and genres. `tmdb_id`, `tvmaze_id`, runtime and cast are not lockable and follow the match.
+
+Known gap: the scanner groups new files into an existing movie or show by title (and year). After a title is edited, a new copy of the file is grouped under the original parsed name, not the edited one.
