@@ -339,6 +339,35 @@ pub fn stream_command(
     copy_audio: bool,
     encode: Encode,
 ) -> Command {
+    ffmpeg_command(
+        bins, path, start_s, video, audio, copy_video, copy_audio, encode, None,
+    )
+}
+
+/// HLS output of one ffmpeg run: MPEG-TS segments `{run}-{n}.ts` in `dir`, numbered from `first`,
+/// each listed in `list-{run}.csv` once complete.
+#[derive(Debug, Clone, Copy)]
+pub struct Segments<'a> {
+    pub dir: &'a Path,
+    pub run: u32,
+    pub first: usize,
+    /// Copied video: cut times relative to the run's start (keyframes). Empty for a re-encode,
+    /// which forces keyframes on its own fixed grid.
+    pub cuts: &'a [f64],
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn ffmpeg_command(
+    bins: &MediaBinaries,
+    path: &Path,
+    start_s: f64,
+    video: Option<Track>,
+    audio: Option<Track>,
+    copy_video: bool,
+    copy_audio: bool,
+    encode: Encode,
+    hls: Option<Segments>,
+) -> Command {
     let reencode = !copy_video && video.is_some();
     // Decoding 10-bit HEVC is a third of a re-encode's CPU on a Raspberry Pi 5; its GPU does it for free.
     let hw_decode = bins
@@ -353,21 +382,33 @@ pub fn stream_command(
     let mut cmd = Command::new(hw_decode.unwrap_or(&bins.ffmpeg));
     kinema_core::platform::configure_playback_process(cmd.as_std_mut());
     cmd.args(["-hide_banner", "-loglevel", "error", "-nostdin"]);
-    if reencode {
+    if reencode && hls.is_none() {
         // Progress for the throttle (Progress::watch); remux is cheap and left to run.
         cmd.args(["-progress", "pipe:2", "-nostats"]);
     }
     if hw_decode.is_some() {
         cmd.args(["-hwaccel", "drm"]);
     }
+    let copied_video = copy_video && video.is_some();
+    // A copied HLS run starts exactly on the keyframe at `start_s`; aim past it so ffmpeg's B-frame
+    // allowance (3/23 s early) cannot drop it back to the one before.
+    let seek_s = if hls.is_some() && copied_video {
+        start_s + 0.2
+    } else {
+        start_s
+    };
     if start_s > 0.0 {
         // Copied video can only start at a keyframe before `start_s`. Accurate seek
         // would still trim re-encoded audio to `start_s` exactly, then both land on
         // 0 and the audio runs out of sync; cut audio at the same seek point instead.
-        if copy_video && video.is_some() {
+        if copied_video {
             cmd.arg("-noaccurate_seek");
         }
-        cmd.arg("-ss").arg(format!("{start_s:.6}"));
+        cmd.arg("-ss").arg(format!("{seek_s:.6}"));
+    }
+    if hls.is_some() && copied_video {
+        // Source timestamps: a segment comes out the same whichever run cut it.
+        cmd.arg("-copyts");
     }
     // Decoding a 4K source takes as many threads as encoding; both get the same share.
     let threads = (reencode && encode.threads > 0).then(|| encode.threads.to_string());
@@ -382,7 +423,7 @@ pub fn stream_command(
         cmd.arg("-map").arg(format!("0:{}", v.index));
         if copy_video {
             cmd.args(["-c:v", "copy"]);
-            if v.codec == Some("hevc") {
+            if v.codec == Some("hevc") && hls.is_none() {
                 cmd.args(["-tag:v", "hvc1"]);
             }
         } else {
@@ -425,18 +466,21 @@ pub fn stream_command(
             cmd.args(["-c:a", "aac", "-ac", "2", "-b:a", "192k"]);
         }
     }
+    cmd.args(["-sn", "-dn", "-map_metadata", "-1", "-map_chapters", "-1"]);
+    if let Some(out) = hls {
+        segment_output(&mut cmd, out, start_s, copied_video, reencode);
+        cmd.stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .kill_on_drop(true);
+        return cmd;
+    }
     if reencode {
         // Without it a fragment closes only at the next keyframe, up to 10 s of encoding on a Pi: play and
         // seek waited 6-9 s for the first frames. Half-second fragments start playback in about 2.5 s.
         cmd.args(["-frag_duration", "500000"]);
     }
     cmd.args([
-        "-sn",
-        "-dn",
-        "-map_metadata",
-        "-1",
-        "-map_chapters",
-        "-1",
         "-avoid_negative_ts",
         "make_zero",
         "-movflags",
@@ -454,6 +498,40 @@ pub fn stream_command(
         })
         .kill_on_drop(true);
     cmd
+}
+
+/// MPEG-TS segments that line up with the playlist whichever run made them. Checked with ffmpeg
+/// 6.1: a restarted run's segments carry the same timestamps as a run from the start.
+fn segment_output(
+    cmd: &mut Command,
+    out: Segments,
+    start_s: f64,
+    copied_video: bool,
+    reencode: bool,
+) {
+    if copied_video {
+        // With -copyts; shifting timestamps to zero would differ per run.
+        cmd.args(["-avoid_negative_ts", "disabled"]);
+        if !out.cuts.is_empty() {
+            let cuts: Vec<String> = out.cuts.iter().map(|c| format!("{c:.3}")).collect();
+            cmd.arg("-segment_times").arg(cuts.join(","));
+        }
+    } else {
+        cmd.arg("-output_ts_offset").arg(format!("{start_s:.6}"));
+        if reencode {
+            cmd.arg("-force_key_frames")
+                .arg(format!("expr:gte(t,n_forced*{})", crate::hls::SEGMENT_S));
+        }
+        cmd.arg("-segment_time")
+            .arg(crate::hls::SEGMENT_S.to_string());
+    }
+    cmd.args(["-f", "segment", "-segment_format", "mpegts"])
+        .arg("-segment_start_number")
+        .arg(out.first.to_string())
+        .arg("-segment_list")
+        .arg(out.dir.join(format!("list-{}.csv", out.run)))
+        .args(["-segment_list_type", "csv"])
+        .arg(out.dir.join(format!("{}-%d.ts", out.run)));
 }
 
 #[cfg(test)]
