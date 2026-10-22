@@ -2,7 +2,7 @@
   "name": "@kinema/desktop",
   "productName": "Kinema",
   "desktopName": "kinema.desktop",
-  "version": "0.0.1-alpha.5",
+  "version": "0.0.1-alpha.6",
   "private": true,
   "description": "Kinema personal media server, desktop app",
   "author": "Kinema Team <ayaan35200@gmail.com>",
