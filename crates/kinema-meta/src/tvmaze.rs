@@ -296,6 +296,7 @@ impl TvmazeClient {
                 backdrop,
                 genres: raw.genres,
                 cast,
+                ..Default::default()
             },
             seasons,
         }))

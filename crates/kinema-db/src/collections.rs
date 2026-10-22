@@ -121,6 +121,18 @@ pub async fn assign_tmdb(
     Ok(())
 }
 
+/// Drops the item from collections TMDB made (a re-match files it again); manual ones stay.
+pub async fn leave_tmdb(pool: &SqlitePool, item_id: i64) -> Result<(), DbError> {
+    sqlx::query(
+        "DELETE FROM collection_items WHERE item_id = ?1
+           AND collection_id IN (SELECT id FROM collections WHERE tmdb_id IS NOT NULL)",
+    )
+    .bind(item_id)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
 /// Collections an item belongs to, for its detail page.
 pub async fn of_item(pool: &SqlitePool, item_id: i64) -> Result<Vec<Collection>, DbError> {
     Ok(sqlx::query_as(

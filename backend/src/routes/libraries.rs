@@ -15,6 +15,7 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/libraries", get(list).post(create))
         .route("/libraries/:id", axum::routing::delete(remove))
+        .route("/libraries/:id/roots", axum::routing::put(set_roots))
         .route("/libraries/:id/scan", post(rescan))
         .route("/libraries/:id/thumbnails", post(regenerate_thumbnails))
         .route("/libraries/:id/match", post(match_missing))
@@ -98,6 +99,32 @@ async fn remove(
     scan::unwatch(&state, id);
     libraries::delete(&state.db, id).await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Deserialize)]
+struct RootOptions {
+    roots: Vec<libraries::RootOption>,
+}
+
+/// Admin: per-folder scan mode. A polled folder is listed every `poll_interval_min` minutes (1 to
+/// 1440) instead of watched for filesystem events, for network shares that send none.
+async fn set_roots(
+    State(state): State<AppState>,
+    _: AdminUser,
+    Path(id): Path<i64>,
+    Json(body): Json<RootOptions>,
+) -> ApiResult<Json<LibraryView>> {
+    libraries::get(&state.db, id)
+        .await?
+        .ok_or_else(ApiError::not_found)?;
+    libraries::set_root_options(&state.db, id, &body.roots).await?;
+    let lib = libraries::get(&state.db, id)
+        .await?
+        .ok_or_else(ApiError::not_found)?;
+    if state.settings().watch_changes {
+        scan::watch_lib(&state, &lib);
+    }
+    Ok(Json(view(&state, lib)))
 }
 
 async fn rescan(
