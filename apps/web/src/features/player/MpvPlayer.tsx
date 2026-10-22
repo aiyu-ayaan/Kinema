@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, CircleNotch, Stop } from '@phosphor-icons/react'
+import { ArrowLeft, CircleNotch, Play, Stop } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/Button'
 import { api } from '@/lib/api'
 import { isTextSub } from '@/lib/format'
@@ -68,6 +68,10 @@ export function MpvPlayer({ detail, startAt }: { detail: ItemDetail; startAt: nu
       {error ? (
         <>
           <p className="max-w-md text-body text-white/80">{error}</p>
+          {/* mpv missing or failed to start: the in-page player still plays the title (direct play, remux or transcode). */}
+          <Button icon={<Play size={18} weight="fill" />} onClick={() => navigate(`/play/${item.id}?t=${startAt}`, { replace: true })}>
+            {t('player.mpv.fallback')}
+          </Button>
           <Button variant="ghost" icon={<ArrowLeft size={18} />} onClick={() => navigate(-1)}>
             {t('player.mpv.back')}
           </Button>
