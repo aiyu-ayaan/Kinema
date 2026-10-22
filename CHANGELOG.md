@@ -1,3 +1,53 @@
+## v0.0.1-alpha.7 (2026-10-22)
+
+- !alpha : Release alpha build
+- android(Fix) : Clamp spring progress to prevent negative corner radius
+- android(Feature) : Use M3 expressive spring motion and single persistent texture frame for PiP
+- android(Feature) : Add YouTube-style watch screen, swipe gestures, and smooth PiP for mobile
+- android(Feature) : Add YouTube-style in-app PiP miniplayer and controls on tablet
+- android(Feature) : Add swipe down and miniplayer gestures with localized strings
+- web(Fix) : Authenticate timeline and sprite requests with session token
+- backend(Fix) : Support query token auth and fix sprite filename parsing
+- android(Fix) : Remove unused nativeKeyEvent import in PlayerScreen
+- media(Fix) : Allow chunks_exact_to_as_chunks in decode_times
+- fix(merge) : Apply content-rating limits to playlists, collections and shelves; pass profile languages to HLS
+- docs(profiles) : Document profiles, household rules, LAN-only unlock, share links and export/import
+- feat(web) : Household rules, profile languages, export/import, share links and the public share page
+- feat(profiles) : Offer track languages and rating levels with the profile
+- feat(web) : Show scrub previews on the seek bar and let admins set or clear skip markers in the player
+- docs(Change) : Document the keyframe index and HLS sessions
+- backend(Change) : Index keyframes after scans, snap remux seeks to them, and serve HLS that reuses cut segments and idles 60 s
+- media(Change) : Build keyframe indexes from Cues, stss or a bounded packet scan, and cut HLS segments that line up across ffmpeg runs
+- docs(subtitles) : Describe scan-time extraction, sidecar sync and OCR
+- db(Change) : Store a keyframe index per file version
+- feat(player) : Offer OCR subtitles, keep fetched tracks and add the OCR setting
+- feat(subtitles) : Cache WebVTT after each scan and add the optional OCR setting
+- feat(scanner) : Pick up sidecar subtitles added, edited or removed next to an unchanged video
+- feat(media) : Extract all text subtitles of a file in one run and read PGS/VobSub with tesseract
+- feat(db) : Store sidecar fingerprints and OCR state on subtitle streams
+- feat(profiles) : LAN-only unlocked profiles, content limits, per-profile languages, export/import and scoped share links
+- feat(metadata) : Keep TMDB certifications on movies and shows, backfilled once for matched titles
+- feat(profiles) : Store profile preferences, content ratings, LAN-only sessions and share links
+- docs(Playlists) : Locked fields, folder polling, playlists, collections and shelves
+- feat(markers) : Find end credits over lit footage by stable picture with lettering on it
+- feat(Web) : Edit details with field locks, folder polling and home shelves settings
+- feat(Web) : Playlists, collections and genre shelves on Home, playlist autoplay
+- feat(DB) : List genre names for shelves
+- feat(API) : Playlists, collections, genre shelves, metadata edit and locks
+- feat(Library) : Per-folder polling task, TMDB collections on match
+- feat(Scanner) : Poll folders by directory listing diff for network shares
+- feat(scrub) : Make scrub thumbnail sheets and a WebVTT index on the first request, behind auth, at low priority
+- feat(DB) : Locked metadata fields, root polling options, playlists, collections and genre shelves
+- feat(Android) : Move the last hard-coded update errors to strings.xml and add es, fr, de, hi drafts for the core strings
+- feat(Android) : Tablet keyboard shortcuts in the player, space, k, f, t and the arrows like the web player
+- feat(Android) : Seek inside the buffered part of a remux stream without restarting it when the player can seek the stream
+- docs(desktop) : Document the bundled mpv, its lock and what is still unpinned
+- feat(desktop) : Offer the in-app player when mpv is missing or fails to start
+- feat(Android) : Picture-in-picture window gets back and forward 10 s buttons, and attaching a keyboard no longer recreates the player
+- build(desktop) : Ship the fetched mpv in the installers as resources/mpv
+- feat(desktop) : Fetch a pinned, checksum-verified mpv at build time
+- feat(desktop) : Find a bundled mpv before PATH and start it without the AppImage environment
+
 ## v0.0.1-alpha.6 (2026-10-22)
 
 - !alpha:$Release
