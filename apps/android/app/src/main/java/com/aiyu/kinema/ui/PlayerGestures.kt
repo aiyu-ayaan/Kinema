@@ -216,19 +216,22 @@ fun Modifier.playerVideoGestures(
             totalDy = 0f
             isFullscreenExit = false
             if (isFullscreen) {
-                if (start.y < size.height * 0.35f) {
+                if (levels != null && start.x < size.width * 0.20f && start.y in (size.height * 0.15f)..(size.height * 0.85f)) {
+                    kind = Swipe.BRIGHTNESS
+                    onSwipeLevel(kind)
+                } else if (levels != null && start.x > size.width * 0.80f && start.y in (size.height * 0.15f)..(size.height * 0.85f)) {
+                    kind = Swipe.VOLUME
+                    levels.syncVolume()
+                    onSwipeLevel(kind)
+                } else {
                     isFullscreenExit = true
                     kind = null
-                } else if (levels != null && start.y <= size.height * 0.90f) {
-                    kind = if (start.x < size.width / 2f) Swipe.BRIGHTNESS else Swipe.VOLUME
-                    if (kind == Swipe.VOLUME) levels.syncVolume()
-                    onSwipeLevel(kind)
                 }
             }
         },
         onDragEnd = {
             if (isFullscreen) {
-                if ((isFullscreenExit && totalDy > 30.dp.toPx()) || totalDy > 55.dp.toPx()) {
+                if (isFullscreenExit && totalDy > 35.dp.toPx()) {
                     onExitFullscreen()
                 }
                 kind = null
@@ -238,7 +241,7 @@ fun Modifier.playerVideoGestures(
                     onPullDownRelease(false)
                     onEnterFullscreen()
                 } else {
-                    val passed = totalDy > 75.dp.toPx()
+                    val passed = totalDy > 65.dp.toPx()
                     onPullDownRelease(passed)
                 }
             }

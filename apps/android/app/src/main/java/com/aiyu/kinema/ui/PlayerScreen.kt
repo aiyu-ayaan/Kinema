@@ -19,6 +19,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -30,13 +31,18 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
@@ -63,6 +69,7 @@ import androidx.compose.material.icons.rounded.SubtitlesOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
@@ -94,6 +101,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -102,6 +110,7 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
@@ -114,14 +123,18 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -140,6 +153,8 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.compose.ContentFrame
+import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
+import kotlin.math.roundToInt
 import com.aiyu.kinema.R
 import com.aiyu.kinema.core.Cue
 import com.aiyu.kinema.core.ItemDetail
@@ -161,6 +176,8 @@ private val deviceCaps: PlayCaps by lazy {
     val types = MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.filter { !it.isEncoder }.flatMap { it.supportedTypes.asList() }.toSet()
     PlayCaps(hevc = "video/hevc" in types, av1 = "video/av01" in types)
 }
+
+private fun lerp(start: Float, stop: Float, fraction: Float): Float = start + (stop - start) * fraction
 
 /** 3725 -> "1:02:05"; 65 -> "1:05". */
 fun clock(seconds: Double): String {
@@ -212,11 +229,11 @@ fun PlayerScreen(
 
     val bgAlpha by animateFloatAsState(
         targetValue = if (isMinimized) 0f else 1f,
-        animationSpec = tween(durationMillis = 280),
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "playerBgAlpha",
     )
     PlayerTheme {
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = bgAlpha))) {
+        Box(Modifier.fillMaxSize().then(if (!isMinimized) Modifier.background(Color.Black.copy(alpha = bgAlpha)) else Modifier)) {
             when (val s = loader.state.value) {
                 Load.Loading -> if (!isMinimized) LoadingIndicator(Modifier.align(Alignment.Center).size(72.dp))
                 is Load.Failed -> if (!isMinimized) ErrorState(errorText(s.error), loader.reload)
@@ -488,141 +505,51 @@ private fun Player(
     // The floating window is too small for controls: video and subtitles only.
     if (inPip) {
         Box(Modifier.fillMaxSize().background(Color.Black)) {
-            ContentFrame(player, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+            ContentFrame(player, Modifier.fillMaxSize(), surfaceType = SURFACE_TYPE_TEXTURE_VIEW, contentScale = ContentScale.Fit)
             Subtitles(cues, time, lifted = false, small = true)
         }
         return
     }
     val showChrome = chrome || !playing || error != null
 
-    val immersive = fullscreen
     val onTracks: (() -> Unit)? = if (audios.size > 1 || subs.isNotEmpty()) ({ tracks = true; poke++ }) else null
     var seekHint by remember { mutableStateOf<Pair<Boolean, Int>?>(null) }
-    var pullY by remember { mutableFloatStateOf(0f) }
-    val pullAnim = remember { Animatable(0f) }
+    var watchVideoBounds by remember { mutableStateOf<Rect?>(null) }
+    val dockAnim = remember { Animatable(if (isMinimized) 1f else 0f) }
+    val motion = MaterialTheme.motionScheme
 
+    LaunchedEffect(isMinimized) {
+        dockAnim.animateTo(if (isMinimized) 1f else 0f, motion.defaultSpatialSpec())
+    }
+
+    val maxDragPx = with(LocalDensity.current) { 250.dp.toPx() }
     val videoGestures = Modifier.playerVideoGestures(
-        isFullscreen = immersive,
+        isFullscreen = fullscreen,
         levels = levels,
         onSwipeLevel = { swipe = it },
         onEnterFullscreen = { onFullscreen(); poke++ },
         onExitFullscreen = { onFullscreen(); poke++ },
-        onPullDownDrag = { pullY = it },
+        onPullDownDrag = { dy ->
+            scope.launch {
+                dockAnim.snapTo((dy / maxDragPx).coerceIn(0f, 1f))
+            }
+        },
         onPullDownRelease = { passed ->
-            if (passed) {
-                scope.launch {
-                    pullAnim.snapTo(pullY)
-                    pullY = 0f
-                    pullAnim.animateTo(600f, tween(180))
+            scope.launch {
+                if (passed) {
                     onMinimize()
-                    pullAnim.snapTo(0f)
-                }
-            } else {
-                val cur = pullY
-                pullY = 0f
-                scope.launch {
-                    pullAnim.snapTo(cur)
-                    pullAnim.animateTo(0f, spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow))
+                    dockAnim.animateTo(1f, motion.defaultSpatialSpec())
+                } else {
+                    dockAnim.animateTo(0f, motion.defaultSpatialSpec())
                 }
             }
         },
     )
 
-    val video: @Composable (Modifier) -> Unit = { modifier -> BoxWithConstraints(
-        modifier.background(Color.Black)
-            .clipToBounds()
-            .then(videoGestures)
-            .pointerTaps(
-                onTap = { chrome = !chrome; poke++ },
-                onDoubleTap = { forward ->
-                    if (forward == null) { if (player.isPlaying) player.pause() else player.play() }
-                    else {
-                        seek(now() + if (forward) 10 else -10)
-                        seekHint = forward to ((seekHint?.second ?: 0) + 1)
-                    }
-                    poke++
-                },
-            ),
-    ) {
-        ContentFrame(player, Modifier.fillMaxSize(), contentScale = if (fill) ContentScale.Crop else ContentScale.Fit)
-
-        Subtitles(cues, time, lifted = showChrome)
-        SeekHint(seekHint)
-        if (levels != null) SwipeIndicator(swipe, levels)
-
-        if (buffering && error == null) LoadingIndicator(Modifier.align(Alignment.Center).size(80.dp))
-
-        error?.let {
-            Surface(color = Color.Black.copy(alpha = 0.8f), shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.align(Alignment.Center).widthIn(max = 420.dp).padding(24.dp)) {
-                Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(stringResource(R.string.player_error_title), style = MaterialTheme.typography.titleLarge)
-                    Text(it, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f), textAlign = TextAlign.Center)
-                    Button({ load(audio, time) }) { Text(stringResource(R.string.action_retry)) }
-                }
-            }
-        }
-
-        val effects = MaterialTheme.motionScheme
-        AnimatedVisibility(showChrome, Modifier.fillMaxSize(), enter = fadeIn(effects.defaultEffectsSpec()), exit = fadeOut(effects.slowEffectsSpec())) {
-            Box(Modifier.fillMaxSize()) {
-                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.75f), 0.3f to Color.Transparent, 0.6f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.85f))))
-                val activity = context.findActivity()
-                TopBar(
-                    detail, plan, showTitle = immersive,
-                    onBack = {
-                        if (fullscreen) onFullscreen()
-                        else onMinimize()
-                    },
-                    onOpen = nav.open, onTracks = onTracks, subtitlesOn = subId != null,
-                    fill = fill, onFill = { fill = !fill; poke++ },
-                    onPip = if (pipEnabled && activity != null) { { enterPip(activity, playing) } } else null,
-                    onList = if (immersive) ({ upNext = true; poke++ }) else null,
-                    isTablet = large,
-                    isFullscreen = fullscreen,
-                )
-                if (error == null) CenterControls(
-                    playing = playing,
-                    onPlay = { if (player.isPlaying) player.pause() else player.play(); poke++ },
-                    onBack10 = { seek(now() - 10); poke++ },
-                    onForward10 = { seek(now() + 10); poke++ },
-                    // A video inside the watch page can be short: smaller buttons keep the seek bar clear.
-                    small = this@BoxWithConstraints.maxHeight < 360.dp,
-                    modifier = Modifier.align(Alignment.Center),
-                )
-                BottomBar(
-                    time = scrub?.toDouble() ?: time,
-                    duration = duration,
-                    onScrub = { scrub = it; poke++ },
-                    onScrubEnd = { scrub?.let { seek(it.toDouble()) }; scrub = null },
-                    onStop = { player.pause(); onClose() },
-                    fullscreen = fullscreen,
-                    onFullscreen = { onFullscreen(); poke++ },
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
-            }
-        }
-        if (error == null) {
-            // Skip intro while it plays; at the credits (else the last minute) the next episode, or Skip credits for a movie.
-            val intro = file.intro
-            val credits = file.credits
-            val remaining = duration?.let { it - time }
-            val inCredits = credits != null && time >= credits.startS && (remaining ?: 0.0) > 2
-            val due = remaining != null && remaining >= 0 && if (credits != null) time >= credits.startS else remaining <= UP_NEXT_S
-            val span = if (credits != null && duration != null) duration - credits.startS else UP_NEXT_S
-            SkipPill(stringResource(R.string.player_skip_intro), intro != null && time >= intro.startS && time < intro.endS - 2, lifted = showChrome) { intro?.let { seek(it.endS) } }
-            SkipPill(stringResource(R.string.player_skip_credits), inCredits && detail.nextId == null, lifted = showChrome) { player.pause(); onClose() }
-            NextEpisodeCard(detail.nextId, due, remaining, span, lifted = showChrome, compact = !immersive) { detail.nextId?.let { nav.play(it, 0.0) } }
-        }
-    } }
-
-    // Hardware keyboard on a tablet, like the web player: space or k plays and pauses, arrows seek 10 s, f and t go
-    // full screen or back to the watch page (one toggle here: the watch page is already the "theater" view).
     val keys = remember { FocusRequester() }
-    // Again after the track sheet closes: its window took the focus.
     LaunchedEffect(tracks) { if (!tracks) runCatching { keys.requestFocus() } }
     fun onKey(e: KeyEvent): Boolean {
         if (e.type != KeyEventType.KeyDown || e.isCtrlPressed || e.isAltPressed || e.isMetaPressed || tracks || error != null) return false
-        // Holding a key repeats it: only the arrows mean something then.
         val repeat = e.nativeKeyEvent.repeatCount > 0
         when (e.key) {
             Key.DirectionLeft -> seek(now() - 10)
@@ -636,77 +563,138 @@ private fun Player(
         return true
     }
 
-    AnimatedVisibility(
-        visible = isMinimized,
-        enter = fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + scaleIn(spring(stiffness = Spring.StiffnessMediumLow), initialScale = 0.85f),
-        exit = fadeOut(tween(160)) + scaleOut(tween(160), targetScale = 0.85f),
-        modifier = Modifier.fillMaxSize(),
+    BoxWithConstraints(
+        Modifier
+            .fillMaxSize()
+            .onPreviewKeyEvent(::onKey)
+            .focusRequester(keys)
+            .focusable()
     ) {
-        Box(Modifier.fillMaxSize()) {
-            MiniPlayer(
-                player = player,
-                playing = playing,
-                buffering = buffering,
-                cues = cues,
-                time = time,
-                onExpand = onExpand,
-                onClose = {
-                    player.pause()
-                    onClose()
-                },
-                onTogglePlay = {
-                    if (player.isPlaying) player.pause() else player.play()
-                    poke++
-                },
-                isTablet = large,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .navigationBarsPadding()
-                    .padding(end = if (large) 16.dp else 12.dp, bottom = if (large) 16.dp else 76.dp),
-            )
-        }
-    }
+        val density = LocalDensity.current
+        val screenWidth = maxWidth
+        val screenHeight = maxHeight
+        val screenWidthPx = with(density) { screenWidth.toPx() }
+        val screenHeightPx = with(density) { screenHeight.toPx() }
+        val dockProgress = if (fullscreen) 0f else dockAnim.value
 
-    AnimatedVisibility(
-        visible = !isMinimized,
-        enter = fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + scaleIn(spring(stiffness = Spring.StiffnessMediumLow), initialScale = 0.94f),
-        exit = fadeOut(tween(160)),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        val currentOffset = if (pullAnim.isRunning) pullAnim.value else pullY
-        val scale = (1f - (currentOffset / 2500f)).coerceIn(0.88f, 1f)
-        Box(
-            Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    translationY = currentOffset
-                    scaleX = scale
-                    scaleY = scale
-                }
-                .onPreviewKeyEvent(::onKey)
-                .focusRequester(keys)
-                .focusable()
-        ) {
-            AnimatedContent(
-                targetState = immersive,
-                transitionSpec = {
-                    (fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + scaleIn(spring(stiffness = Spring.StiffnessMediumLow), initialScale = 0.96f))
-                        .togetherWith(fadeOut(tween(150)))
-                },
-                label = "fullscreenTransition",
-                modifier = Modifier.fillMaxSize(),
-            ) { isFull ->
-                if (isFull) {
-                    Box(Modifier.fillMaxSize()) {
-                        video(Modifier.fillMaxSize())
-                        UpNextPanel(upNext, detail) { upNext = false; poke++ }
+        // 1. WatchLayout in background (fades out as video docks into miniplayer)
+        if (!fullscreen && dockProgress < 1f) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = (1f - dockProgress * 2.2f).coerceIn(0f, 1f)
+                        translationY = dockProgress * 80.dp.toPx()
                     }
-                } else {
-                    WatchLayout(detail, onTracks) { mod ->
-                        video(mod)
-                    }
+            ) {
+                WatchLayout(detail, onTracks) { modifier ->
+                    Spacer(
+                        modifier.onGloballyPositioned { coords ->
+                            val b = coords.boundsInRoot()
+                            if (b.width > 0f && b.height > 0f) {
+                                watchVideoBounds = b
+                            }
+                        }
+                    )
                 }
             }
+        }
+
+        // 2. Single Persistent Video Frame
+        val videoModifier = if (fullscreen) {
+            Modifier.fillMaxSize()
+        } else {
+            val defaultTop = with(density) { WindowInsets.systemBars.asPaddingValues().calculateTopPadding().toPx() }
+            val startBounds = watchVideoBounds ?: Rect(0f, defaultTop, screenWidthPx, defaultTop + screenWidthPx * 9f / 16f)
+            val startW = startBounds.width.coerceAtLeast(1f)
+            val startH = startBounds.height.coerceAtLeast(1f)
+            val startX = startBounds.left
+            val startY = startBounds.top
+
+            val miniWidthPx = with(density) { (if (large) 260.dp else 210.dp).toPx() }
+            val miniHeightPx = miniWidthPx * 9f / 16f
+            val marginEndPx = with(density) { (if (large) 20.dp else 12.dp).toPx() }
+            val marginBottomPx = with(density) { (if (large) 20.dp else 76.dp).toPx() }
+            val endX = screenWidthPx - miniWidthPx - marginEndPx
+            val endY = screenHeightPx - miniHeightPx - marginBottomPx
+
+            val scale = lerp(1f, miniWidthPx / startW, dockProgress)
+            val curX = lerp(startX, endX, dockProgress)
+            val curY = lerp(startY, endY, dockProgress)
+            val transX = curX - startX
+            val transY = curY - startY
+            val cornerRadius = lerp(0f, with(density) { 16.dp.toPx() } / scale, dockProgress)
+            val elevation = lerp(0f, with(density) { 10.dp.toPx() }, dockProgress)
+
+            Modifier
+                .offset { IntOffset(startX.roundToInt(), startY.roundToInt()) }
+                .size(with(density) { startW.toDp() }, with(density) { startH.toDp() })
+                .graphicsLayer {
+                    this.scaleX = scale
+                    this.scaleY = scale
+                    this.transformOrigin = TransformOrigin(0f, 0f)
+                    this.translationX = transX
+                    this.translationY = transY
+                    this.shadowElevation = elevation
+                    this.shape = RoundedCornerShape(cornerRadius.toDp())
+                    this.clip = true
+                }
+        }
+
+        VideoContainer(
+            modifier = videoModifier,
+            player = player,
+            fill = fill,
+            cues = cues,
+            time = scrub?.toDouble() ?: time,
+            duration = duration,
+            showChrome = showChrome,
+            playing = playing,
+            buffering = buffering,
+            error = error,
+            detail = detail,
+            plan = plan,
+            subId = subId,
+            seekHint = seekHint,
+            swipe = swipe,
+            levels = levels,
+            isFull = fullscreen,
+            dockProgress = dockProgress,
+            videoGestures = videoGestures,
+            onTap = { chrome = !chrome; poke++ },
+            onDoubleTap = { forward ->
+                if (forward == null) { if (player.isPlaying) player.pause() else player.play() }
+                else {
+                    seek(now() + if (forward) 10 else -10)
+                    seekHint = forward to ((seekHint?.second ?: 0) + 1)
+                }
+                poke++
+            },
+            onBack = {
+                if (fullscreen) onFullscreen()
+                else onMinimize()
+            },
+            onTracks = onTracks,
+            onFill = { fill = !fill; poke++ },
+            onPip = if (pipEnabled && context.findActivity() != null) { { enterPip(context.findActivity()!!, playing) } } else null,
+            onList = if (fullscreen) ({ upNext = true; poke++ }) else null,
+            onPlay = { if (player.isPlaying) player.pause() else player.play(); poke++ },
+            onBack10 = { seek(now() - 10); poke++ },
+            onForward10 = { seek(now() + 10); poke++ },
+            onScrub = { scrub = it; poke++ },
+            onScrubEnd = { scrub?.let { seek(it.toDouble()) }; scrub = null },
+            onStop = { player.pause(); onClose() },
+            onFullscreen = { onFullscreen(); poke++ },
+            onSeek = ::seek,
+            onRetry = { load(audio, time) },
+            onExpand = onExpand,
+            onClose = { player.pause(); onClose() },
+            large = large,
+            nav = nav,
+        )
+
+        if (fullscreen) {
+            UpNextPanel(upNext, detail) { upNext = false; poke++ }
         }
     }
 
@@ -940,91 +928,234 @@ internal fun TrackRow(label: String, selected: Boolean, enabled: Boolean = true,
     )
 }
 
-/**
- * YouTube-style in-app Picture-in-Picture miniplayer floating at the bottom right.
- * Allows scrubbing/pause/close and expanding back up by tap or vertical swipe up.
- */
 @Composable
-private fun BoxScope.MiniPlayer(
-    player: Player,
-    playing: Boolean,
-    buffering: Boolean,
+private fun VideoContainer(
+    modifier: Modifier,
+    player: ExoPlayer,
+    fill: Boolean,
     cues: List<Cue>,
     time: Double,
+    duration: Double?,
+    showChrome: Boolean,
+    playing: Boolean,
+    buffering: Boolean,
+    error: String?,
+    detail: ItemDetail,
+    plan: PlaybackPlan?,
+    subId: Long?,
+    seekHint: Pair<Boolean, Int>?,
+    swipe: Swipe?,
+    levels: SwipeLevels?,
+    isFull: Boolean,
+    dockProgress: Float,
+    videoGestures: Modifier,
+    onTap: () -> Unit,
+    onDoubleTap: (Boolean?) -> Unit,
+    onBack: () -> Unit,
+    onTracks: (() -> Unit)?,
+    onFill: () -> Unit,
+    onPip: (() -> Unit)?,
+    onList: (() -> Unit)?,
+    onPlay: () -> Unit,
+    onBack10: () -> Unit,
+    onForward10: () -> Unit,
+    onScrub: (Float) -> Unit,
+    onScrubEnd: () -> Unit,
+    onStop: () -> Unit,
+    onFullscreen: () -> Unit,
+    onSeek: (Double) -> Unit,
+    onRetry: () -> Unit,
     onExpand: () -> Unit,
     onClose: () -> Unit,
-    onTogglePlay: () -> Unit,
-    isTablet: Boolean = false,
-    modifier: Modifier = Modifier,
+    large: Boolean,
+    nav: Navigator,
 ) {
-    val miniWidth = if (isTablet) 260.dp else 210.dp
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = Color.Black,
-        shadowElevation = 10.dp,
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+    val file = detail.files.first()
+    val isMini = dockProgress > 0.8f
+    val fullAlpha = (1f - dockProgress * 2.5f).coerceIn(0f, 1f)
+    val miniAlpha = ((dockProgress - 0.4f) / 0.6f).coerceIn(0f, 1f)
+
+    Box(
         modifier = modifier
-            .width(miniWidth)
-            .aspectRatio(16f / 9f)
-            .miniPlayerGestures(onExpand = onExpand, onClose = onClose)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onExpand,
-            ),
+            .background(Color.Black)
+            .then(
+                if (isFull || dockProgress < 0.2f) {
+                    Modifier
+                        .then(videoGestures)
+                        .pointerTaps(onTap = onTap, onDoubleTap = onDoubleTap)
+                } else if (isMini) {
+                    Modifier
+                        .miniPlayerGestures(onExpand = onExpand, onClose = onClose)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onExpand,
+                        )
+                } else Modifier
+            )
     ) {
-        Box(Modifier.fillMaxSize()) {
-            ContentFrame(
-                player = player,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-            )
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.25f)),
-            )
-            Subtitles(cues, time, lifted = false, small = true)
-            if (buffering) {
-                LoadingIndicator(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(36.dp),
-                    color = Color.White,
+        ContentFrame(
+            player = player,
+            modifier = Modifier.fillMaxSize(),
+            surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
+            contentScale = if (fill) ContentScale.Crop else ContentScale.Fit,
+        )
+
+        Subtitles(cues, time, lifted = showChrome && dockProgress < 0.2f, small = dockProgress > 0.5f)
+
+        // Full player overlays
+        if (fullAlpha > 0f) {
+            Box(Modifier.fillMaxSize().graphicsLayer { alpha = fullAlpha }) {
+                SeekHint(seekHint)
+                if (levels != null) SwipeIndicator(swipe, levels)
+
+                if (buffering && error == null) LoadingIndicator(Modifier.align(Alignment.Center).size(80.dp))
+
+                error?.let {
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.8f),
+                        shape = MaterialTheme.shapes.extraLarge,
+                        modifier = Modifier.align(Alignment.Center).widthIn(max = 420.dp).padding(24.dp),
+                    ) {
+                        Column(
+                            Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Text(stringResource(R.string.player_error_title), style = MaterialTheme.typography.titleLarge)
+                            Text(it, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f), textAlign = TextAlign.Center)
+                            Button(onRetry) { Text(stringResource(R.string.action_retry)) }
+                        }
+                    }
+                }
+
+                val effects = MaterialTheme.motionScheme
+                AnimatedVisibility(
+                    showChrome,
+                    Modifier.fillMaxSize(),
+                    enter = fadeIn(effects.defaultEffectsSpec()),
+                    exit = fadeOut(effects.slowEffectsSpec()),
+                ) {
+                    Box(Modifier.fillMaxSize()) {
+                        Box(
+                            Modifier.fillMaxSize().background(
+                                Brush.verticalGradient(
+                                    0f to Color.Black.copy(alpha = 0.75f),
+                                    0.3f to Color.Transparent,
+                                    0.6f to Color.Transparent,
+                                    1f to Color.Black.copy(alpha = 0.85f),
+                                ),
+                            ),
+                        )
+                        TopBar(
+                            detail = detail,
+                            plan = plan,
+                            showTitle = isFull,
+                            onBack = onBack,
+                            onOpen = nav.open,
+                            onTracks = onTracks,
+                            subtitlesOn = subId != null,
+                            fill = fill,
+                            onFill = onFill,
+                            onPip = onPip,
+                            onList = onList,
+                            isTablet = large,
+                            isFullscreen = isFull,
+                        )
+                        if (error == null) CenterControls(
+                            playing = playing,
+                            onPlay = onPlay,
+                            onBack10 = onBack10,
+                            onForward10 = onForward10,
+                            small = !isFull,
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                        BottomBar(
+                            time = time,
+                            duration = duration,
+                            onScrub = onScrub,
+                            onScrubEnd = onScrubEnd,
+                            onStop = onStop,
+                            fullscreen = isFull,
+                            onFullscreen = onFullscreen,
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                        )
+                    }
+                }
+
+                if (error == null) {
+                    val intro = file.intro
+                    val credits = file.credits
+                    val remaining = duration?.let { it - time }
+                    val inCredits = credits != null && time >= credits.startS && (remaining ?: 0.0) > 2
+                    val due = remaining != null && remaining >= 0 && if (credits != null) time >= credits.startS else remaining <= UP_NEXT_S
+                    val span = if (credits != null && duration != null) duration - credits.startS else UP_NEXT_S
+                    SkipPill(stringResource(R.string.player_skip_intro), intro != null && time >= intro.startS && time < intro.endS - 2, lifted = showChrome) { intro?.let { onSeek(it.endS) } }
+                    SkipPill(stringResource(R.string.player_skip_credits), inCredits && detail.nextId == null, lifted = showChrome, onClick = onStop)
+                    NextEpisodeCard(detail.nextId, due, remaining, span, lifted = showChrome, compact = !isFull) { detail.nextId?.let { nav.play(it, 0.0) } }
+                }
+            }
+        }
+
+        // Mini player overlays
+        if (miniAlpha > 0f) {
+            Box(Modifier.fillMaxSize().graphicsLayer { alpha = miniAlpha }) {
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.25f)))
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.15f * miniAlpha)), RoundedCornerShape(16.dp)),
                 )
-            } else {
+                if (buffering) {
+                    LoadingIndicator(
+                        modifier = Modifier.align(Alignment.Center).size(36.dp),
+                        color = Color.White,
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.55f))
+                            .clickable(onClick = onPlay),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            contentDescription = stringResource(if (playing) R.string.player_pause else R.string.action_play),
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                }
                 Box(
                     modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(44.dp)
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
                         .background(Color.Black.copy(alpha = 0.55f))
-                        .clickable(onClick = onTogglePlay),
+                        .clickable(onClick = onClose),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                        contentDescription = stringResource(if (playing) R.string.player_pause else R.string.action_play),
+                        Icons.Rounded.Close,
+                        contentDescription = stringResource(R.string.player_dismiss),
                         tint = Color.White,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(18.dp),
                     )
                 }
-            }
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(6.dp)
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.55f))
-                    .clickable(onClick = onClose),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Rounded.Close,
-                    contentDescription = stringResource(R.string.player_dismiss),
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp),
+                val progressFraction = if (duration != null && duration > 0) (time / duration).toFloat().coerceIn(0f, 1f) else 0f
+                LinearProgressIndicator(
+                    progress = { progressFraction },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(3.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = Color.White.copy(alpha = 0.2f),
                 )
             }
         }
