@@ -4,7 +4,7 @@ const fs = require('fs')
 const http = require('http')
 const os = require('os')
 const path = require('path')
-const { findMpv, mpvArgs, startProxy } = require('../src/mpv')
+const { findMpv, mpvArgs, mpvEnv, startProxy } = require('../src/mpv')
 
 test('findMpv takes KINEMA_MPV, then PATH, else null', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kinema-mpv-'))
@@ -15,6 +15,44 @@ test('findMpv takes KINEMA_MPV, then PATH, else null', () => {
   assert.equal(findMpv({ KINEMA_MPV: path.join(dir, 'nope'), PATH: '' }, 'linux'), null)
   assert.equal(findMpv({ PATH: dir }, 'win32'), null)
   fs.rmSync(dir, { recursive: true })
+})
+
+test('findMpv order: KINEMA_MPV, bundled, then PATH', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kinema-mpv-'))
+  const make = (...parts) => {
+    const file = path.join(root, ...parts)
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.writeFileSync(file, '')
+    return file
+  }
+  const onPath = make('path', 'mpv')
+  const resourcesCopy = make('res', 'mpv', 'mpv')
+  const appDirCopy = make('appdir', 'usr', 'bin', 'mpv')
+  const override = make('own', 'mpv')
+  const base = { PATH: path.dirname(onPath) }
+  const res = path.join(root, 'res')
+
+  assert.equal(findMpv({ ...base, KINEMA_MPV: override, APPDIR: path.join(root, 'appdir') }, 'linux', res), override)
+  assert.equal(findMpv({ ...base, APPDIR: path.join(root, 'appdir') }, 'linux', res), appDirCopy)
+  assert.equal(findMpv(base, 'linux', res), resourcesCopy)
+  assert.equal(findMpv(base, 'linux', path.join(root, 'none')), onPath)
+  // A broken KINEMA_MPV falls through to the bundled copy instead of hiding it.
+  assert.equal(findMpv({ ...base, KINEMA_MPV: path.join(root, 'nope') }, 'linux', res), resourcesCopy)
+
+  // Windows: resources/mpv/mpv.exe, or mpv.exe next to the app, before PATH.
+  const winRes = make('winres', 'mpv', 'mpv.exe')
+  const winPath = make('winpath', 'mpv.exe')
+  const winEnv = { PATH: path.dirname(winPath) }
+  assert.equal(findMpv(winEnv, 'win32', path.join(root, 'winres')), winRes)
+  const beside = make('app', 'mpv.exe')
+  assert.equal(findMpv(winEnv, 'win32', undefined, path.join(root, 'app', 'Kinema.exe')), beside)
+  assert.equal(findMpv(winEnv, 'win32', undefined, path.join(root, 'elsewhere', 'Kinema.exe')), winPath)
+  fs.rmSync(root, { recursive: true })
+})
+
+test('mpvEnv drops the AppImage variables and keeps the rest', () => {
+  const env = mpvEnv({ APPDIR: '/a', APPIMAGE: '/b', ARGV0: 'c', OWD: '/d', HOME: '/h', DISPLAY: ':0' })
+  assert.deepEqual(env, { HOME: '/h', DISPLAY: ':0' })
 })
 
 test('mpvArgs keeps the URL after -- and turns subtitles off without one', () => {

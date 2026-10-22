@@ -16,14 +16,39 @@ const isFile = (p) => {
   }
 }
 
-/** mpv's binary: KINEMA_MPV, else the first `mpv` on PATH. */
-function findMpv(env = process.env, platform = process.platform) {
+/**
+ * Where a bundled mpv lives: Linux AppImage `$APPDIR/usr/bin/mpv`, then the app's resources (`resources/mpv/`,
+ * filled at build time by scripts/fetch-mpv.mjs; same layout in the .deb and the Windows install), and on Windows
+ * an `mpv.exe` next to the app.
+ */
+function bundledCandidates(env, platform, resources, execPath) {
+  const name = platform === 'win32' ? 'mpv.exe' : 'mpv'
+  const list = []
+  if (platform !== 'win32' && env.APPDIR) list.push(path.join(env.APPDIR, 'usr', 'bin', name))
+  if (resources) list.push(path.join(resources, 'mpv', name))
+  if (platform === 'win32' && execPath) list.push(path.join(path.dirname(execPath), name))
+  return list
+}
+
+/** mpv's binary: KINEMA_MPV, the copy bundled with the app, then the first `mpv` on PATH. */
+function findMpv(env = process.env, platform = process.platform, resources = process.resourcesPath, execPath = process.execPath) {
   if (env.KINEMA_MPV && isFile(env.KINEMA_MPV)) return env.KINEMA_MPV
+  for (const bundled of bundledCandidates(env, platform, resources, execPath)) if (isFile(bundled)) return bundled
   const name = platform === 'win32' ? 'mpv.exe' : 'mpv'
   for (const dir of (env.PATH || env.Path || '').split(path.delimiter)) {
     if (dir && isFile(path.join(dir, name))) return path.join(dir, name)
   }
   return null
+}
+
+/**
+ * The environment mpv starts with. The bundled Linux copy is an AppImage tree with its own AppRun, which must not
+ * see this app's AppImage variables (it would take them for its own mount point).
+ */
+function mpvEnv(env = process.env) {
+  const clean = { ...env }
+  for (const key of ['APPDIR', 'APPIMAGE', 'ARGV0', 'OWD']) delete clean[key]
+  return clean
 }
 
 /** Response headers mpv needs for ranged reads; the rest (cookies, caching) stays behind. */
@@ -147,7 +172,7 @@ async function play({ mpv, server, fetchUpstream, fileId, start, title, aid, sub
   })
   const state = { position: start, ended: false, exited: false }
   return new Promise((resolve) => {
-    const child = spawn(mpv, args, { stdio: 'ignore' })
+    const child = spawn(mpv, args, { stdio: 'ignore', env: mpvEnv() })
     current = child
     let lastSent = 0
     watchIpc(
@@ -174,4 +199,4 @@ async function play({ mpv, server, fetchUpstream, fileId, start, title, aid, sub
   })
 }
 
-module.exports = { findMpv, startProxy, mpvArgs, ipcPath, play, stop }
+module.exports = { findMpv, mpvEnv, startProxy, mpvArgs, ipcPath, play, stop }
