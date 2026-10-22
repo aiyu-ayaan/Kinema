@@ -152,6 +152,10 @@ Update downloads the APK into the cache with a plain OkHttp client (the app's ow
 
 Every user-facing string is in `app/src/main/res/values/strings.xml` (English). A translation is a `values-<lang>/strings.xml`.
 
+Audit (2026-10-22): no user-facing literal is left in the Kotlin code. What remains is deliberate: animation `label`s (debug names), the example address placeholder `192.168.1.10:3000`, proper nouns and library names in the About screens, `error("No repository")`-style programmer errors, and the messages the server sends (`ApiException`, shown as received; the server's own i18n is separate). The two update HTTP errors moved to `update_github_status` and `update_download_status`.
+
+Translations: `values-es`, `values-fr`, `values-de`, `values-hi`, each with the same 51 strings (actions, errors, tabs, sign-in, search, title actions, player controls and messages, appearance and playback settings). **Machine-quality drafts, needs review by a native speaker** (Hindi most of all) before any release counts on them. Everything not translated (plurals, Connect, Trust, Settings › Connection, Updates, About, watch page) falls back to English; `tools:ignore="MissingTranslation"` on the default file keeps lint quiet about that until a language is complete. To add a language: copy a `values-<lang>/strings.xml`, keep the `name`s and the `%1$s` placeholders, use typographic apostrophes (`’`) so nothing needs escaping, and add plurals with the language's own categories.
+
 ## Shortcuts
 
 - shortcut: remux/transcode seeks still restart the stream in practice, because ExoPlayer sees the piped fragmented MP4 as unseekable. Fix: a custom `SeekMap` (seekable inside the buffer, with the duration from the plan, plus a back buffer in `DefaultLoadControl`), or a `sidx`/HLS output from the server.

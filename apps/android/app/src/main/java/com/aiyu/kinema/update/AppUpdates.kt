@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import com.aiyu.kinema.BuildConfig
+import com.aiyu.kinema.R
 import com.aiyu.kinema.core.Releases
 import com.aiyu.kinema.core.UpdateChannel
 import java.io.File
@@ -73,7 +74,7 @@ object AppUpdates {
         val next = runCatching {
             val request = Request.Builder().url(Releases.API).header("Accept", "application/vnd.github+json").build()
             http.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) error("GitHub answered ${response.code}")
+                if (!response.isSuccessful) error(context.getString(R.string.update_github_status, response.code))
                 val body = response.body?.string().orEmpty()
                 _installedNotes.value = Releases.notesOf(body, BuildConfig.VERSION_NAME)
                 Releases.pickApk(body, BuildConfig.VERSION_NAME, channel)?.let { State.Available(it) } ?: State.UpToDate
@@ -107,7 +108,7 @@ object AppUpdates {
         _state.value = State.Downloading(apk, 0f)
         http.newCall(Request.Builder().url(apk.url).build()).execute().use { response ->
             val body = response.body
-            if (!response.isSuccessful || body == null) error("The download answered ${response.code}")
+            if (!response.isSuccessful || body == null) error(context.getString(R.string.update_download_status, response.code))
             val total = body.contentLength().takeIf { it > 0 } ?: apk.size
             var written = 0L
             body.byteStream().use { input ->

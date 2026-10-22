@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Every user-facing string of the app. English is the default; translations go in values-<lang>/strings.xml. -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <!-- Shared actions -->
     <string name="action_back">Back</string>
     <string name="action_cancel">Cancel</string>
@@ -238,5 +238,7 @@
     <string name="about_acknowledgements_subtitle">Libraries and projects the Android app is built on</string>
     <string name="about_tmdb">Movie and show metadata and artwork, through your server. This product uses the TMDB API but is not endorsed or certified by TMDB.</string>
     <string name="about_plex">Inspiration: the idea of a personal media server. No Plex code or assets are used.</string>
+    <string name="update_github_status">GitHub answered %1$d</string>
+    <string name="update_download_status">The download answered %1$d</string>
     <string name="update_conflict">Android refused the update: it is signed with a different key from the installed app. Uninstall this copy first.</string>
 </resources>
