@@ -5,15 +5,18 @@ import android.content.pm.ActivityInfo
 import android.media.AudioManager
 import android.media.MediaCodecList
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -88,6 +91,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Size
@@ -184,8 +188,8 @@ internal fun trackLabel(s: Stream, n: Int): String {
 private var lastFullscreen = false
 
 /**
- * Always-dark playback of one title. A phone turns sideways and plays full screen; a tablet or an open foldable shows
- * the watch page (WatchScreen.kt) with the up-next list, and goes full screen on request or minimizes to in-app PiP.
+ * Always-dark playback of one title. Both phones and tablets open in the YouTube-style watch page
+ * (WatchScreen.kt) with the up-next list, swipe up or toggle to go full screen, and swipe down to minimize to in-app PiP.
  */
 @Composable
 fun PlayerScreen(
@@ -201,14 +205,18 @@ fun PlayerScreen(
     val large = LocalConfiguration.current.smallestScreenWidthDp >= 600
     var fullscreen by remember { mutableStateOf(lastFullscreen) }
     if (!isMinimized) {
-        Immersive(lockLandscape = !large, hideBars = !large || fullscreen)
+        Immersive(lockLandscape = fullscreen, hideBars = fullscreen)
     }
-    BackHandler(large && fullscreen) { fullscreen = false; lastFullscreen = false }
-    BackHandler(large && !fullscreen && !isMinimized) { onMinimize() }
-    BackHandler(!large) { onClose() }
+    BackHandler(fullscreen) { fullscreen = false; lastFullscreen = false }
+    BackHandler(!fullscreen && !isMinimized) { onMinimize() }
+
+    val bgAlpha by animateFloatAsState(
+        targetValue = if (isMinimized) 0f else 1f,
+        animationSpec = tween(durationMillis = 280),
+        label = "playerBgAlpha",
+    )
     PlayerTheme {
-        val rootModifier = if (isMinimized && large) Modifier.fillMaxSize() else Modifier.fillMaxSize().background(Color.Black)
-        Box(rootModifier) {
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = bgAlpha))) {
             when (val s = loader.state.value) {
                 Load.Loading -> if (!isMinimized) LoadingIndicator(Modifier.align(Alignment.Center).size(72.dp))
                 is Load.Failed -> if (!isMinimized) ErrorState(errorText(s.error), loader.reload)
@@ -487,17 +495,43 @@ private fun Player(
     }
     val showChrome = chrome || !playing || error != null
 
-    val immersive = !large || fullscreen
-    val onTracks: (() -> Unit)? = if (audios.size > 1 || subs.isNotEmpty()) ({ tracks = true; poke++; Unit }) else null
-    val onSwipeDownPiP: (() -> Unit)? = remember(context, pipEnabled, playing) {
-        val act = context.findActivity()
-        if (pipEnabled && act != null) { { enterPip(act, playing) } } else null
-    }
+    val immersive = fullscreen
+    val onTracks: (() -> Unit)? = if (audios.size > 1 || subs.isNotEmpty()) ({ tracks = true; poke++ }) else null
     var seekHint by remember { mutableStateOf<Pair<Boolean, Int>?>(null) }
+    var pullY by remember { mutableFloatStateOf(0f) }
+    val pullAnim = remember { Animatable(0f) }
+
+    val videoGestures = Modifier.playerVideoGestures(
+        isFullscreen = immersive,
+        levels = levels,
+        onSwipeLevel = { swipe = it },
+        onEnterFullscreen = { onFullscreen(); poke++ },
+        onExitFullscreen = { onFullscreen(); poke++ },
+        onPullDownDrag = { pullY = it },
+        onPullDownRelease = { passed ->
+            if (passed) {
+                scope.launch {
+                    pullAnim.snapTo(pullY)
+                    pullY = 0f
+                    pullAnim.animateTo(600f, tween(180))
+                    onMinimize()
+                    pullAnim.snapTo(0f)
+                }
+            } else {
+                val cur = pullY
+                pullY = 0f
+                scope.launch {
+                    pullAnim.snapTo(cur)
+                    pullAnim.animateTo(0f, spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow))
+                }
+            }
+        },
+    )
+
     val video: @Composable (Modifier) -> Unit = { modifier -> BoxWithConstraints(
         modifier.background(Color.Black)
-            .then(if (onSwipeDownPiP != null && !large) Modifier.swipeDownToPip(onSwipeDownPiP) else Modifier)
-            .then(if (levels != null) Modifier.swipeLevels(levels) { swipe = it } else Modifier)
+            .clipToBounds()
+            .then(videoGestures)
             .pointerTaps(
                 onTap = { chrome = !chrome; poke++ },
                 onDoubleTap = { forward ->
@@ -536,14 +570,13 @@ private fun Player(
                 TopBar(
                     detail, plan, showTitle = immersive,
                     onBack = {
-                        if (large && fullscreen) onFullscreen()
-                        else if (large) onMinimize()
-                        else onClose()
+                        if (fullscreen) onFullscreen()
+                        else onMinimize()
                     },
                     onOpen = nav.open, onTracks = onTracks, subtitlesOn = subId != null,
                     fill = fill, onFill = { fill = !fill; poke++ },
                     onPip = if (pipEnabled && activity != null) { { enterPip(activity, playing) } } else null,
-                    onList = if (immersive) ({ upNext = true; poke++; Unit }) else null,
+                    onList = if (immersive) ({ upNext = true; poke++ }) else null,
                     isTablet = large,
                     isFullscreen = fullscreen,
                 )
@@ -562,7 +595,7 @@ private fun Player(
                     onScrub = { scrub = it; poke++ },
                     onScrubEnd = { scrub?.let { seek(it.toDouble()) }; scrub = null },
                     onStop = { player.pause(); onClose() },
-                    fullscreen = if (large) fullscreen else null,
+                    fullscreen = fullscreen,
                     onFullscreen = { onFullscreen(); poke++ },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
@@ -602,7 +635,13 @@ private fun Player(
         poke++
         return true
     }
-    if (isMinimized && large) {
+
+    AnimatedVisibility(
+        visible = isMinimized,
+        enter = fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + scaleIn(spring(stiffness = Spring.StiffnessMediumLow), initialScale = 0.85f),
+        exit = fadeOut(tween(160)) + scaleOut(tween(160), targetScale = 0.85f),
+        modifier = Modifier.fillMaxSize(),
+    ) {
         Box(Modifier.fillMaxSize()) {
             MiniPlayer(
                 player = player,
@@ -619,54 +658,53 @@ private fun Player(
                     if (player.isPlaying) player.pause() else player.play()
                     poke++
                 },
+                isTablet = large,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .navigationBarsPadding()
-                    .padding(end = 16.dp, bottom = 16.dp),
+                    .padding(end = if (large) 16.dp else 12.dp, bottom = if (large) 16.dp else 76.dp),
             )
         }
-    } else {
-        var pullY by remember { mutableFloatStateOf(0f) }
-        val pullAnim = remember { Animatable(0f) }
-        val swipeMinimize = if (large) {
-            Modifier.swipeDownToMinimize(
-                enabled = true,
-                onDrag = { pullY = it },
-                onRelease = { passed ->
-                    if (passed) {
-                        pullY = 0f
-                        onMinimize()
-                    } else {
-                        val cur = pullY
-                        pullY = 0f
-                        scope.launch {
-                            pullAnim.snapTo(cur)
-                            pullAnim.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
-                        }
-                    }
-                },
-            )
-        } else Modifier
+    }
 
+    AnimatedVisibility(
+        visible = !isMinimized,
+        enter = fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + scaleIn(spring(stiffness = Spring.StiffnessMediumLow), initialScale = 0.94f),
+        exit = fadeOut(tween(160)),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        val currentOffset = if (pullAnim.isRunning) pullAnim.value else pullY
+        val scale = (1f - (currentOffset / 2500f)).coerceIn(0.88f, 1f)
         Box(
             Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    val offset = if (pullAnim.isRunning) pullAnim.value else pullY
-                    translationY = offset
+                    translationY = currentOffset
+                    scaleX = scale
+                    scaleY = scale
                 }
                 .onPreviewKeyEvent(::onKey)
                 .focusRequester(keys)
                 .focusable()
         ) {
-            if (immersive) {
-                Box(Modifier.fillMaxSize()) {
-                    video(Modifier.fillMaxSize().then(swipeMinimize))
-                    UpNextPanel(upNext, detail) { upNext = false; poke++ }
-                }
-            } else {
-                WatchLayout(detail, onTracks) { mod ->
-                    video(mod.then(swipeMinimize))
+            AnimatedContent(
+                targetState = immersive,
+                transitionSpec = {
+                    (fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + scaleIn(spring(stiffness = Spring.StiffnessMediumLow), initialScale = 0.96f))
+                        .togetherWith(fadeOut(tween(150)))
+                },
+                label = "fullscreenTransition",
+                modifier = Modifier.fillMaxSize(),
+            ) { isFull ->
+                if (isFull) {
+                    Box(Modifier.fillMaxSize()) {
+                        video(Modifier.fillMaxSize())
+                        UpNextPanel(upNext, detail) { upNext = false; poke++ }
+                    }
+                } else {
+                    WatchLayout(detail, onTracks) { mod ->
+                        video(mod)
+                    }
                 }
             }
         }
@@ -770,8 +808,8 @@ private fun TopBar(
     val title = if (item.kind == "episode") item.showTitle ?: item.title else item.title
     val subtitle = if (item.kind == "episode") listOfNotNull(subtitleOf(item), item.title).joinToString(" · ") else item.year?.toString()
     Row(Modifier.fillMaxWidth().displayCutoutPadding().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        val backIcon = if (isTablet && !isFullscreen) Icons.Rounded.ExpandMore else Icons.AutoMirrored.Rounded.ArrowBack
-        val backLabel = if (isTablet && !isFullscreen) stringResource(R.string.player_minimize) else stringResource(R.string.action_back)
+        val backIcon = if (!isFullscreen) Icons.Rounded.ExpandMore else Icons.AutoMirrored.Rounded.ArrowBack
+        val backLabel = if (!isFullscreen) stringResource(R.string.player_minimize) else stringResource(R.string.action_back)
         IconButton(onBack) { Icon(backIcon, backLabel, tint = Color.White) }
         // In the watch page the title sits under the video instead.
         Column(Modifier.weight(1f).padding(horizontal = 8.dp).graphicsLayer { alpha = if (showTitle) 1f else 0f }) {
@@ -903,7 +941,7 @@ internal fun TrackRow(label: String, selected: Boolean, enabled: Boolean = true,
 }
 
 /**
- * YouTube-style in-app Picture-in-Picture miniplayer floating at the bottom right on tablets.
+ * YouTube-style in-app Picture-in-Picture miniplayer floating at the bottom right.
  * Allows scrubbing/pause/close and expanding back up by tap or vertical swipe up.
  */
 @Composable
@@ -916,15 +954,17 @@ private fun BoxScope.MiniPlayer(
     onExpand: () -> Unit,
     onClose: () -> Unit,
     onTogglePlay: () -> Unit,
+    isTablet: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    val miniWidth = if (isTablet) 260.dp else 210.dp
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = Color.Black,
         shadowElevation = 10.dp,
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
         modifier = modifier
-            .width(260.dp)
+            .width(miniWidth)
             .aspectRatio(16f / 9f)
             .miniPlayerGestures(onExpand = onExpand, onClose = onClose)
             .clickable(

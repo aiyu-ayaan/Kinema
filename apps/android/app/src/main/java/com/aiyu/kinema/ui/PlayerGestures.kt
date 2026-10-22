@@ -188,6 +188,92 @@ fun Modifier.swipeDownToMinimize(
     )
 }
 
+/**
+ * YouTube-style video gesture detector:
+ * - When [isFullscreen] is true (landscape fullscreen):
+ *   - Pulling down (> 50dp or starting in top 35% with > 30dp) exits fullscreen back to watch screen
+ *   - Vertical drag on left half adjusts brightness; on right half adjusts volume
+ * - When [isFullscreen] is false (portrait watch screen):
+ *   - Swiping up (< -35dp) triggers [onEnterFullscreen]
+ *   - Swiping down calls [onPullDownDrag] continuously and on release triggers [onPullDownRelease] with true
+ *     if dragged past 75dp (to minimize to in-app PiP)
+ */
+fun Modifier.playerVideoGestures(
+    isFullscreen: Boolean,
+    levels: SwipeLevels?,
+    onSwipeLevel: (Swipe?) -> Unit,
+    onEnterFullscreen: () -> Unit,
+    onExitFullscreen: () -> Unit,
+    onPullDownDrag: (Float) -> Unit,
+    onPullDownRelease: (Boolean) -> Unit,
+) = pointerInput(isFullscreen, levels) {
+    var kind: Swipe? = null
+    var totalDy = 0f
+    var isFullscreenExit = false
+
+    detectVerticalDragGestures(
+        onDragStart = { start ->
+            totalDy = 0f
+            isFullscreenExit = false
+            if (isFullscreen) {
+                if (start.y < size.height * 0.35f) {
+                    isFullscreenExit = true
+                    kind = null
+                } else if (levels != null && start.y <= size.height * 0.90f) {
+                    kind = if (start.x < size.width / 2f) Swipe.BRIGHTNESS else Swipe.VOLUME
+                    if (kind == Swipe.VOLUME) levels.syncVolume()
+                    onSwipeLevel(kind)
+                }
+            }
+        },
+        onDragEnd = {
+            if (isFullscreen) {
+                if ((isFullscreenExit && totalDy > 30.dp.toPx()) || totalDy > 55.dp.toPx()) {
+                    onExitFullscreen()
+                }
+                kind = null
+                onSwipeLevel(null)
+            } else {
+                if (totalDy < -35.dp.toPx()) {
+                    onPullDownRelease(false)
+                    onEnterFullscreen()
+                } else {
+                    val passed = totalDy > 75.dp.toPx()
+                    onPullDownRelease(passed)
+                }
+            }
+            totalDy = 0f
+        },
+        onDragCancel = {
+            if (!isFullscreen) {
+                onPullDownRelease(false)
+            }
+            kind = null
+            onSwipeLevel(null)
+            totalDy = 0f
+        },
+        onVerticalDrag = { change, dy ->
+            totalDy += dy
+            if (isFullscreen) {
+                val k = kind
+                if (k != null && levels != null) {
+                    val delta = -dy / size.height
+                    when (k) {
+                        Swipe.BRIGHTNESS -> levels.changeBrightness(levels.brightness + delta)
+                        Swipe.VOLUME -> levels.changeVolume(levels.volume + delta)
+                    }
+                }
+                change.consume()
+            } else {
+                if (dy > 0 || totalDy > 0f) {
+                    onPullDownDrag(maxOf(0f, totalDy))
+                }
+                change.consume()
+            }
+        },
+    )
+}
+
 /** Swiping up on the miniplayer expands it back to the full player; swiping down dismisses it. */
 fun Modifier.miniPlayerGestures(
     onExpand: () -> Unit,

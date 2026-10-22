@@ -82,7 +82,7 @@ data class ActivePlayback(val id: Long, val start: Double? = null) : java.io.Ser
 
 /**
  * Signed-in navigation. Pages push with a shared-axis slide; the system back gesture previews the page beneath.
- * An active player is hosted as an overlay: on tablets it minimizes to an in-app PiP miniplayer at bottom right.
+ * An active player is hosted as an overlay: minimizes to a YouTube-style in-app PiP miniplayer at bottom right.
  */
 @Composable
 fun AppNavigation() {
@@ -127,7 +127,7 @@ fun AppNavigation() {
                 PlayerScreen(
                     id = playback.id,
                     start = playback.start,
-                    isMinimized = isMinimized && large,
+                    isMinimized = isMinimized,
                     onMinimize = { isMinimized = true },
                     onExpand = { isMinimized = false },
                     onClose = {
