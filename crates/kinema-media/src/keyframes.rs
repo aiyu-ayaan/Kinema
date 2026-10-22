@@ -53,6 +53,7 @@ impl KeyframeIndex {
             .collect()
     }
 
+    #[allow(clippy::chunks_exact_to_as_chunks)]
     pub fn decode_times(blob: &[u8]) -> Vec<f64> {
         blob.chunks_exact(4)
             .map(|c| f64::from(u32::from_le_bytes([c[0], c[1], c[2], c[3]])) / 1000.0)
