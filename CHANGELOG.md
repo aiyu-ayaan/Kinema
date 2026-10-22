@@ -1,3 +1,22 @@
+## v0.0.1-alpha.6 (2026-10-22)
+
+- !alpha:$Release
+- feat(transcode) : Encode on the GPU when a startup test encode finds NVENC, Quick Sync or VA-API
+- fix(transcode) : Keep at least 4 threads per re-encode so a Raspberry Pi 5 still converts 1080p in real time
+- perf(transcode) : Cap the x264 peak bitrate by output height and the lookahead of slow presets
+- perf(transcode) : Give each re-encode a share of the cores instead of every core
+- perf(transcode) : Shorten the re-encode lead to 30 s so each play or seek spikes the CPU for half as long
+- docs(showcase) : Add Kinema motion showcase video, fix mobile drawer containment and polish multi-device holders
+- docs(install) : Prioritize one-line script installers over docker in quick start and homepage
+- style(docs) : Switch to full app-icon tile logo and add standalone semantic CSS styling
+- ci(docs) : Update pnpm lockfile and relax frozen-lockfile check in deploy workflow
+- ci(docs) : Use corepack for pnpm 12.4.2 in deploy-docs workflow
+- ci(docs) : Use packageManager version resolution in deploy-docs workflow
+- ci(docs) : Specify pnpm version in deploy workflow and package.json
+- ci(docs) : Add GitHub Pages deployment workflow and automated build verification
+- docs(portal) : Add comprehensive documentation guides, API reference, and interactive architecture diagrams
+- feat(docs) : Initialize Docusaurus documentation portal with custom Kinema cinematic theme and animations
+
 ## v0.0.1-alpha.5 (2026-10-21)
 
 - !alpha : Dedicated PiP button, swipe-down PiP gesture, and media notification seekbar
