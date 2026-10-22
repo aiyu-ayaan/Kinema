@@ -44,6 +44,15 @@ pub async fn hidden_by(pool: &SqlitePool, user_id: i64) -> Result<Vec<i64>, DbEr
     )
 }
 
+/// Every genre name in the library, for the shelf form.
+pub async fn genre_names(pool: &SqlitePool) -> Result<Vec<String>, DbError> {
+    Ok(
+        sqlx::query_scalar("SELECT name FROM genres ORDER BY name COLLATE NOCASE")
+            .fetch_all(pool)
+            .await?,
+    )
+}
+
 pub async fn get(pool: &SqlitePool, id: i64) -> Result<Option<Shelf>, DbError> {
     Ok(
         sqlx::query_as("SELECT id, title, genre, position FROM shelves WHERE id = ?1")
