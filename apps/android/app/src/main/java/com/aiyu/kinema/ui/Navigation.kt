@@ -15,18 +15,24 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -71,45 +77,66 @@ data object AboutKey : NavKey
 @Serializable
 data object AcknowledgementsKey : NavKey
 
+@Serializable
+data class ActivePlayback(val id: Long, val start: Double? = null) : java.io.Serializable
+
 /**
- * Signed-in navigation. Pages push with a shared-axis slide; the system back gesture previews the page below:
- * the top page shrinks toward the edge being swiped from while the one beneath fades up, and lets go or springs
- * back with the gesture.
+ * Signed-in navigation. Pages push with a shared-axis slide; the system back gesture previews the page beneath.
+ * An active player is hosted as an overlay: on tablets it minimizes to an in-app PiP miniplayer at bottom right.
  */
 @Composable
 fun AppNavigation() {
     val stack = rememberNavBackStack(TabsKey)
     val motion = MaterialTheme.motionScheme
+    val large = LocalConfiguration.current.smallestScreenWidthDp >= 600
+    var activePlayback by rememberSaveable { mutableStateOf<ActivePlayback?>(null) }
+    var isMinimized by rememberSaveable { mutableStateOf(false) }
+
     val navigator = remember(stack) {
         Navigator(
             open = { stack.add(ItemKey(it)) },
             play = { id, start ->
-                // "Next episode" replaces the player instead of stacking players.
-                if (stack.lastOrNull() is PlayerKey) stack.removeAt(stack.lastIndex)
-                stack.add(PlayerKey(id, start))
+                activePlayback = ActivePlayback(id, start)
+                isMinimized = false
             },
             back = { if (stack.size > 1) stack.removeAt(stack.lastIndex) },
             go = { stack.add(it) },
         )
     }
     androidx.compose.runtime.CompositionLocalProvider(LocalNavigator provides navigator) {
-        NavDisplay(
-            backStack = stack,
-            onBack = { if (stack.size > 1) stack.removeAt(stack.lastIndex) },
-            transitionSpec = { sharedAxisX(forward = true, motion) },
-            popTransitionSpec = { sharedAxisX(forward = false, motion).apply { targetContentZIndex = -1f } },
-            predictivePopTransitionSpec = { edge -> predictivePop(edge) },
-            // Each page is opaque, so the page beneath only shows around a shrinking one.
-            entryProvider = entryProvider {
-                entry<TabsKey> { Page { MainScreen() } }
-                entry<ItemKey> { Page { ItemScreen(it.id) } }
-                entry<PlayerKey> { PlayerScreen(it.id, it.start) }
-                entry<UpdatesKey> { Page { UpdatesScreen() } }
-                entry<AboutKey> { Page { AboutScreen() } }
-                entry<AcknowledgementsKey> { Page { AcknowledgementsScreen() } }
-            },
-        )
-        com.aiyu.kinema.update.UpdatePrompt()
+        Box(Modifier.fillMaxSize()) {
+            NavDisplay(
+                backStack = stack,
+                onBack = { if (stack.size > 1) stack.removeAt(stack.lastIndex) },
+                transitionSpec = { sharedAxisX(forward = true, motion) },
+                popTransitionSpec = { sharedAxisX(forward = false, motion).apply { targetContentZIndex = -1f } },
+                predictivePopTransitionSpec = { edge -> predictivePop(edge) },
+                // Each page is opaque, so the page beneath only shows around a shrinking one.
+                entryProvider = entryProvider {
+                    entry<TabsKey> { Page { MainScreen() } }
+                    entry<ItemKey> { Page { ItemScreen(it.id) } }
+                    entry<PlayerKey> { PlayerScreen(it.id, it.start, isMinimized = false, onMinimize = {}, onExpand = {}, onClose = { if (stack.size > 1) stack.removeAt(stack.lastIndex) }) }
+                    entry<UpdatesKey> { Page { UpdatesScreen() } }
+                    entry<AboutKey> { Page { AboutScreen() } }
+                    entry<AcknowledgementsKey> { Page { AcknowledgementsScreen() } }
+                },
+            )
+            com.aiyu.kinema.update.UpdatePrompt()
+
+            activePlayback?.let { playback ->
+                PlayerScreen(
+                    id = playback.id,
+                    start = playback.start,
+                    isMinimized = isMinimized && large,
+                    onMinimize = { isMinimized = true },
+                    onExpand = { isMinimized = false },
+                    onClose = {
+                        activePlayback = null
+                        isMinimized = false
+                    },
+                )
+            }
+        }
     }
 }
 
