@@ -94,7 +94,7 @@ export interface Marker {
   kind: 'intro' | 'credits'
   start_s: number
   end_s: number
-  source: 'chapter' | 'audio' | 'black' | 'manual'
+  source: 'chapter' | 'audio' | 'black' | 'text' | 'manual'
 }
 
 export interface CastMember {

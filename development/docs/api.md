@@ -27,7 +27,7 @@ This is Kinema's own API. It is not Plex-compatible.
 | PUT | `/items/{id}/progress` | `{position_s, watched?}` |
 | PUT | `/items/{id}/watched` | `{watched}`, for the item and every episode under it |
 | PUT | `/items/{id}/track-choice` | `{audio, subtitle}` positions (subtitle `-1` off): this profile's pick, saved by every player and kept on the movie or the show; the plan prefers it over the show's admin choice and the Languages settings |
-| PUT / DELETE | `/items/{id}/markers/{intro\|credits}` | Admin: `{start_s, end_s}` sets a marker on the title's main file that detection never replaces; DELETE drops it and looks for it again. Markers come with each file in `GET /items/{id}` as `markers: [{kind, start_s, end_s, source}]` |
+| PUT / DELETE | `/items/{id}/markers/{intro\|credits}` | Admin: `{start_s, end_s}` sets a marker on the title's main file that detection never replaces; DELETE drops it and looks for it again. Markers come with each file in `GET /items/{id}` as `markers: [{kind, start_s, end_s, source}]` (`source`: `chapter`, `audio`, `black`, `text`, `manual`). The web player's admin panel (Skip markers) uses these two calls |
 | PUT | `/items/{id}/tracks` | Admin, show only: `{audio, subtitle}` as positions among an episode's audio / subtitle streams; `null` follows the Languages settings, subtitle `-1` is off |
 | GET | `/files/{id}/plan?audio=&start=&hevc=&av1=&raw=` | `{mode: direct\|remux\|transcode, duration_s, audio, start, subtitle}`; audio and subtitle follow the show's track choice, then the Languages settings. `raw=true` always plans direct (a player that decodes anything, mpv) |
 | GET | `/stream/{id}?audio=&start=&hevc=&av1=&raw=` | Direct (Range) or fMP4 pipe, per the plan; `raw=true` always serves the file as it is |

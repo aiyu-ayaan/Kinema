@@ -75,8 +75,8 @@ See `docs/roadmap.md` for later milestones.
 - [x] Web: watch page with up-next list, theater mode (t), full window width
 - [x] Server: intro / credits markers from chapters, audio shared across a season, black frames; admin override API
 - [x] Android + web: Skip intro, Skip credits
-- [ ] Admin UI to set or clear a marker (API only for now)
-- [ ] Credits over lit footage (no black, no shared song) are not found; consider a text-overlay or loudness check
+- [ ] Admin UI to set or clear a marker: built in the web player (flag button, `MarkerEditor.tsx`); tsc/eslint clean and the API calls curl-tested, but not yet clicked through in a browser. Android has none
+- [ ] Credits over lit footage: stable picture + edge detail check added (`source = text`, media-pipeline.md §7); tuned and tested on synthetic ffmpeg footage only. Check it on real films and episodes (`KINEMA_CREDITS_FILE=... look_at_a_file`), adjust thresholds; busy-backdrop credits still missed; no loudness check
 - [ ] Android tablet keyboard shortcuts (f, t, space) like the web player
 
 ## Cheaper HEVC playback (2026-10-21)
@@ -108,3 +108,10 @@ Trigger: transcode-only viewing took every core while Plex stayed quiet on the s
 - [ ] VA-API: bundled ffmpeg aborts against the host libva (`vaMapBuffer2`); see the packaging spike
 - [ ] Per-stream fallback to libx264 when the GPU encoder fails after startup
 - [ ] AMF (AMD on Windows)
+
+## Scrub thumbnails (2026-10-22)
+- [x] Server: lazy sprite sheets + WebVTT index per file (keyframe-only, `nice 19`, shared background slot, one run per file, cached by id+mtime+size), `GET /items/{id}/timeline.vtt` and `/items/{id}/sprites/{n}` behind auth; curl-tested end to end on a synthetic file
+- [ ] Web: hover / drag preview on the seek bar (`ScrubPreview.tsx`); tsc/eslint clean, not yet seen in a browser
+- [ ] Measure sprite generation on real 4K HEVC / long files and on the Pi 5
+- [ ] Android player: use the same sprites for its seek bar
+- [ ] Sprites for audio-only or very sparse-GOP files (one keyframe per minute gives repeated tiles)

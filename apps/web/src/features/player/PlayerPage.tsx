@@ -8,6 +8,7 @@ import {
   CircleNotch,
   ClockCounterClockwise,
   ClockClockwise,
+  FlagBanner,
   Pause,
   Play,
   Rectangle,
@@ -24,10 +25,14 @@ import { hasTopLeftWindowControls, hasTopRightWindowControls } from '@/lib/deskt
 import { storageKeys } from '@/lib/flavor'
 import { clock, isTextSub, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
+import { useIsAdmin } from '@/lib/auth'
 import { mpvBridge, useMpv } from '@/lib/mpv'
 import type { ItemDetail, PlaybackPlan, Stream } from '@/lib/types'
 import { parseVtt, type Cue } from '@/lib/vtt'
+import { MarkerEditor } from './MarkerEditor'
 import { MpvPlayer } from './MpvPlayer'
+import { ScrubPreview } from './ScrubPreview'
+import { useScrubTiles } from './useScrubTiles'
 import { SkipPill, UP_NEXT_S, UpNextCard, UpNextList, WatchDetails } from './WatchPanels'
 
 
@@ -169,6 +174,10 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     })
   }, [])
   const [menu, setMenu] = useState(false)
+  const [markerPanel, setMarkerPanel] = useState(false)
+  const [hoverFrac, setHoverFrac] = useState<number | null>(null)
+  const tiles = useScrubTiles(item.id)
+  const isAdmin = useIsAdmin()
   const [chrome, setChrome] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -371,7 +380,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     hideTimer.current = window.setTimeout(() => setChrome(false), 3000)
   }, [])
   useEffect(() => () => window.clearTimeout(hideTimer.current), [])
-  const showChrome = chrome || !playing || menu
+  const showChrome = chrome || !playing || menu || markerPanel
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -429,6 +438,8 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   const upNextDue = remaining != null && remaining >= 0 && (credits ? time >= credits.start_s : remaining <= UP_NEXT_S)
   const upNextSpan = credits && duration ? duration - credits.start_s : UP_NEXT_S
   const fill = duration ? `${(shown / duration) * 100}%` : '0%'
+  // Preview above the bar: where the pointer hovers, or where a drag is.
+  const previewFrac = duration ? (scrub != null ? scrub / duration : hoverFrac) : null
   const title = item.kind === 'episode' ? (item.show_title ?? item.title) : item.title
   const subtitle = item.kind === 'episode' ? `${subtitleOf(item)} · ${item.title}` : item.year ? String(item.year) : null
 
@@ -460,7 +471,10 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
           <div
             ref={shellRef}
             onMouseMove={poke}
-            onClick={() => menu && setMenu(false)}
+            onClick={() => {
+              if (menu) setMenu(false)
+              if (markerPanel) setMarkerPanel(false)
+            }}
             className={cn('relative aspect-video w-full overflow-hidden bg-black text-white', theater ? 'max-h-[calc(100dvh-120px)]' : 'max-h-[calc(100dvh-140px)] lg:rounded-lg', !showChrome && 'cursor-none')}
           >
             <video
@@ -613,6 +627,12 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
               </div>
             )}
 
+            {isAdmin && markerPanel && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <MarkerEditor itemId={item.id} markers={file.markers ?? []} time={time} duration={duration} />
+              </div>
+            )}
+
             {/* Bottom controls */}
             <div
               onClick={(e) => e.stopPropagation()}
@@ -621,27 +641,37 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
               {duration ? (
                 <div className="flex items-center gap-3 px-2">
                   <span className="w-16 text-end text-label tabular text-white/80">{clock(shown)}</span>
-                  <input
-                    type="range"
-                    className="range flex-1"
-                    min={0}
-                    max={duration}
-                    step={1}
-                    value={shown}
-                    style={{ ['--fill' as string]: fill }}
-                    aria-label={t('player.seek')}
-                    onChange={(e) => setScrub(Number(e.target.value))}
-                    onPointerUp={(e) => {
-                      const target = Number(e.currentTarget.value)
-                      seek(target)
-                      setScrub(null)
+                  <div
+                    className="relative flex-1"
+                    onPointerMove={(e) => {
+                      const r = e.currentTarget.getBoundingClientRect()
+                      if (r.width > 0) setHoverFrac(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)))
                     }}
-                    onKeyUp={(e) => {
-                      const target = Number(e.currentTarget.value)
-                      seek(target)
-                      setScrub(null)
-                    }}
-                  />
+                    onPointerLeave={() => setHoverFrac(null)}
+                  >
+                    <input
+                      type="range"
+                      className="range w-full"
+                      min={0}
+                      max={duration}
+                      step={1}
+                      value={shown}
+                      style={{ ['--fill' as string]: fill }}
+                      aria-label={t('player.seek')}
+                      onChange={(e) => setScrub(Number(e.target.value))}
+                      onPointerUp={(e) => {
+                        const target = Number(e.currentTarget.value)
+                        seek(target)
+                        setScrub(null)
+                      }}
+                      onKeyUp={(e) => {
+                        const target = Number(e.currentTarget.value)
+                        seek(target)
+                        setScrub(null)
+                      }}
+                    />
+                    {previewFrac != null && <ScrubPreview tiles={tiles} time={previewFrac * duration} frac={previewFrac} />}
+                  </div>
                   <span className="w-16 text-label tabular text-white/60">{clock(duration)}</span>
                 </div>
               ) : null}
@@ -687,6 +717,11 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
                   )}
                 </div>
                 <div className="ms-auto flex items-center gap-1">
+                  {isAdmin && (
+                    <IconButton label={t('player.markers.open')} onClick={() => setMarkerPanel((o) => !o)} className={markerPanel ? 'bg-white/15' : undefined}>
+                      <FlagBanner size={22} weight={markerPanel ? 'fill' : 'regular'} />
+                    </IconButton>
+                  )}
                   {onTracks && (
                     <IconButton label={t('player.tracks')} onClick={onTracks} className={menu ? 'bg-white/15' : undefined}>
                       <Subtitles size={22} weight={subId != null ? 'fill' : 'regular'} />
