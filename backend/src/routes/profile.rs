@@ -84,12 +84,26 @@ pub fn clean_max_rating(r: Option<i64>) -> ApiResult<Option<i64>> {
 struct Me {
     user: User,
     preferences: Prefs,
+    options: Options,
+}
+
+/// Choices the profile and admin editors offer.
+#[derive(Serialize)]
+struct Options {
+    track_languages: Vec<&'static str>,
+    subtitle_modes: &'static [&'static str],
+    rating_levels: &'static [u8],
 }
 
 async fn me(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiResult<Json<Me>> {
     Ok(Json(Me {
         preferences: profiles::get(&state.db, user.id).await?,
         user,
+        options: Options {
+            track_languages: TRACK_LANGUAGES.iter().map(|(c, _)| *c).collect(),
+            subtitle_modes: SUBTITLE_MODES,
+            rating_levels: content_rating::LEVELS,
+        },
     }))
 }
 
