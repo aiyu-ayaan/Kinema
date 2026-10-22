@@ -47,6 +47,8 @@ CREATE TABLE items (
   tvmaze_id INTEGER,               -- shows matched on TVmaze when TMDB had no key or no match
   poster TEXT,                     -- image cache key
   backdrop TEXT,
+  content_rating TEXT,             -- certification; '' = looked up, unrated (migration 20261022300001)
+  content_rating_manual INTEGER NOT NULL DEFAULT 0,  -- set by an admin, TMDB never replaces it
   added_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -142,20 +144,34 @@ CREATE TABLE user_library_access (
 
 CREATE TABLE share_links (
   id INTEGER PRIMARY KEY,
-  token_hash TEXT NOT NULL UNIQUE,
-  created_by INTEGER NOT NULL REFERENCES users(id),
-  target_kind TEXT NOT NULL,       -- item|playlist|library
+  token_hash TEXT NOT NULL UNIQUE, -- SHA-256 of the secret verifier
+  created_by INTEGER NOT NULL REFERENCES users(id),  -- trigger deletes links with the user
+  target_kind TEXT NOT NULL,       -- 'item' (movie/show/season/episode/video)
   target_id INTEGER NOT NULL,
   expires_at INTEGER,
-  max_uses INTEGER,
-  uses INTEGER NOT NULL DEFAULT 0
+  max_uses INTEGER,                -- unused for now
+  uses INTEGER NOT NULL DEFAULT 0, -- unused for now
+  selector TEXT UNIQUE,            -- public half of the token (migration 20261022300001)
+  created_at INTEGER NOT NULL DEFAULT 0,
+  revoked_at INTEGER,
+  label TEXT
 );
 
 CREATE TABLE sessions (
   id TEXT PRIMARY KEY,             -- random 256-bit, stored hashed
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   created_at INTEGER NOT NULL,
-  expires_at INTEGER NOT NULL
+  expires_at INTEGER NOT NULL,
+  lan_only INTEGER NOT NULL DEFAULT 0  -- opened without a lock at home: LAN only
+);
+
+-- Per-profile languages, content limit and LAN unlock (migration 20261022300001).
+CREATE TABLE profile_prefs (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  audio_language TEXT, subtitle_language TEXT, subtitle_mode TEXT,  -- NULL follows the server
+  max_rating INTEGER,              -- minimum-age scale 0..18, NULL = no limit
+  allow_unrated INTEGER NOT NULL DEFAULT 0,
+  lan_unlock INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE jobs (

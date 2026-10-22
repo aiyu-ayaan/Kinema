@@ -13,9 +13,20 @@ This is Kinema's own API. It is not Plex-compatible.
 | POST | `/auth/login` | `{user_id \| name, password? \| pin?}` returns `{token, user}` and sets `kinema_session`; 429 after 5 failures |
 | POST | `/auth/logout` | Invalidate session, clear cookie |
 | GET | `/auth/me` | Current user |
-| GET | `/auth/profiles` | Public profile picker: names, avatars, lock kind |
+| GET | `/auth/profiles` | Public profile picker: names, avatars, lock kind, and for this device `opens_without_lock` / `home_only` |
+| GET | `/profile` | `{user, preferences, options: {track_languages, subtitle_modes, rating_levels}}` |
+| PUT | `/profile/preferences` | `{audio_language, subtitle_language, subtitle_mode}` (null follows the server, `""` file default); limits are not settable here |
+| GET | `/profile/export` | Own export `{format: "kinema.profile", version: 1, profile, preferences, watch}`; never lock hashes |
+| POST | `/profile/import` | Own import: watch history + languages; `{imported, unmatched, kept, lock_applied}` |
+| GET | `/users/{id}/export?include_lock=` | Admin: export, hashes only with `include_lock=true` |
+| POST | `/users/{id}/import?apply_lock=` | Admin: import incl. limits and LAN unlock; lock hashes only with `apply_lock=true` |
+| PUT | `/items/{id}/content-rating` | Admin: `{content_rating: "PG-13" \| null}` manual certification (null returns to TMDB's) |
+| GET/POST | `/shares` | Admin: list / create `{item_id, expires_in_hours: 1..2160, label?}` → `{share, token, path: "/s/<token>"}` (token shown once) |
+| DELETE | `/shares/{id}` | Admin: revoke (204, 404 if not live) |
+| GET | `/share/{token}`, `/share/{token}/items/{id}` | Public, scoped: `{share: {label, expires_at, target_id}, item, children, files: [{id, container, duration_s, streams}]}` |
+| GET | `/share/{token}/files/{id}/plan`, `/share/{token}/stream/{id}`, `/share/{token}/subtitles/{stream_id}`, `/share/{token}/images/{size}/{name}` | Public, scoped playback; same query as `/files/{id}/plan` and `/stream/{id}` |
 | GET/POST | `/users` | Admin: list / create profile `{name, avatar, is_admin, password?, pin?, library_ids}` |
-| PATCH/DELETE | `/users/{id}` | Admin: edit (omitted lock keeps it, `""` removes it) / delete |
+| PATCH/DELETE | `/users/{id}` | Admin: edit (omitted lock keeps it, `""` removes it; optional `preferences: {audio_language, subtitle_language, subtitle_mode, max_rating, allow_unrated, lan_unlock}`, omitted keeps them) / delete. Responses carry `preferences` |
 | GET/POST | `/libraries` | List / admin create `{name, kind: movie\|show\|other, paths}` |
 | DELETE | `/libraries/{id}` | Admin: remove (files on disk untouched) |
 | POST | `/libraries/{id}/scan` | Admin: rescan |
