@@ -1,6 +1,13 @@
 import { storageKeys } from './flavor'
 import type {
+  CollectionDetail,
+  CollectionSummary,
   DirListing,
+  LockableField,
+  PlaylistDetail,
+  PlaylistSummary,
+  RootOption,
+  ShelfDef,
   MatchCandidate,
   Home,
   ItemCard,
@@ -152,6 +159,37 @@ export const api = {
   clearCache: (kind: 'thumbnails' | 'subtitles' | 'images') => request<void>('POST', `/server/cache/${kind}/clear`),
   regenerateThumbnails: (id: number) => request<void>('POST', `/libraries/${id}/thumbnails`),
   matchMissing: (id: number) => request<void>('POST', `/libraries/${id}/match`),
+  /** Admin: scan mode per folder (events, or poll every `poll_interval_min` minutes for network shares). */
+  setRoots: (id: number, roots: RootOption[]) => request<Library>('PUT', `/libraries/${id}/roots`, { roots }),
+
+  /** Admin: saves and locks the given fields. */
+  editMetadata: (id: number, body: { title?: string; year?: number; summary?: string; rating?: number }) =>
+    request<{ locked_fields: LockableField[] }>('PATCH', `/items/${id}/metadata`, body),
+  /** Admin: exactly which fields are locked. */
+  setLocks: (id: number, fields: LockableField[]) => request<{ locked_fields: LockableField[] }>('PUT', `/items/${id}/locks`, { fields }),
+
+  playlists: () => request<PlaylistSummary[]>('GET', '/playlists'),
+  playlist: (id: number) => request<PlaylistDetail>('GET', `/playlists/${id}`),
+  createPlaylist: (name: string, item_ids: number[] = []) => request<PlaylistDetail>('POST', '/playlists', { name, item_ids }),
+  updatePlaylist: (id: number, body: { name?: string; is_shared?: boolean }) => request<PlaylistDetail>('PATCH', `/playlists/${id}`, body),
+  deletePlaylist: (id: number) => request<void>('DELETE', `/playlists/${id}`),
+  setPlaylistItems: (id: number, item_ids: number[]) => request<PlaylistDetail>('PUT', `/playlists/${id}/items`, { item_ids }),
+  addToPlaylist: (id: number, item_ids: number[]) => request<PlaylistDetail>('POST', `/playlists/${id}/items`, { item_ids }),
+
+  collections: () => request<CollectionSummary[]>('GET', '/collections'),
+  collection: (id: number) => request<CollectionDetail>('GET', `/collections/${id}`),
+  createCollection: (name: string, item_ids: number[] = []) => request<CollectionDetail>('POST', '/collections', { name, item_ids }),
+  renameCollection: (id: number, name: string) => request<CollectionDetail>('PATCH', `/collections/${id}`, { name }),
+  deleteCollection: (id: number) => request<void>('DELETE', `/collections/${id}`),
+  setCollectionItems: (id: number, item_ids: number[]) => request<CollectionDetail>('PUT', `/collections/${id}/items`, { item_ids }),
+
+  shelves: () => request<ShelfDef[]>('GET', '/shelves'),
+  createShelf: (title: string, genre: string) => request<ShelfDef>('POST', '/shelves', { title, genre }),
+  updateShelf: (id: number, body: { title?: string; genre?: string }) => request<ShelfDef>('PATCH', `/shelves/${id}`, body),
+  deleteShelf: (id: number) => request<void>('DELETE', `/shelves/${id}`),
+  /** Hides or shows a shelf for this profile only. */
+  hideShelf: (id: number, hidden: boolean) => request<void>('PUT', `/shelves/${id}/hidden`, { hidden }),
+  genres: () => request<string[]>('GET', '/genres'),
 }
 
 /** Server-made video frame for an item without artwork (a show uses its first episode). */

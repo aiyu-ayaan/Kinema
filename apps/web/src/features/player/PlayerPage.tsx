@@ -18,6 +18,7 @@ import {
   Check,
 } from '@phosphor-icons/react'
 import { EpisodeLinks } from '@/components/media/EpisodeLinks'
+import { activePlaylist, nextInList } from '@/lib/activePlaylist'
 import { api, type PlayCaps } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { hasTopLeftWindowControls, hasTopRightWindowControls } from '@/lib/desktop'
@@ -731,6 +732,15 @@ export function PlayerPage() {
   const id = Number(useParams().id)
   const [params] = useSearchParams()
   const { data, error } = useQuery({ queryKey: ['item', id], queryFn: () => api.item(id), staleTime: 0 })
+  const listId = activePlaylist.id
+  const list = useQuery({ queryKey: ['playlist', listId], queryFn: () => api.playlist(listId as number), enabled: listId != null })
+  const listIds = list.data?.items.map((i) => i.id)
+  const playlist = listIds?.includes(id) ? { next: nextInList(listIds, id) } : null
+  // Playing something outside the playlist (or a playlist that is gone) leaves playlist mode.
+  const leftList = listId != null && ((listIds && !listIds.includes(id)) || list.isError)
+  useEffect(() => {
+    if (leftList) activePlaylist.set(null)
+  }, [leftList])
   if (error || (data && data.files.length === 0)) {
     return (
       <div className="fixed inset-0 z-sheet flex items-center justify-center bg-black p-6 text-center text-white/80">
@@ -738,7 +748,8 @@ export function PlayerPage() {
       </div>
     )
   }
-  if (!data) {
+  // Held until the playlist is known, so the player never starts with the wrong "up next".
+  if (!data || (listId != null && list.isLoading)) {
     return (
       <div className="fixed inset-0 z-sheet flex items-center justify-center bg-black">
         <CircleNotch size={48} className="animate-spin text-primary" aria-label={t('common.loading')} />
@@ -748,8 +759,10 @@ export function PlayerPage() {
   const explicit = params.get('t')
   const resume = data.item.watched ? 0 : (data.item.position_s ?? 0)
   const startAt = explicit != null ? Number(explicit) || 0 : resume
-  if (params.get('mpv') === '1' && mpvBridge) return <MpvPlayer key={id} detail={data} startAt={startAt} />
-  return <Player key={id} detail={data} startAt={startAt} />
+  // Playing from a playlist: its next entry replaces the next episode.
+  const detail = playlist ? { ...data, next_id: playlist.next } : data
+  if (params.get('mpv') === '1' && mpvBridge) return <MpvPlayer key={id} detail={detail} startAt={startAt} />
+  return <Player key={id} detail={detail} startAt={startAt} />
 }
 
 export default PlayerPage

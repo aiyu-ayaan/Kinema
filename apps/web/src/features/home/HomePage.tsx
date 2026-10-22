@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FilmReel, Info, Play, Plus } from '@phosphor-icons/react'
 import { Shelf } from '@/components/media/PosterCard'
 import { Button } from '@/components/ui/Button'
 import { EmptyState, Skeleton } from '@/components/ui/Card'
+import { ListCard, ListRow } from '@/features/playlists/ListCard'
 import { api, frameUrl, imageUrl, sharperImageUrl } from '@/lib/api'
 import { useIsAdmin } from '@/lib/auth'
 import { cn } from '@/lib/cn'
@@ -133,6 +134,16 @@ export function HomePage() {
   const admin = useIsAdmin()
   const { data, isLoading } = useQuery({ queryKey: ['home'], queryFn: api.home, refetchInterval: scanning ? 3000 : false })
   const features = useMemo(() => (data ? pickFeatures(data) : []), [data])
+  const qc = useQueryClient()
+  const shelfDefs = useQuery({ queryKey: ['shelves'], queryFn: api.shelves })
+  const hidden = shelfDefs.data?.filter((s) => s.hidden) ?? []
+  const hide = useMutation({
+    mutationFn: ({ id, hidden: h }: { id: number; hidden: boolean }) => api.hideShelf(id, h),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['home'] })
+      qc.invalidateQueries({ queryKey: ['shelves'] })
+    },
+  })
 
   if (isLoading) {
     return (
@@ -186,6 +197,46 @@ export function HomePage() {
             }
           />
         ))}
+        {data.genre_shelves.map((s) => (
+          <Shelf
+            key={`genre-${s.id}`}
+            title={s.title}
+            items={s.items}
+            action={
+              <button type="button" onClick={() => hide.mutate({ id: s.id, hidden: true })} className="cursor-pointer text-label font-medium text-muted hover:text-fg">
+                {t('home.shelf.hide')}
+              </button>
+            }
+          />
+        ))}
+        {data.collections.length > 0 && (
+          <ListRow title={t('home.collections')}>
+            {data.collections.map((c) => (
+              <div key={c.id} className="w-36 shrink-0 snap-start md:w-40">
+                <ListCard to={`/collections/${c.id}`} title={c.name} count={c.item_count} poster={c.poster} />
+              </div>
+            ))}
+          </ListRow>
+        )}
+        {data.playlists.length > 0 && (
+          <ListRow title={t('home.playlists')}>
+            {data.playlists.map((p) => (
+              <div key={p.id} className="w-36 shrink-0 snap-start md:w-40">
+                <ListCard to={`/playlists/${p.id}`} title={p.name} count={p.item_count} poster={p.poster} note={p.mine ? undefined : t('lists.sharedBy', { name: p.owner_name })} />
+              </div>
+            ))}
+          </ListRow>
+        )}
+        {hidden.length > 0 && (
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-muted">
+            {t('home.shelf.hidden')}
+            {hidden.map((s) => (
+              <button key={s.id} type="button" onClick={() => hide.mutate({ id: s.id, hidden: false })} className="cursor-pointer text-primary hover:underline">
+                {t('home.shelf.show', { title: s.title })}
+              </button>
+            ))}
+          </p>
+        )}
       </div>
     </div>
   )

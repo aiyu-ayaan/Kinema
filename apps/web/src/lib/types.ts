@@ -33,8 +33,16 @@ export interface Library {
   item_count: number
   show_count: number
   roots: string[]
+  /** Per-folder scan mode: filesystem events, or polling for network shares. */
+  root_options: RootOption[]
   scanning: boolean
   generating_thumbnails: boolean
+}
+
+export interface RootOption {
+  path: string
+  poll: boolean
+  poll_interval_min: number
 }
 
 export type ItemKind = 'movie' | 'show' | 'season' | 'episode' | 'video'
@@ -107,6 +115,10 @@ export interface CastMember {
 export interface ItemDetail {
   item: ItemCard
   genres: string[]
+  /** Fields edited by hand; scans and refreshes never overwrite them. */
+  locked_fields: LockableField[]
+  /** Franchise collections the title belongs to. */
+  collections: { id: number; name: string; tmdb_id: number | null }[]
   files: MediaFile[]
   children: ItemCard[]
   cast: CastMember[]
@@ -131,6 +143,49 @@ export interface SeriesTracks {
 export interface Home {
   continue_watching: ItemCard[]
   shelves: { library: Library; kind: 'movies' | 'shows' | 'episodes'; items: ItemCard[] }[]
+  playlists: PlaylistSummary[]
+  collections: CollectionSummary[]
+  genre_shelves: { id: number; title: string; genre: string; items: ItemCard[] }[]
+}
+
+export const lockableFields = ['title', 'year', 'summary', 'rating', 'poster', 'backdrop', 'genres'] as const
+export type LockableField = (typeof lockableFields)[number]
+
+export interface PlaylistSummary {
+  id: number
+  owner_id: number
+  owner_name: string
+  name: string
+  is_shared: boolean
+  mine: boolean
+  /** Items this profile may see. */
+  item_count: number
+  poster: string | null
+}
+
+export interface PlaylistDetail extends PlaylistSummary {
+  items: ItemCard[]
+}
+
+export interface CollectionSummary {
+  id: number
+  name: string
+  tmdb_id: number | null
+  item_count: number
+  poster: string | null
+}
+
+export interface CollectionDetail extends CollectionSummary {
+  items: ItemCard[]
+}
+
+export interface ShelfDef {
+  id: number
+  title: string
+  genre: string
+  position: number
+  /** This profile hid the shelf. */
+  hidden: boolean
 }
 
 export interface PlaybackPlan {
