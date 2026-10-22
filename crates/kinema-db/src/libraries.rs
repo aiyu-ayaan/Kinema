@@ -12,6 +12,28 @@ pub struct Library {
     pub show_count: i64,
     #[sqlx(skip)]
     pub roots: Vec<String>,
+    /// Per-folder scan mode: filesystem events, or polling for network shares.
+    #[sqlx(skip)]
+    pub root_options: Vec<RootOption>,
+}
+
+pub const POLL_DEFAULT_MIN: i64 = 5;
+pub const POLL_MIN: i64 = 1;
+pub const POLL_MAX: i64 = 24 * 60;
+
+#[derive(Debug, Clone, Serialize, serde::Deserialize, PartialEq, Eq, sqlx::FromRow)]
+pub struct RootOption {
+    pub path: String,
+    /// Poll this folder instead of watching it for filesystem events (NFS, SMB).
+    pub poll: bool,
+    pub poll_interval_min: i64,
+}
+
+impl RootOption {
+    pub fn clamped(mut self) -> Self {
+        self.poll_interval_min = self.poll_interval_min.clamp(POLL_MIN, POLL_MAX);
+        self
+    }
 }
 
 pub async fn list(pool: &SqlitePool) -> Result<Vec<Library>, DbError> {
@@ -23,18 +45,45 @@ pub async fn list(pool: &SqlitePool) -> Result<Vec<Library>, DbError> {
     )
     .fetch_all(pool)
     .await?;
-    let roots: Vec<(i64, String)> =
-        sqlx::query_as("SELECT library_id, path FROM library_roots ORDER BY path")
-            .fetch_all(pool)
-            .await?;
+    let roots: Vec<(i64, String, bool, i64)> = sqlx::query_as(
+        "SELECT library_id, path, poll, poll_interval_min FROM library_roots ORDER BY path",
+    )
+    .fetch_all(pool)
+    .await?;
     for lib in &mut libs {
-        lib.roots = roots
-            .iter()
-            .filter(|(id, _)| *id == lib.id)
-            .map(|(_, p)| p.clone())
-            .collect();
+        for (_, path, poll, poll_interval_min) in roots.iter().filter(|r| r.0 == lib.id) {
+            lib.roots.push(path.clone());
+            lib.root_options.push(RootOption {
+                path: path.clone(),
+                poll: *poll,
+                poll_interval_min: *poll_interval_min,
+            });
+        }
     }
     Ok(libs)
+}
+
+/// Saves the scan mode of folders the library already has; unknown paths are ignored.
+pub async fn set_root_options(
+    pool: &SqlitePool,
+    library_id: i64,
+    options: &[RootOption],
+) -> Result<(), DbError> {
+    let mut tx = pool.begin().await?;
+    for o in options {
+        let o = o.clone().clamped();
+        sqlx::query(
+            "UPDATE library_roots SET poll = ?3, poll_interval_min = ?4 WHERE library_id = ?1 AND path = ?2",
+        )
+        .bind(library_id)
+        .bind(&o.path)
+        .bind(o.poll)
+        .bind(o.poll_interval_min)
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(())
 }
 
 pub async fn get(pool: &SqlitePool, id: i64) -> Result<Option<Library>, DbError> {
