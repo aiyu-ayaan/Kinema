@@ -25,6 +25,7 @@
   "media.ffmpeg_missing": "ffmpeg was not found, so this file cannot be converted for the browser.",
   "media.subtitle_unsupported": "This subtitle is an image format and cannot be shown yet.",
   "media.image_invalid": "Unknown image.",
+  "media.hls_unavailable": "This file cannot be streamed as HLS yet: it is not probed, or its keyframe index is still being built. Use the regular stream.",
   "media.transcode_busy": "The server is already converting as many videos as allowed. Try again when another stream stops, or raise the limit in Settings → Transcoder.",
   "settings.cache_unknown": "Unknown cache.",
   "common.not_found": "Not found.",

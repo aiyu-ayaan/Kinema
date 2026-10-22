@@ -19,13 +19,15 @@ pub fn is_scanning(state: &AppState, library_id: i64) -> bool {
 }
 
 /// Starts a scan, or asks the running one to go again when it finishes.
-/// Thumbnails and skip markers for whatever the scan found follow in their own background jobs.
+/// Keyframe indexes, thumbnails and skip markers for whatever the scan found follow in their own
+/// background jobs.
 pub fn spawn_scan(state: AppState, library_id: i64) {
     let jobs = state.scans.clone();
     jobs.spawn(library_id, move || {
         let state = state.clone();
         async move {
             scan(&state, library_id).await?;
+            crate::keyframes::spawn(state.clone(), library_id);
             crate::thumbs::spawn(state.clone(), library_id);
             crate::markers::spawn(state, library_id);
             Ok(())

@@ -21,6 +21,9 @@ pub struct AppState {
     pub scans: Jobs,
     pub thumb_jobs: Jobs,
     pub marker_jobs: Jobs,
+    pub keyframe_jobs: Jobs,
+    /// Live HLS sessions (remux and transcode segments).
+    pub hls: crate::hls::HlsSessions,
     pub watchers: Arc<Mutex<HashMap<i64, RecommendedWatcher>>>,
     /// Library ids with filesystem changes, debounced into scans.
     pub changes: UnboundedSender<i64>,
