@@ -79,6 +79,16 @@ CREATE TABLE markers (
   PRIMARY KEY (file_id, kind)
 );
 
+-- Keyframes of a file's first video stream (media-pipeline.md 6a), migration 20261022100001.
+-- Valid while fingerprint matches files.fingerprint; a stale row is rebuilt by the keyframe job.
+CREATE TABLE keyframe_index (
+  file_id INTEGER PRIMARY KEY REFERENCES files(id) ON DELETE CASCADE,
+  fingerprint TEXT NOT NULL,
+  source TEXT NOT NULL,            -- cues|stss|packets|none (none: no cheap source, not retried)
+  has_b_frames INTEGER NOT NULL DEFAULT 0,
+  times BLOB NOT NULL              -- little-endian u32 milliseconds, ascending (14 KB for 2 h at 2 s GOPs)
+);
+
 CREATE TABLE streams (
   id INTEGER PRIMARY KEY,
   file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,

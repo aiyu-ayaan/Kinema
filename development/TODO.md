@@ -44,11 +44,14 @@
 - [x] Web integration: server change button on profile picker, setup, settings, and user menu
 
 ## Playback speed (Plex pain points)
-- [ ] Store keyframe/Cues index at probe time (M1)
+- [x] Store keyframe/Cues index at probe time (M1): Matroska Cues, MP4 stss, bounded ffprobe packet scan; remux plan start from it
 - [ ] Direct play: ranged `sendfile`, no session (M1)
 - [ ] Scan-time subtitle extraction to cached WebVTT (M4)
 - [ ] Client-side subtitle track switch, no player reload (M4)
-- [ ] HLS seek reuses existing segments; keep idle session 60 s (M4)
+- [x] HLS seek reuses existing segments; keep idle session 60 s (M4): server side, `/api/hls/{id}/index.m3u8` + `{n}.ts`
+- [ ] Web player (hls.js / Safari native) and Android on `/api/hls` for remux and transcode
+- [ ] Pause HLS runs on Windows (`platform::suspend_process`, e.g. NtSuspendProcess); unthrottled there for now
+- [ ] fMP4 HLS segments (HEVC copy for players without HEVC-in-TS)
 - [ ] Optional OCR of PGS/VobSub to WebVTT (M4)
 
 ## Packaging (end goal)

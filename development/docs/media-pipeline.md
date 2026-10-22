@@ -100,7 +100,7 @@ flowchart LR
 - Throttle: a re-encode may run at most 30 s (`THROTTLE_AHEAD_S`) ahead of the wall clock since it started. The lead is encoded at full speed after every play and seek, so it is the length of the CPU spike; it was 60 s until 2026-10-22, and 30 s still covers a short seek back or forward without a restart. ffmpeg reports `out_time_us` through `-progress pipe:2`; past the lead, the server stops reading its stdout, the pipe fills and ffmpeg blocks until playback catches up. CPU drops from "as fast as the cores allow" to "real time" (measured on an i5-10200H: 470 % to 230 %). Done in Rust, not with ffmpeg's `-readrate_initial_burst`, because that option needs ffmpeg 6.1 and the Raspberry Pi build with HEVC hardware decode is 5.1. Remux is not throttled: it costs little CPU and a deep buffer helps slow networks.
 - Rate control: libx264 runs CRF (the Quality setting) with a peak of `-maxrate` 2/4/8/12/20 Mbit/s for 480p/720p/1080p/1440p/2160p or Original and `-bufsize` twice that (`playback::max_kbps`). Without a cap a grainy or fast scene took several times the average bitrate. Presets slower than `veryfast` also get `-rc-lookahead 10`, veryfast's own value, instead of 20-40 frames analysed ahead.
 - Threads: a re-encode passes `-threads N` to both the decoder and libx264. N is the server setting `transcode_threads`, or with Auto (0) the logical cores divided by `max_transcodes`, never fewer than 4 (`playback::transcode_threads`): a Raspberry Pi 5 encodes 1080p at only about 1.4x real time on all four cores, so machines with 4 cores or fewer are not capped. Without it ffmpeg starts a thread per core for each, so the full-speed lead after every play or seek took the whole machine, and two conversions fought over the same cores. The cap does not slow a throttled stream: past the lead it only has to keep real time.
-- Segments are deleted as the client moves past them. Session dir purged on idle timeout (60 s) and at startup.
+- HLS segments are kept within 10 min of the playhead, so a seek back reuses them; session dir purged on idle timeout (60 s) and at startup (§ 6a).
 
 ## 5. Thumbnails
 
@@ -135,10 +135,54 @@ Goal: no Plex-style stall on multi-GB files, on seek, or on caption change.
 ```
 
 - Probe and keyframe index are stored in the DB at scan time, never computed on the play path.
-- MKV with Cues at the end: read the Cues once at scan time and store the offsets, so the first seek does not scan the file.
 - Direct play uses `Range` with no read-ahead cap and `sendfile`; no transcode session is created.
 - A seek inside an active HLS session first checks for existing segments; only a seek outside the cut range restarts ffmpeg, and it uses input seeking (`-ss` before `-i`) to the nearest keyframe.
 - Idle sessions are kept 60 s so a quick seek back does not pay startup again.
+
+### Keyframe index (done 2026-10-22)
+
+A background job (`backend/src/keyframes.rs`, after every scan, before thumbnails, sharing the one background media slot) indexes each probed video once per file version into `keyframe_index` (`data-model.md`), keyed by `files.fingerprint`. Builder: `kinema-media::keyframes`.
+
+| Container | Source | Cost |
+|---|---|---|
+| Matroska / WebM | Cues of the first video track, found through the SeekHead (Cues usually sit at the end) | a few KB read, milliseconds on any size |
+| MP4 / MOV | `stss` of the video `trak`, times from `stts` + `ctts` − first edit | the `moov` box only, `mdat` is skipped |
+| anything else ≤ 4 GiB | `ffprobe -select_streams v:0 -show_entries packet=pts_time,flags` (demux, no decode), nice 19, 120 s cap | reads the whole file once |
+| bigger, or timed out | none (`source = 'none'`, not retried for that version) | — |
+
+Cues and `stss` are exactly the points ffmpeg's Matroska and MP4 demuxers seek to, so a lookup gives the same landing ffmpeg will. Checked on ffmpeg-made files with irregular keyframes: the Matroska reader matches ffprobe exactly, the MP4 reader within 21 ms (ffmpeg's own edit-list shift). More than 50 000 keyframes (intra-only) stores none: any time is a keyframe there.
+
+Uses:
+- `GET /files/{id}/plan` for a remux: the start offset is `KeyframeIndex::landing(t)` (keyframe at or before `t`, `t − 3/23 s` with B-frames, as ffmpeg aims), a binary search instead of two ffprobe runs. Without an index it still asks ffprobe. The landing is the video keyframe; copied audio can begin up to one audio frame earlier (≈ 20 ms), below what subtitles show.
+- HLS remux segments start on indexed keyframes (below).
+
+### HLS sessions (done 2026-10-22, server side)
+
+`GET /api/hls/{file}/index.m3u8` returns a VOD playlist of the whole title; `GET /api/hls/{file}/{n}.ts` returns segment `n`. Segments are MPEG-TS cut by ffmpeg's segment muxer. Copied video: segments start at indexed keyframes, at least 4 s apart (`hls::copy_segments`; needs the index, else 409 `media.hls_unavailable`). Re-encode: a 4 s grid with forced keyframes (`hls::grid_segments`). Audio other than AAC/MP3 is re-encoded to AAC (TS carries those two as is).
+
+```mermaid
+flowchart TD
+  Req["GET /hls/{file}/{n}.ts"] --> S{session for<br/>profile+file+audio+mode}
+  S -- none --> New[new session:<br/>playlist starts, dir cache/hls/key]
+  New --> F
+  S -- found --> F{"Produced::fetch(n)"}
+  F -- "segment on disk<br/>(any earlier run)" --> Serve[serve file]
+  F -- "live run reaches it<br/>within 12 s" --> Wait[poll list-run.csv<br/>every 100 ms] --> F
+  F -- "elsewhere" --> Run["kill run, new run at n:<br/>-ss start(n), segment_start_number n"] --> Wait
+  Tick[1 s tick while sessions exist] --> T{"run > 30 s past<br/>last request?"}
+  T -- yes --> Stop[SIGSTOP] 
+  T -- no --> Cont[SIGCONT]
+  Tick --> I{"no request<br/>for 60 s?"}
+  I -- yes --> Down[kill ffmpeg, delete dir]
+```
+
+- Every run's segments line up with the playlist and with each other's: copied video keeps source timestamps (`-copyts -avoid_negative_ts disabled`) and cuts at `-segment_times` just under each keyframe; a re-encode shifts its output with `-output_ts_offset start`. Checked with ffmpeg 6.1: a run restarted at segment 3 produced segment 4 with the same PTS as a run from 0 (copy), within 21 ms (re-encode).
+- Files are `{run}-{n}.ts`, so a new run never rewrites a segment being served; the first complete copy of a segment wins. Segments from an earlier run stay usable after a restart (seek to 160 s, back to 4 s: served from run 1 in 13 ms, measured).
+- A segment more than 10 min (`KEEP_S`) from the one asked for is deleted, which bounds a session on disk.
+- Throttle: past 30 s (`THROTTLE_AHEAD_S`) beyond the last requested segment, the run is stopped with SIGSTOP (`kinema_core::platform::suspend_process`) and continued when the player nears. Remux is throttled too here: it writes to disk, not into a socket. Windows has no implementation yet, so runs there are not paused.
+- A profile has one session per file: asking with another audio track drops the old one. A re-encode run holds a transcode slot (503 `media.transcode_busy` past `max_transcodes`) while it exists, including the 60 s idle time.
+- `cache/hls` is purged at startup.
+- Shortcuts: no player uses HLS yet (the web player and Android still use the progressive stream; Safari needs it). HEVC copied into TS needs a player that decodes HEVC in MPEG-TS (untested), so for HEVC an HLS client should ask without `hevc=true` and get a re-encode. No fMP4 segments.
 
 ## 7. Intro and credits markers (skip intro, up next)
 
