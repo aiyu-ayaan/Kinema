@@ -20,7 +20,7 @@
 - [x] Player: direct play / remux / transcode, exact seek offset, audio switch, WebVTT subtitles, resume, next episode
 - [ ] Safari playback of remuxed streams (needs HLS, M4)
 - [x] Family profiles: picker, PIN, lockout, per-profile library access
-- [ ] Per-profile language preferences; LAN-only unlocked profiles
+- [x] Per-profile language preferences; LAN-only unlocked profiles (2026-10-22, see below)
 - [x] Fix-match UI for wrong TMDB matches
 - [x] Episodes inside Movies libraries grouped as shows; Movies / TV Shows sidebar sub-entries
 - [x] Sidecar subtitles picked up without a video change
@@ -140,3 +140,18 @@ Trigger: transcode-only viewing took every core while Plex stayed quiet on the s
 - [ ] Measure sprite generation on real 4K HEVC / long files and on the Pi 5
 - [ ] Android player: use the same sprites for its seek bar
 - [ ] Sprites for audio-only or very sparse-GOP files (one keyframe per minute gives repeated tiles)
+
+## Profiles and household (2026-10-22)
+- [x] Per-profile audio / subtitle language and subtitle mode, used by the plan (`profile_prefs`)
+- [x] LAN-only unlocked profiles: no-lock profiles and `lan_unlock` PIN skip only from LAN; `lan_only` sessions; `[network] trusted_proxies`
+- [x] Content limits per profile (age scale, unrated toggle) on every listing, search, item and stream path; TMDB certifications + admin override
+- [x] Share links: selector + hashed verifier, constant-time check, expiry, revoke, scoped `/api/share/{token}/...` routes; admin UI and `/s/{token}` page
+- [x] Profile export / import (watch history, preferences; lock hashes only on explicit admin request)
+- [x] Access-control tests over the router (`backend/src/access_tests.rs`)
+- [ ] Share links: per-IP rate limit, max uses, per-link transcode cap
+- [ ] Non-admin users creating share links for titles they can see (admin only for now)
+- [ ] Content limits in SQL instead of after the query, so limited profiles get full search / shelf pages
+- [ ] Android app: show `home_only` profiles and handle `auth.lan_session` (picker and re-sign-in)
+- [ ] Global IPv6 on the home network is treated as remote; consider matching the server's own /64 prefixes
+- [ ] Re-match keeps the old certification when the new match has none
+- [ ] `/api/images/...` serves any cached artwork key to any signed-in profile (posters of titles above a limit)

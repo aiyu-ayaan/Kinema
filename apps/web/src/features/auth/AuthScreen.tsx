@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Backspace, LockSimple } from '@phosphor-icons/react'
+import { ArrowLeft, Backspace, HouseLine, LockSimple } from '@phosphor-icons/react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { ErrorText, Skeleton } from '@/components/ui/Card'
@@ -11,7 +11,7 @@ import { cn } from '@/lib/cn'
 import { isDev } from '@/lib/flavor'
 import { t } from '@/lib/i18n'
 import { useServerInfo } from '@/lib/queries'
-import type { User } from '@/lib/types'
+import type { ProfileCard, User } from '@/lib/types'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -211,9 +211,14 @@ function ProfilePicker() {
   const [chosen, setChosen] = useState<User | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  async function pick(p: User) {
+  async function pick(p: ProfileCard) {
     setError(null)
-    if (p.has_password || p.has_pin) {
+    if (p.home_only) {
+      setError(t('auth.profiles.homeOnlyHint', { name: p.name }))
+      return
+    }
+    // The server says whether this device may skip the lock (home network); otherwise ask for it.
+    if (!p.opens_without_lock) {
       setChosen(p)
       return
     }
@@ -242,16 +247,33 @@ function ProfilePicker() {
             <Skeleton key={i} className="h-36 w-28 rounded-xl" />
           ))}
         {profiles?.map((p) => (
-          <button key={p.id} type="button" onClick={() => pick(p)} className="group flex w-28 cursor-pointer flex-col items-center gap-3 rounded-xl p-2 focus-visible:outline-offset-4">
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => pick(p)}
+            aria-disabled={p.home_only || undefined}
+            aria-describedby={p.home_only ? `home-only-${p.id}` : undefined}
+            className={cn('group flex w-28 cursor-pointer flex-col items-center gap-3 rounded-xl p-2 focus-visible:outline-offset-4', p.home_only && 'cursor-not-allowed opacity-60')}
+          >
             <span className="relative">
               <Avatar name={p.name} color={p.avatar} size={96} className="ring-2 ring-transparent ring-offset-4 ring-offset-bg transition-all duration-base group-hover:scale-105 group-hover:ring-fg/70" />
-              {(p.has_pin || p.has_password) && (
+              {p.home_only && (
+                <span className="absolute -bottom-1 -end-1 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-panel text-muted">
+                  <HouseLine size={14} weight="fill" aria-hidden />
+                </span>
+              )}
+              {!p.opens_without_lock && !p.home_only && (
                 <span className="absolute -bottom-1 -end-1 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-panel text-muted">
                   <LockSimple size={14} weight="fill" aria-label={t('auth.profiles.locked')} />
                 </span>
               )}
             </span>
             <span className="max-w-full truncate text-body font-medium text-muted group-hover:text-fg">{p.name}</span>
+            {p.home_only && (
+              <span id={`home-only-${p.id}`} className="text-caption text-subtle">
+                {t('auth.profiles.homeOnly')}
+              </span>
+            )}
           </button>
         ))}
       </div>

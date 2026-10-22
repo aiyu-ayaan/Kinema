@@ -13,6 +13,8 @@ import { AddToList } from '@/features/playlists/AddToList'
 import { EditMetadata } from './EditMetadata'
 import { FixMatch } from './FixMatch'
 import { SeriesTracks } from './SeriesTracks'
+import { ContentRatingButton } from './ContentRating'
+import { ShareButton } from '@/features/shares/ShareButton'
 import { clock, fileSize, progressOf, runtime, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import { useMpv } from '@/lib/mpv'
@@ -296,6 +298,8 @@ export function ItemPage() {
           {admin && (item.kind === 'movie' || item.kind === 'show' || item.kind === 'video') && <AddToList itemId={item.id} kind="collection" />}
           {admin && <EditMetadata detail={data} />}
           {admin && (item.kind === 'movie' || item.kind === 'show') && <FixMatch item={item} />}
+          {admin && (item.kind === 'movie' || item.kind === 'show' || item.kind === 'video') && <ContentRatingButton item={item} />}
+          {admin && <ShareButton item={item} />}
         </div>
       </Hero>
       {data.collections.length > 0 && (

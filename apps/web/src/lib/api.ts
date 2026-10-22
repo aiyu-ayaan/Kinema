@@ -15,8 +15,16 @@ import type {
   Library,
   LibraryKind,
   ManagedUser,
+  CreatedShare,
+  ImportResult,
+  Languages,
+  MyProfile,
+  Prefs,
+  ProfileCard,
   ProfileInput,
   PlaybackPlan,
+  Share,
+  ShareView,
   ServerOptions,
   ServerStatus,
   SettingsView,
@@ -108,7 +116,21 @@ export const api = {
   serverInfo: () => request<ServerInfo>('GET', '/server/info'),
   authStatus: () => request<{ needs_setup: boolean }>('GET', '/auth/status'),
   setup: (name: string, password: string) => request<SessionResponse>('POST', '/auth/setup', { name, password }),
-  profiles: () => request<User[]>('GET', '/auth/profiles'),
+  profiles: () => request<ProfileCard[]>('GET', '/auth/profiles'),
+  myProfile: () => request<MyProfile>('GET', '/profile'),
+  setLanguages: (l: Languages) => request<Prefs>('PUT', '/profile/preferences', l),
+  exportProfile: () => request<unknown>('GET', '/profile/export'),
+  importProfile: (data: unknown) => request<ImportResult>('POST', '/profile/import', data),
+  exportUser: (id: number, includeLock: boolean) =>
+    request<unknown>('GET', `/users/${id}/export${includeLock ? '?include_lock=true' : ''}`),
+  importUser: (id: number, data: unknown, applyLock: boolean) =>
+    request<ImportResult>('POST', `/users/${id}/import${applyLock ? '?apply_lock=true' : ''}`, data),
+  setContentRating: (id: number, content_rating: string | null) =>
+    request<void>('PUT', `/items/${id}/content-rating`, { content_rating }),
+  shares: () => request<Share[]>('GET', '/shares'),
+  createShare: (body: { item_id: number; expires_in_hours: number; label?: string }) =>
+    request<CreatedShare>('POST', '/shares', body),
+  revokeShare: (id: number) => request<void>('DELETE', `/shares/${id}`),
   login: (body: { user_id: number; password?: string; pin?: string }) => request<SessionResponse>('POST', '/auth/login', body),
   users: () => request<ManagedUser[]>('GET', '/users'),
   createUser: (p: ProfileInput) => request<ManagedUser>('POST', '/users', p),
@@ -203,6 +225,40 @@ export const api = {
   /** Hides or shows a shelf for this profile only. */
   hideShelf: (id: number, hidden: boolean) => request<void>('PUT', `/shelves/${id}/hidden`, { hidden }),
   genres: () => request<string[]>('GET', '/genres'),
+}
+
+/**
+ * A share link's own endpoints. They carry the link token in the path and never the session,
+ * so a viewer with no profile can watch exactly what the link covers.
+ */
+export const shareApi = (token: string) => {
+  const base = `/api/share/${encodeURIComponent(token)}`
+  const get = async <T,>(path: string): Promise<T> => {
+    const res = await fetch(`${base}${path}`, { credentials: 'omit' })
+    if (!res.ok) {
+      const err = await res.json().catch(() => null)
+      throw new ApiError(res.status, err?.error?.code ?? 'unknown', err?.error?.message ?? res.statusText)
+    }
+    return res.json()
+  }
+  return {
+    view: (itemId?: number) => get<ShareView>(itemId ? `/items/${itemId}` : ''),
+    plan: (fileId: number, audio: number | null, caps: PlayCaps) =>
+      get<PlaybackPlan>(`/files/${fileId}/plan?${playQuery(audio, caps)}`),
+    streamUrl: (fileId: number, audio: number | null, caps: PlayCaps) => `${base}/stream/${fileId}?${playQuery(audio, caps)}`,
+    subtitleUrl: (streamId: number) => `${base}/subtitles/${streamId}`,
+    imageUrl: (key: string | null | undefined) => (key ? `${base}/images/${key}` : null),
+  }
+}
+
+/** Saves JSON as a file download, e.g. a profile export. */
+export function downloadJson(data: unknown, filename: string) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 /** Server-made video frame for an item without artwork (a show uses its first episode). */

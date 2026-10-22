@@ -5,7 +5,9 @@ pub mod keyframes;
 pub mod libraries;
 pub mod markers;
 pub mod playlists;
+pub mod profiles;
 pub mod settings;
+pub mod shares;
 pub mod shelves;
 #[cfg(test)]
 mod tests;

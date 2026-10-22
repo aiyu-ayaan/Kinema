@@ -55,12 +55,25 @@ impl Default for TlsConfig {
     }
 }
 
+/// Who the server believes about a client's address. Profiles that open without a PIN
+/// only do so from a private (LAN) address, so a forwarded address is only trusted when
+/// the request comes straight from one of `trusted_proxies` (IPs or CIDRs, e.g.
+/// `["127.0.0.1", "10.0.0.0/8"]`). Empty: the socket peer is the client, and any
+/// request carrying forwarding headers counts as remote.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct NetworkConfig {
+    #[serde(default)]
+    pub trusted_proxies: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     #[serde(default)]
     pub server: ServerConfig,
     #[serde(default)]
     pub tls: TlsConfig,
+    #[serde(default)]
+    pub network: NetworkConfig,
     #[serde(default = "default_data_dir")]
     pub data_dir: PathBuf,
     #[serde(default)]
@@ -76,6 +89,7 @@ impl Default for Config {
         Self {
             server: ServerConfig::default(),
             tls: TlsConfig::default(),
+            network: NetworkConfig::default(),
             data_dir: default_data_dir(),
             tmdb_api_key: None,
         }

@@ -73,6 +73,15 @@ Query keys follow `['libraries']`, `['items', libraryId, filters]`, `['home']`. 
 
 Sign-in / first-run setup, Home, Library grid, Item (movie, show, season, episode), Search, Settings (admin: libraries, folder picker, TMDB key), Settings › Updates (`/settings/updates`) and Settings › About Kinema (`/settings/about`: version, developer, link to `/settings/about/acknowledgements`, the credits in `src/lib/credits.ts`), Player (route-split chunk). Strings live in `src/locales/en.json` and go through `t()` in `src/lib/i18n.ts`. UI kit mirrors Domus: `components/ui/{Button,Field,Card,Modal}`.
 
+## Profiles and sharing screens (2026-10-22)
+
+- Picker: profiles that open with one tap from this device go straight in; a profile without a lock seen from outside the home network is dimmed with "Home network only" (server flags `opens_without_lock`, `home_only`).
+- `/profile` (`features/profiles/ProfilePage.tsx`, from the avatar pill in the top bar): the profile's own track languages and Export or import.
+- Settings › Profiles: the editor has Household rules (content limit, unrated titles, Skip the PIN at home) and Languages; each row has Export or import (admin options: include / restore PIN and password).
+- Title page (admin): Share (expiry, label; the link is shown once) and Rating (manual certification).
+- Settings › Share links: every link with state and Revoke.
+- `/s/{token}` (`features/shares/SharePage.tsx`, lazy): public, rendered before the auth check; title, seasons / episodes of the target, native `<video>` with WebVTT tracks through `/api/share/{token}/...`.
+
 ## Flavors
 
 As in Domus, dev and prod instances must not interfere.

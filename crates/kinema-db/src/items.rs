@@ -27,6 +27,8 @@ pub struct ItemCard {
     pub duration_s: Option<f64>,
     pub child_count: i64,
     pub added_at: i64,
+    /// Certification, inherited from the season or show when the item has none.
+    pub content_rating: Option<String>,
 }
 
 pub(crate) const CARD_SELECT: &str =
@@ -39,7 +41,8 @@ pub(crate) const CARD_SELECT: &str =
   w.position_s, COALESCE(w.watched, 0) AS watched,
   (SELECT MAX(f.duration_s) FROM files f WHERE f.item_id = i.id) AS duration_s,
   (SELECT COUNT(*) FROM items c WHERE c.parent_id = i.id) AS child_count,
-  i.added_at
+  i.added_at,
+  COALESCE(i.content_rating, p.content_rating, g.content_rating) AS content_rating
 FROM items i
 LEFT JOIN items p ON p.id = i.parent_id
 LEFT JOIN items g ON g.id = p.parent_id
@@ -1291,6 +1294,64 @@ pub async fn set_track_choice(
         .bind(tracks.subtitle)
         .execute(pool)
         .await?;
+    Ok(())
+}
+
+// ---- content ratings ----
+
+/// Certification from a metadata lookup. Leaves an admin's manual rating alone. A lookup
+/// without one stores "" (looked up, unrated) unless a rating is already known, so the
+/// backfill below does not ask again.
+pub async fn set_content_rating(
+    pool: &SqlitePool,
+    item_id: i64,
+    certification: Option<&str>,
+) -> Result<(), DbError> {
+    let c = certification.map(str::trim).unwrap_or_default();
+    sqlx::query(
+        "UPDATE items SET content_rating = ?2
+         WHERE id = ?1 AND content_rating_manual = 0 AND (?2 != '' OR content_rating IS NULL)",
+    )
+    .bind(item_id)
+    .bind(c)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// Matched movies and shows never checked for a certification (matched before ratings
+/// were stored): (id, kind, tmdb_id).
+pub async fn needing_content_rating(
+    pool: &SqlitePool,
+    library_id: i64,
+    limit: i64,
+) -> Result<Vec<(i64, String, i64)>, DbError> {
+    Ok(sqlx::query_as(
+        "SELECT id, kind, tmdb_id FROM items
+         WHERE library_id = ?1 AND parent_id IS NULL AND kind IN ('movie', 'show')
+           AND tmdb_id IS NOT NULL AND content_rating IS NULL AND content_rating_manual = 0
+         LIMIT ?2",
+    )
+    .bind(library_id)
+    .bind(limit)
+    .fetch_all(pool)
+    .await?)
+}
+
+/// Admin override; None clears it so metadata can fill it again on the next match.
+pub async fn set_manual_content_rating(
+    pool: &SqlitePool,
+    item_id: i64,
+    certification: Option<&str>,
+) -> Result<(), DbError> {
+    sqlx::query(
+        "UPDATE items SET content_rating = ?2, content_rating_manual = (?2 IS NOT NULL)
+         WHERE id = ?1",
+    )
+    .bind(item_id)
+    .bind(certification)
+    .execute(pool)
+    .await?;
     Ok(())
 }
 

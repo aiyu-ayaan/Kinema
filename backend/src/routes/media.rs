@@ -13,6 +13,7 @@ use axum::routing::get;
 use axum::{Json, Router};
 use futures_util::StreamExt;
 use kinema_db::items::{self, MediaFile, Stream};
+use kinema_db::profiles;
 use kinema_media::playback::{self, ClientCaps, Plan, Track};
 use kinema_media::subtitles;
 use serde::{Deserialize, Serialize};
@@ -33,8 +34,41 @@ pub fn router() -> Router<AppState> {
         .route("/items/:id/thumb", get(thumb))
 }
 
+/// Default track languages for one viewer: the profile's own where set, else the server's
+/// Languages settings. A profile value of "" means "the file's default track".
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Langs {
+    audio: String,
+    subtitle: String,
+    mode: String,
+}
+
+impl Langs {
+    pub(crate) fn server(state: &AppState) -> Self {
+        let s = state.settings();
+        Self {
+            audio: s.preferred_audio_language,
+            subtitle: s.preferred_subtitle_language,
+            mode: s.subtitle_mode,
+        }
+    }
+
+    pub(crate) fn with_prefs(self, p: &profiles::Prefs) -> Self {
+        Self {
+            audio: p.audio_language.clone().unwrap_or(self.audio),
+            subtitle: p.subtitle_language.clone().unwrap_or(self.subtitle),
+            mode: p.subtitle_mode.clone().unwrap_or(self.mode),
+        }
+    }
+
+    pub(crate) async fn for_user(state: &AppState, user_id: i64) -> ApiResult<Self> {
+        let prefs = profiles::get(&state.db, user_id).await?;
+        Ok(Self::server(state).with_prefs(&prefs))
+    }
+}
+
 #[derive(Deserialize)]
-struct PlayQuery {
+pub(crate) struct PlayQuery {
     /// Audio stream index; the file's default when absent.
     audio: Option<i64>,
     #[serde(default)]
@@ -65,7 +99,13 @@ fn track(s: &Stream) -> Track<'_> {
     }
 }
 
-async fn choose(state: &AppState, user_id: i64, file_id: i64, q: &PlayQuery) -> ApiResult<Chosen> {
+async fn choose(
+    state: &AppState,
+    user_id: i64,
+    langs: &Langs,
+    file_id: i64,
+    q: &PlayQuery,
+) -> ApiResult<Chosen> {
     let file = items::file(&state.db, file_id)
         .await?
         .ok_or_else(ApiError::not_found)?;
@@ -77,7 +117,7 @@ async fn choose(state: &AppState, user_id: i64, file_id: i64, q: &PlayQuery) -> 
         .filter(|(_, s)| s.kind == "audio")
         .map(|(i, _)| i)
         .collect();
-    let preferred = state.settings().preferred_audio_language;
+    let preferred = &langs.audio;
     // The profile's own choice (made in any player) wins over the show's admin choice.
     let mine = items::file_track_choice(&state.db, user_id, file_id).await?;
     let show = items::file_series_tracks(&state.db, file_id).await?;
@@ -96,7 +136,7 @@ async fn choose(state: &AppState, user_id: i64, file_id: i64, q: &PlayQuery) -> 
             audios
                 .iter()
                 .copied()
-                .find(|&i| lang_matches(streams[i].language.as_deref(), &preferred))
+                .find(|&i| lang_matches(streams[i].language.as_deref(), preferred))
         })
         .or_else(|| audios.iter().copied().find(|&i| streams[i].is_default))
         .or_else(|| audios.first().copied());
@@ -127,7 +167,7 @@ async fn choose(state: &AppState, user_id: i64, file_id: i64, q: &PlayQuery) -> 
 }
 
 #[derive(Serialize)]
-struct PlanResponse {
+pub(crate) struct PlanResponse {
     mode: &'static str,
     duration_s: Option<f64>,
     audio: Option<i64>,
@@ -142,8 +182,8 @@ fn has_vtt(s: &Stream) -> bool {
     subtitles::is_text_subtitle(s.codec.as_deref()) || s.ocr
 }
 
-/// The default subtitle per the admin's subtitle mode and language.
-fn default_subtitle(state: &AppState, c: &Chosen) -> Option<i64> {
+/// The default subtitle per the viewer's (else the server's) subtitle mode and language.
+fn default_subtitle(langs: &Langs, c: &Chosen) -> Option<i64> {
     // The show's own choice wins; -1 is off. Picture subtitles without OCR cannot be shown, so they mean off too.
     if let Some(n) = c.series.subtitle {
         let n = usize::try_from(n).ok()?;
@@ -155,14 +195,10 @@ fn default_subtitle(state: &AppState, c: &Chosen) -> Option<i64> {
             .filter(|st| has_vtt(st))
             .map(|st| st.id);
     }
-    let s = state.settings();
     let audio_lang = c.audio.and_then(|i| c.streams[i].language.as_deref());
-    let wanted = match s.subtitle_mode.as_str() {
+    let wanted = match langs.mode.as_str() {
         "always" => true,
-        "foreign" => {
-            !s.preferred_audio_language.is_empty()
-                && !lang_matches(audio_lang, &s.preferred_audio_language)
-        }
+        "foreign" => !langs.audio.is_empty() && !lang_matches(audio_lang, &langs.audio),
         _ => false,
     };
     if !wanted {
@@ -174,11 +210,8 @@ fn default_subtitle(state: &AppState, c: &Chosen) -> Option<i64> {
         .filter(|st| st.kind == "subtitle" && has_vtt(st))
         .collect();
     text.iter()
-        .find(|st| lang_matches(st.language.as_deref(), &s.preferred_subtitle_language))
-        .or_else(|| {
-            text.first()
-                .filter(|_| s.preferred_subtitle_language.is_empty())
-        })
+        .find(|st| lang_matches(st.language.as_deref(), &langs.subtitle))
+        .or_else(|| text.first().filter(|_| langs.subtitle.is_empty()))
         .map(|st| st.id)
 }
 
@@ -189,7 +222,20 @@ async fn plan(
     Query(q): Query<PlayQuery>,
 ) -> ApiResult<Json<PlanResponse>> {
     access::check_file(&state, &user, id).await?;
-    let c = choose(&state, user.id, id, &q).await?;
+    let langs = Langs::for_user(&state, user.id).await?;
+    plan_for(&state, user.id, &langs, id, &q).await.map(Json)
+}
+
+/// The plan for a file the caller already checked access to. `user_id` 0 (a share link)
+/// has no per-title track choices.
+pub(crate) async fn plan_for(
+    state: &AppState,
+    user_id: i64,
+    langs: &Langs,
+    id: i64,
+    q: &PlayQuery,
+) -> ApiResult<PlanResponse> {
+    let c = choose(state, user_id, langs, id, q).await?;
     let start = match (c.plan, &state.bins) {
         (Plan::Direct, _) => 0.0,
         (
@@ -221,13 +267,13 @@ async fn plan(
         // Re-encoding decodes up to `start` and cuts there exactly.
         _ => q.start.max(0.0),
     };
-    Ok(Json(PlanResponse {
+    Ok(PlanResponse {
         mode: c.plan.name(),
         duration_s: c.file.duration_s,
         audio: c.audio.map(|i| c.streams[i].idx),
         start,
-        subtitle: default_subtitle(&state, &c),
-    }))
+        subtitle: default_subtitle(langs, &c),
+    })
 }
 
 async fn stream(
@@ -238,7 +284,20 @@ async fn stream(
     req: Request,
 ) -> ApiResult<Response> {
     access::check_file(&state, &user, id).await?;
-    let c = choose(&state, user.id, id, &q).await?;
+    let langs = Langs::for_user(&state, user.id).await?;
+    stream_for(&state, user.id, &langs, id, &q, req).await
+}
+
+/// The stream for a file the caller already checked access to.
+pub(crate) async fn stream_for(
+    state: &AppState,
+    user_id: i64,
+    langs: &Langs,
+    id: i64,
+    q: &PlayQuery,
+    req: Request,
+) -> ApiResult<Response> {
+    let c = choose(state, user_id, langs, id, q).await?;
     let path = PathBuf::from(&c.file.path);
     let Plan::Stream {
         copy_video,
@@ -464,6 +523,11 @@ async fn subtitle(
         .filter(|s| s.kind == "subtitle")
         .ok_or_else(ApiError::not_found)?;
     access::check_file(&state, &user, s.file_id).await?;
+    subtitle_for(&state, s).await
+}
+
+/// WebVTT for a subtitle stream the caller already checked access to.
+pub(crate) async fn subtitle_for(state: &AppState, s: Stream) -> ApiResult<Response> {
     let text = subtitles::is_text_subtitle(s.codec.as_deref());
     if !text && !s.ocr {
         return Err(ApiError::bad_request("media.subtitle_unsupported"));
@@ -542,17 +606,26 @@ async fn image(
     Path((size, name)): Path<(String, String)>,
     req: Request,
 ) -> ApiResult<Response> {
+    image_for(&state, &size, &name, req).await
+}
+
+pub(crate) async fn image_for(
+    state: &AppState,
+    size: &str,
+    name: &str,
+    req: Request,
+) -> ApiResult<Response> {
     let tvmaze = size == kinema_meta::tvmaze::IMAGE_PREFIX;
-    if !(tvmaze || kinema_meta::IMAGE_SIZES.contains(&size.as_str())) || !valid_image_name(&name) {
+    if !(tvmaze || kinema_meta::IMAGE_SIZES.contains(&size)) || !valid_image_name(name) {
         return Err(ApiError::bad_request("media.image_invalid"));
     }
-    let dir = state.cache_dir("images").join(&size);
-    let path = dir.join(&name);
+    let dir = state.cache_dir("images").join(size);
+    let path = dir.join(name);
     if !path.exists() {
         let bytes = if tvmaze {
-            kinema_meta::tvmaze::fetch_image(&state.http, &name).await
+            kinema_meta::tvmaze::fetch_image(&state.http, name).await
         } else {
-            kinema_meta::fetch_image(&state.http, &size, &name).await
+            kinema_meta::fetch_image(&state.http, size, name).await
         }
         .map_err(|_| ApiError::not_found())?;
         tokio::fs::create_dir_all(&dir).await?;

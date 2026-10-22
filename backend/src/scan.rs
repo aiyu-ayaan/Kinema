@@ -606,6 +606,7 @@ async fn fetch_metadata(state: &AppState, library_id: i64) -> anyhow::Result<()>
                 if let Some((collection_id, name)) = collection {
                     collections::assign_tmdb(db, target.id, collection_id, &name).await?;
                 }
+                items::set_content_rating(db, target.id, d.certification.as_deref()).await?;
             }
             Ok(None) if is_show => match tvmaze_show(&tvmaze, &target).await {
                 Ok(Some(show)) => {
@@ -636,6 +637,17 @@ async fn fetch_metadata(state: &AppState, library_id: i64) -> anyhow::Result<()>
     }
 
     if let Some(tmdb) = &tmdb {
+        // Titles matched before certifications were stored: look each up once (bounded per
+        // scan so a big library catches up over a few scans, not in one burst).
+        for (id, kind, tmdb_id) in items::needing_content_rating(db, library_id, 200).await? {
+            match tmdb.by_id(&kind, tmdb_id).await {
+                Ok(d) => items::set_content_rating(db, id, d.certification.as_deref()).await?,
+                Err(e) => {
+                    warn!("tmdb certification {kind}/{tmdb_id}: {e}");
+                    break;
+                }
+            }
+        }
         for (show_id, tmdb_id) in items::shows_with_bare_episodes(db, library_id).await? {
             for (season_id, season_no) in items::numbered_children(db, show_id).await? {
                 let season = match tmdb.season(tmdb_id, season_no).await {

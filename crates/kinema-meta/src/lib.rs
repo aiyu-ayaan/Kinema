@@ -35,6 +35,8 @@ pub struct Details {
     pub cast: Vec<CastMember>,
     /// The franchise TMDB groups a movie in: (collection id, name).
     pub collection: Option<(i64, String)>,
+    /// Certification ("PG-13", "TV-14"), US first; None when TMDB has none.
+    pub certification: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -135,12 +137,85 @@ struct RawDetails {
     credits: Option<RawCredits>,
     #[serde(default)]
     belongs_to_collection: Option<RawCollection>,
+    /// Movies, with `append_to_response=release_dates`.
+    #[serde(default)]
+    release_dates: Option<Page<RawCountryReleases>>,
+    /// Shows, with `append_to_response=content_ratings`.
+    #[serde(default)]
+    content_ratings: Option<Page<RawCountryRating>>,
 }
 
 #[derive(Deserialize)]
 struct RawCollection {
     id: i64,
     name: String,
+}
+
+#[derive(Deserialize)]
+struct RawCountryReleases {
+    iso_3166_1: String,
+    #[serde(default)]
+    release_dates: Vec<RawRelease>,
+}
+
+#[derive(Deserialize)]
+struct RawRelease {
+    #[serde(default)]
+    certification: String,
+}
+
+#[derive(Deserialize)]
+struct RawCountryRating {
+    iso_3166_1: String,
+    #[serde(default)]
+    rating: String,
+}
+
+/// Extra TMDB sections per details call: the certification source differs for movies and shows.
+fn append_for(path: &str) -> &'static str {
+    if path.starts_with("/tv/") {
+        "credits,content_ratings"
+    } else {
+        "credits,release_dates"
+    }
+}
+
+/// The US certification, else the first other country's, as one string per country.
+fn pick_certification(by_country: Vec<(String, String)>) -> Option<String> {
+    let mut rated: Vec<(String, String)> = by_country
+        .into_iter()
+        .map(|(c, r)| (c, r.trim().to_string()))
+        .filter(|(_, r)| !r.is_empty())
+        .collect();
+    rated.sort_by_key(|(c, _)| c != "US");
+    rated.into_iter().next().map(|(_, r)| r)
+}
+
+fn certification(d: &RawDetails) -> Option<String> {
+    if let Some(page) = &d.release_dates {
+        return pick_certification(
+            page.results
+                .iter()
+                .map(|c| {
+                    let cert = c
+                        .release_dates
+                        .iter()
+                        .map(|r| r.certification.trim())
+                        .find(|r| !r.is_empty())
+                        .unwrap_or_default();
+                    (c.iso_3166_1.clone(), cert.to_string())
+                })
+                .collect(),
+        );
+    }
+    d.content_ratings.as_ref().and_then(|page| {
+        pick_certification(
+            page.results
+                .iter()
+                .map(|c| (c.iso_3166_1.clone(), c.rating.clone()))
+                .collect(),
+        )
+    })
 }
 
 #[derive(Deserialize)]
@@ -279,8 +354,12 @@ impl TmdbClient {
 
     async fn details(&self, path: &str) -> Result<Details, MetaError> {
         let d: RawDetails = self
-            .get(path, &[("append_to_response", "credits".to_string())])
+            .get(
+                path,
+                &[("append_to_response", append_for(path).to_string())],
+            )
             .await?;
+        let certification = certification(&d);
         let mut cast = Vec::new();
         if let Some(credits) = d.credits {
             let mut raw_cast = credits.cast;
@@ -327,6 +406,7 @@ impl TmdbClient {
             genres: d.genres.into_iter().map(|g| g.name).collect(),
             cast,
             collection: d.belongs_to_collection.map(|c| (c.id, c.name)),
+            certification,
         })
     }
 
@@ -380,4 +460,30 @@ pub async fn fetch_image(client: &Client, size: &str, name: &str) -> Result<Vec<
         return Err(MetaError::NotFound(name.to_string()));
     }
     Ok(res.bytes().await?.to_vec())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn certification_prefers_us() {
+        let movie: RawDetails = serde_json::from_str(
+            r#"{"id": 1, "release_dates": {"results": [
+                {"iso_3166_1": "DE", "release_dates": [{"certification": "12"}]},
+                {"iso_3166_1": "US", "release_dates": [{"certification": ""}, {"certification": "PG-13"}]}
+            ]}}"#,
+        )
+        .unwrap();
+        assert_eq!(certification(&movie).as_deref(), Some("PG-13"));
+        let show: RawDetails = serde_json::from_str(
+            r#"{"id": 2, "content_ratings": {"results": [{"iso_3166_1": "GB", "rating": "15"}]}}"#,
+        )
+        .unwrap();
+        assert_eq!(certification(&show).as_deref(), Some("15"));
+        let none: RawDetails = serde_json::from_str(r#"{"id": 3}"#).unwrap();
+        assert_eq!(certification(&none), None);
+        assert_eq!(append_for("/tv/5"), "credits,content_ratings");
+        assert_eq!(append_for("/movie/5"), "credits,release_dates");
+    }
 }

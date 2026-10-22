@@ -66,6 +66,7 @@ async fn apply(
     let d = client(&state).await?.by_id(&kind, pick.tmdb_id).await?;
     let image =
         |size: &str, p: Option<String>| p.map(|p| format!("{size}/{}", p.trim_start_matches('/')));
+    items::set_content_rating(&state.db, id, d.certification.as_deref()).await?;
     items::clear_meta(&state.db, id).await?;
     // A wrong match may have filed the movie in the wrong franchise.
     kinema_db::collections::leave_tmdb(&state.db, id).await?;

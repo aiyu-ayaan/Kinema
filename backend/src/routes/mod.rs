@@ -7,8 +7,10 @@ pub mod media;
 pub mod metadata_edit;
 pub mod playlists;
 pub mod scrub;
+pub mod profile;
 pub mod server;
 pub mod settings;
+pub mod shares;
 pub mod users;
 
 use crate::state::AppState;
@@ -28,4 +30,6 @@ pub fn api_router() -> Router<AppState> {
         .merge(scrub::router())
         .merge(settings::router())
         .merge(users::router())
+        .merge(profile::router())
+        .merge(shares::router())
 }
