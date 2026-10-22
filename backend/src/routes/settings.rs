@@ -21,6 +21,7 @@ pub fn router() -> Router<AppState> {
 struct Options {
     presets: &'static [&'static str],
     max_heights: &'static [u32],
+    threads: &'static [u32],
     subtitle_modes: &'static [&'static str],
     metadata_languages: &'static [&'static str],
     track_languages: Vec<&'static str>,
@@ -42,6 +43,7 @@ async fn view(state: &AppState) -> Json<SettingsView> {
         options: Options {
             presets: server_settings::PRESETS,
             max_heights: server_settings::MAX_HEIGHTS,
+            threads: server_settings::THREADS,
             subtitle_modes: server_settings::SUBTITLE_MODES,
             metadata_languages: server_settings::METADATA_LANGUAGES,
             track_languages: server_settings::TRACK_LANGUAGES

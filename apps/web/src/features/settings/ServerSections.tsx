@@ -286,6 +286,15 @@ export function TranscoderSection() {
                 ))}
               </Select>
             </SettingRow>
+            <SettingRow label={t('settings.transcoder.threads')} description={t('settings.transcoder.threadsHint')} htmlFor="threads">
+              <Select id="threads" value={s.transcode_threads} onChange={(e) => set({ transcode_threads: Number(e.target.value) })}>
+                {view.options.threads.map((n) => (
+                  <option key={n} value={n}>
+                    {n === 0 ? t('settings.transcoder.auto') : n}
+                  </option>
+                ))}
+              </Select>
+            </SettingRow>
           </>
         )}
       </ServerForm>

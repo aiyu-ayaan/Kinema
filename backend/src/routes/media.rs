@@ -262,6 +262,10 @@ async fn stream(
             preset: &settings.transcode_preset,
             crf: settings.transcode_crf,
             max_height: settings.transcode_max_height,
+            threads: playback::transcode_threads(
+                settings.transcode_threads,
+                settings.max_transcodes,
+            ),
         },
     )
     .spawn()?;

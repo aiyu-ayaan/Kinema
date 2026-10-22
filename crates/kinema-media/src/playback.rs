@@ -174,6 +174,18 @@ pub struct Encode<'a> {
     pub crf: u32,
     /// 0 keeps the source height.
     pub max_height: u32,
+    /// Decoder and encoder threads; 0 lets ffmpeg take every core.
+    pub threads: u32,
+}
+
+/// Threads for one re-encode: an equal share of the cores per allowed conversion, so the cap on
+/// conversions also caps CPU. `configured` 0 is automatic.
+pub fn transcode_threads(configured: u32, max_transcodes: u32) -> u32 {
+    if configured > 0 {
+        return configured;
+    }
+    let cores = std::thread::available_parallelism().map_or(1, |n| n.get() as u32);
+    (cores / max_transcodes.max(1)).max(1)
 }
 
 /// How far a re-encode may run ahead of the wall clock. The browser holds that much, so a seek
@@ -258,6 +270,11 @@ pub fn stream_command(
         }
         cmd.arg("-ss").arg(format!("{start_s:.6}"));
     }
+    // Decoding a 4K source takes as many threads as encoding; both get the same share.
+    let threads = (reencode && encode.threads > 0).then(|| encode.threads.to_string());
+    if let Some(n) = &threads {
+        cmd.args(["-threads", n]);
+    }
     cmd.arg("-i").arg(path);
     if let Some(v) = video {
         cmd.arg("-map").arg(format!("0:{}", v.index));
@@ -277,6 +294,9 @@ pub fn stream_command(
                 .arg(encode.crf.to_string())
                 .args(["-pix_fmt", "yuv420p", "-vf"])
                 .arg(scale);
+            if let Some(n) = &threads {
+                cmd.args(["-threads", n]);
+            }
         }
     }
     if let Some(a) = audio {
@@ -357,6 +377,7 @@ mod tests {
             preset: "veryfast",
             crf: 23,
             max_height: 0,
+            threads: 0,
         };
         let has_flag = |start: f64, copy_video: bool| {
             let cmd = stream_command(
@@ -387,6 +408,7 @@ mod tests {
             preset: "veryfast",
             crf: 23,
             max_height: 0,
+            threads: 0,
         };
         let hevc = Track {
             codec: Some("hevc"),
@@ -413,6 +435,38 @@ mod tests {
         assert_eq!(run(hevc, false), ("/usr/bin/ffmpeg".into(), true, true));
         assert_eq!(run(hevc, true), ("ffmpeg".into(), false, false));
         assert_eq!(run(H264, false), ("ffmpeg".into(), false, true));
+    }
+
+    #[test]
+    fn threads_cap_decode_and_encode_of_a_reencode_only() {
+        let bins = MediaBinaries {
+            ffmpeg: "ffmpeg".into(),
+            ffprobe: "ffprobe".into(),
+            hevc_drm: None,
+        };
+        let encode = Encode {
+            preset: "veryfast",
+            crf: 23,
+            max_height: 0,
+            threads: 3,
+        };
+        let count = |copy_video: bool| {
+            let cmd = stream_command(
+                &bins,
+                Path::new("a.mkv"),
+                0.0,
+                Some(H264),
+                Some(AAC),
+                copy_video,
+                true,
+                encode,
+            );
+            cmd.as_std().get_args().filter(|a| *a == "-threads").count()
+        };
+        assert_eq!(count(false), 2);
+        assert_eq!(count(true), 0);
+        assert_eq!(transcode_threads(5, 2), 5);
+        assert!(transcode_threads(0, 8) >= 1);
     }
 
     #[test]

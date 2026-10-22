@@ -34,6 +34,8 @@ pub struct ServerSettings {
     pub transcode_crf: u32,
     /// 0 keeps the source height.
     pub transcode_max_height: u32,
+    /// Threads per conversion; 0 shares the cores between `max_transcodes`.
+    pub transcode_threads: u32,
     /// Periodic full rescan for drives without filesystem events (network shares). 0 = off.
     pub rescan_hours: u32,
 }
@@ -54,6 +56,7 @@ impl Default for ServerSettings {
             transcode_preset: "veryfast".into(),
             transcode_crf: 22,
             transcode_max_height: 1080,
+            transcode_threads: 0,
             rescan_hours: 0,
         }
     }
@@ -68,6 +71,7 @@ pub const PRESETS: &[&str] = &[
     "medium",
 ];
 pub const MAX_HEIGHTS: &[u32] = &[0, 2160, 1440, 1080, 720, 480];
+pub const THREADS: &[u32] = &[0, 1, 2, 3, 4, 6, 8, 12, 16];
 pub const SUBTITLE_MODES: &[&str] = &["off", "always", "foreign"];
 pub const METADATA_LANGUAGES: &[&str] = &[
     "en-US", "en-GB", "hi-IN", "ta-IN", "te-IN", "ml-IN", "kn-IN", "bn-IN", "es-ES", "es-MX",
@@ -153,6 +157,9 @@ impl ServerSettings {
         if !MAX_HEIGHTS.contains(&self.transcode_max_height) {
             self.transcode_max_height = d.transcode_max_height;
         }
+        if !THREADS.contains(&self.transcode_threads) {
+            self.transcode_threads = d.transcode_threads;
+        }
         self.rescan_hours = self.rescan_hours.min(168);
         self
     }
@@ -196,6 +203,7 @@ mod tests {
             transcode_crf: 99,
             transcode_preset: "placebo".into(),
             transcode_max_height: 999,
+            transcode_threads: 5,
             preferred_audio_language: "xx".into(),
             subtitle_mode: "sometimes".into(),
             ..Default::default()
@@ -206,6 +214,7 @@ mod tests {
         assert_eq!(s.transcode_crf, 30);
         assert_eq!(s.transcode_preset, d.transcode_preset);
         assert_eq!(s.transcode_max_height, d.transcode_max_height);
+        assert_eq!(s.transcode_threads, 0);
         assert_eq!(s.preferred_audio_language, "");
         assert_eq!(s.subtitle_mode, "off");
     }

@@ -174,6 +174,7 @@ export interface ServerOptions {
   transcode_preset: string
   transcode_crf: number
   transcode_max_height: number
+  transcode_threads: number
   rescan_hours: number
 }
 
@@ -184,6 +185,7 @@ export interface SettingsView {
   options: {
     presets: string[]
     max_heights: number[]
+    threads: number[]
     subtitle_modes: ServerOptions['subtitle_mode'][]
     metadata_languages: string[]
     track_languages: string[]
