@@ -74,7 +74,7 @@ sequenceDiagram
 ## 4. Transcode
 
 - Hardware first: VAAPI (Intel/AMD), NVENC, QSV, VideoToolbox, detected at startup by test-encoding a short clip.
-- Software fallback: `libx264` with the admin's preset, CRF and max height (Transcoder settings). Threads are not capped: a Raspberry Pi 5 encodes 1080p at only about 1.4x real time on all four cores, so a cap would stall playback. Priority keeps the server responsive instead.
+- Software fallback: `libx264` with the admin's preset, CRF and max height (Transcoder settings). Threads: see the Threads entry below.
 - Output: HLS, 4 s segments, started at the requested position (`-ss` before `-i`).
 - Session limits: default 2 concurrent. A third request gets HTTP 503 with a retry hint.
 - HEVC decode on the GPU where only that exists (Raspberry Pi 5): `-hwaccel drm` through the distribution's ffmpeg, see `packaging.md` § Hardware transcoding.
@@ -84,7 +84,7 @@ sequenceDiagram
 - Seek picture: before a new remux/transcode stream loads, the web player draws the current frame into the `<video>` poster, so the picture holds instead of flashing black.
 - Throttle: a re-encode may run at most 30 s (`THROTTLE_AHEAD_S`) ahead of the wall clock since it started. The lead is encoded at full speed after every play and seek, so it is the length of the CPU spike; it was 60 s until 2026-10-22, and 30 s still covers a short seek back or forward without a restart. ffmpeg reports `out_time_us` through `-progress pipe:2`; past the lead, the server stops reading its stdout, the pipe fills and ffmpeg blocks until playback catches up. CPU drops from "as fast as the cores allow" to "real time" (measured on an i5-10200H: 470 % to 230 %). Done in Rust, not with ffmpeg's `-readrate_initial_burst`, because that option needs ffmpeg 6.1 and the Raspberry Pi build with HEVC hardware decode is 5.1. Remux is not throttled: it costs little CPU and a deep buffer helps slow networks.
 - Rate control: libx264 runs CRF (the Quality setting) with a peak of `-maxrate` 2/4/8/12/20 Mbit/s for 480p/720p/1080p/1440p/2160p or Original and `-bufsize` twice that (`playback::max_kbps`). Without a cap a grainy or fast scene took several times the average bitrate. Presets slower than `veryfast` also get `-rc-lookahead 10`, veryfast's own value, instead of 20-40 frames analysed ahead.
-- Threads: a re-encode passes `-threads N` to both the decoder and libx264. N is the server setting `transcode_threads`, or with Auto (0) the logical cores divided by `max_transcodes` (`playback::transcode_threads`). Without it ffmpeg starts a thread per core for each, so the full-speed lead after every play or seek took the whole machine, and two conversions fought over the same cores. The cap does not slow a throttled stream: past the lead it only has to keep real time.
+- Threads: a re-encode passes `-threads N` to both the decoder and libx264. N is the server setting `transcode_threads`, or with Auto (0) the logical cores divided by `max_transcodes`, never fewer than 4 (`playback::transcode_threads`): a Raspberry Pi 5 encodes 1080p at only about 1.4x real time on all four cores, so machines with 4 cores or fewer are not capped. Without it ffmpeg starts a thread per core for each, so the full-speed lead after every play or seek took the whole machine, and two conversions fought over the same cores. The cap does not slow a throttled stream: past the lead it only has to keep real time.
 - Segments are deleted as the client moves past them. Session dir purged on idle timeout (60 s) and at startup.
 
 ## 5. Thumbnails

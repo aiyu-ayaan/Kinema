@@ -192,13 +192,14 @@ fn max_kbps(max_height: u32) -> u32 {
 }
 
 /// Threads for one re-encode: an equal share of the cores per allowed conversion, so the cap on
-/// conversions also caps CPU. `configured` 0 is automatic.
+/// conversions also caps CPU. `configured` 0 is automatic. Never fewer than 4: a Raspberry Pi 5
+/// encodes 1080p at only about 1.4x real time on all four cores, so a smaller share would stall it.
 pub fn transcode_threads(configured: u32, max_transcodes: u32) -> u32 {
     if configured > 0 {
         return configured;
     }
     let cores = std::thread::available_parallelism().map_or(1, |n| n.get() as u32);
-    (cores / max_transcodes.max(1)).max(1)
+    (cores / max_transcodes.max(1)).max(4)
 }
 
 /// How far a re-encode may run ahead of the wall clock. The browser holds that much, so a seek
@@ -491,7 +492,7 @@ mod tests {
         assert_eq!(max_kbps(1080), 8_000);
         assert_eq!(max_kbps(0), 20_000);
         assert_eq!(transcode_threads(5, 2), 5);
-        assert!(transcode_threads(0, 8) >= 1);
+        assert!(transcode_threads(0, 8) >= 4);
     }
 
     #[test]
