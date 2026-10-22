@@ -32,7 +32,7 @@
 - [x] Compose app (watch only): connect, trust, profiles, home hero, library, search, title page, settings
 - [x] Media3 player: direct / remux / transcode, audio + subtitle switch, resume, next episode, double-tap seek
 - [x] Predictive back on every page (Navigation 3) and inside the tab host
-- [ ] Picture-in-picture and a media session (lock-screen controls)
+- [x] Picture-in-picture (back / play / forward actions) and a media session (lock-screen controls); not run on a device yet
 - [ ] Seek inside the buffered part of a remux stream without restarting it
 - [ ] Translations (`values-<lang>/strings.xml`)
 

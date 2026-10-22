@@ -104,13 +104,14 @@ flowchart LR
   Session --> Sys[Lock screen · Bluetooth · headset]
   Notif -->|custom commands| Hand
   Hand -->|Controls.seekBy / next / stop| Screen
-  Screen --> PiP[Picture-in-picture<br/>auto-enter on leave · play/pause action]
+  Screen --> PiP[Picture-in-picture<br/>auto-enter on leave · -10 s · play/pause · +10 s]
+  PiP -->|broadcast actions| Hand
 ```
 
 - The player screen creates the ExoPlayer (audio focus, pause on headphones unplugged) and hands it to `Playback` (`playback/PlaybackService.kt`), which starts `PlaybackService`. The service wraps it in a `PlaybackSessionPlayer` (overriding timeline, duration, position, and seek) for `MediaSession`; Media3 then runs the service in the foreground (`mediaPlayback` type) while something plays and posts the system media notification with full seekbar support, real stream duration, and position syncing across direct play, remux, and transcode. Its buttons are Media3 `CommandButton`s: back and forward 10 s in the compact view, next episode and stop when expanded.
 - The next episode's screen attaches before the previous one detaches; `detach` ignores a player that is no longer current, and the service swaps the session's player (`MediaSession.setPlayer`).
 - The notification and lock screen show the title, poster, and interactive scrubbable seekbar.
-- Picture-in-picture (Settings › Playback, on by default): leaving the app while a video plays shrinks it into a window (auto-enter on Android 12+, `onUserLeaveHint` before). Users can also enter PiP directly via the dedicated PiP button on the player top bar or by swiping down from the upper area of the video. The window shows video and subtitles with a play/pause action. Closing the window pauses playback. With the setting off, leaving the app keeps the sound playing with the notification and seekbar.
+- Picture-in-picture (Settings › Playback, on by default): leaving the app while a video plays shrinks it into a window (auto-enter on Android 12+, `onUserLeaveHint` before). Users can also enter PiP directly via the dedicated PiP button on the player top bar or by swiping down from the upper area of the video. The window shows video and subtitles with back 10 s, play/pause and forward 10 s actions (only play/pause where the system allows one action); the skips go through the screen's seek logic like the notification's. The activity declares `keyboard|navigation` in `configChanges` so attaching a tablet keyboard does not recreate it and restart the stream. Closing the window pauses playback. With the setting off, leaving the app keeps the sound playing with the notification and seekbar.
 - Swiping the app away from recents pauses and stops the service.
 - Known limit: Compose does not recompose while the activity is stopped, so "next episode" or the end of an episode pressed from the notification with the app fully in the background (not in picture-in-picture) takes effect when the app comes back. Stop pauses right away.
 
@@ -152,6 +153,5 @@ Every user-facing string is in `app/src/main/res/values/strings.xml` (English). 
 
 ## Shortcuts
 
-- shortcut: no picture-in-picture or background audio session; add a `MediaSessionService` when lock-screen controls are wanted.
 - shortcut: remux/transcode seeks always restart the stream, even inside the buffer.
 - shortcut: no offline downloads.
