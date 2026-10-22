@@ -44,7 +44,7 @@ Priority order: user-triggered > newly added > refresh.
 
 ## Streaming path
 
-MVP (built): `GET /api/files/{id}/plan` picks the mode; remux and transcode pipe fragmented MP4 from ffmpeg straight into the response, with no session or segment files. A re-encode is throttled to 60 s ahead of real time. The desktop app can skip all of it and play the raw file in mpv. See `mvp.md` and `media-pipeline.md` § 3–4.
+MVP (built): `GET /api/files/{id}/plan` picks the mode; remux and transcode pipe fragmented MP4 from ffmpeg straight into the response, with no session or segment files. A re-encode is throttled to 30 s ahead of real time. The desktop app can skip all of it and play the raw file in mpv. See `mvp.md` and `media-pipeline.md` § 3–4.
 
 ```mermaid
 flowchart LR
@@ -57,7 +57,7 @@ flowchart LR
   Tx --> HW{HEVC + hevc_drm?}
   HW -- yes --> GPU[-hwaccel drm decode]
   HW -- no --> CPU[software decode]
-  Tx --> Thr[throttle: 60 s lead, then real time]
+  Tx --> Thr[throttle: 30 s lead, then real time]
 ```
 
 The HLS design below is the M4 target.

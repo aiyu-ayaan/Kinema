@@ -14,7 +14,7 @@ Platform rule: OS-specific code (process priority, child-process kill, paths, au
 
 MVP built: admin setup and sign-in, libraries with folder picker, scanner + watcher, TMDB metadata, browse UI and a player with direct play / remux / transcode and audio and subtitle switching. What it does and its shortcuts: `development/docs/mvp.md`. Build order: `development/docs/roadmap.md`. Full docs index: `development/docs/README.md`.
 
-Playback cost (2026-10-21): live re-encodes are throttled to 60 s ahead of real time and run at `nice 10`; background ffmpeg at `nice 19`. On a Raspberry Pi 5 HEVC re-encodes decode on the GPU through the distribution's ffmpeg (`MediaBinaries::hevc_drm`). Players that claim HEVC/AV1 but fail to decode it retry as a transcode. The desktop app can play titles in a local mpv (`raw=true`, loopback proxy). Details: `development/docs/media-pipeline.md` § 3–4.
+Playback cost (2026-10-21): live re-encodes are throttled to 30 s ahead of real time and run at `nice 10`; background ffmpeg at `nice 19`. On a Raspberry Pi 5 HEVC re-encodes decode on the GPU through the distribution's ffmpeg (`MediaBinaries::hevc_drm`). Players that claim HEVC/AV1 but fail to decode it retry as a transcode. The desktop app can play titles in a local mpv (`raw=true`, loopback proxy). Details: `development/docs/media-pipeline.md` § 3–4.
 
 ## Stack
 

@@ -33,7 +33,7 @@
 
 ## Throttling
 
-- A live re-encode is held to 60 s ahead of real time, then paced to playback (see `media-pipeline.md` § 4).
+- A live re-encode is held to 30 s ahead of real time, then paced to playback (see `media-pipeline.md` § 4).
 
 - Scan and thumbnail workers pause while any transcode session is active or while system load per core exceeds 0.8.
 - Network and disk reads for background jobs are rate limited so playback gets priority.

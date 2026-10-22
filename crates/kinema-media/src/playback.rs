@@ -178,7 +178,8 @@ pub struct Encode<'a> {
 
 /// How far a re-encode may run ahead of the wall clock. The browser holds that much, so a seek
 /// inside it stays local; past it ffmpeg keeps pace with playback instead of taking every core.
-pub const THROTTLE_AHEAD_S: f64 = 60.0;
+/// Every play and seek encodes this lead at full speed, so a shorter lead is a shorter CPU spike.
+pub const THROTTLE_AHEAD_S: f64 = 30.0;
 
 /// Seconds of output a re-encode has written, read from ffmpeg's `-progress` lines on stderr.
 #[derive(Debug, Clone, Default)]
@@ -421,7 +422,7 @@ mod tests {
         assert!(!p.ahead_of(0.0));
         p.0.store(90_000, Ordering::Relaxed);
         assert!(p.ahead_of(10.0));
-        assert!(!p.ahead_of(40.0));
+        assert!(!p.ahead_of(70.0));
         p.0.store(DONE, Ordering::Relaxed);
         assert!(!p.ahead_of(0.0));
     }
