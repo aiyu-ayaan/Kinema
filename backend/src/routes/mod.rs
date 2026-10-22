@@ -1,8 +1,11 @@
 pub mod auth;
+pub mod collections;
 pub mod items;
 pub mod libraries;
 pub mod matching;
 pub mod media;
+pub mod metadata_edit;
+pub mod playlists;
 pub mod server;
 pub mod settings;
 pub mod users;
@@ -17,6 +20,9 @@ pub fn api_router() -> Router<AppState> {
         .merge(libraries::router())
         .merge(items::router())
         .merge(matching::router())
+        .merge(metadata_edit::router())
+        .merge(playlists::router())
+        .merge(collections::router())
         .merge(media::router())
         .merge(settings::router())
         .merge(users::router())

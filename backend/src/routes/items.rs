@@ -1,7 +1,9 @@
 use crate::access;
 use crate::auth::{AdminUser, AuthUser};
 use crate::error::{ApiError, ApiResult};
+use crate::routes::collections::{self, CollectionSummary, GenreShelf};
 use crate::routes::libraries::{LibraryView, view};
+use crate::routes::playlists::{self, PlaylistSummary};
 use crate::state::AppState;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
@@ -38,6 +40,11 @@ struct Shelf {
 struct Home {
     continue_watching: Vec<ItemCard>,
     shelves: Vec<Shelf>,
+    /// The profile's own playlists and shared ones.
+    playlists: Vec<PlaylistSummary>,
+    collections: Vec<CollectionSummary>,
+    /// Admin-defined genre rows ("Oh, The Horror!") the profile has not hidden.
+    genre_shelves: Vec<GenreShelf>,
 }
 
 async fn home(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiResult<Json<Home>> {
@@ -75,6 +82,9 @@ async fn home(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiRes
             .filter(|i| access::allows(&visible, i.library_id))
             .collect(),
         shelves,
+        playlists: playlists::summaries(&state, &user, &visible).await?,
+        collections: collections::summaries(&state, &user, &visible).await?,
+        genre_shelves: collections::home_shelves(&state, &user, &visible).await?,
     }))
 }
 
@@ -111,6 +121,10 @@ struct FileView {
 struct Detail {
     item: ItemCard,
     genres: Vec<String>,
+    /// Fields an admin edited by hand; scans and refreshes never overwrite them.
+    locked_fields: Vec<String>,
+    /// Franchise collections the title belongs to.
+    collections: Vec<kinema_db::collections::Collection>,
     files: Vec<FileView>,
     children: Vec<ItemCard>,
     cast: Vec<items::CastMember>,
@@ -179,6 +193,8 @@ async fn detail(
     let cast = items::item_cast(db, id).await?;
     Ok(Json(Detail {
         genres: items::genres(db, id).await?,
+        locked_fields: items::locked_fields(db, id).await?,
+        collections: kinema_db::collections::of_item(db, id).await?,
         children: items::children(db, user.id, id).await?,
         files,
         item,
