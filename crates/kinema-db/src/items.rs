@@ -1,6 +1,7 @@
 use crate::{DbError, now};
 use serde::Serialize;
 use sqlx::SqlitePool;
+use std::collections::HashMap;
 
 /// What a poster card or list row needs. Episodes and seasons inherit missing
 /// art from their parents; an episode's still lives in `backdrop`.
@@ -207,6 +208,11 @@ pub struct Stream {
     pub is_default: bool,
     #[serde(skip)]
     pub external_path: Option<String>,
+    /// Sidecar version ("size-mtime"); part of the subtitle cache key.
+    #[serde(skip)]
+    pub external_fingerprint: Option<String>,
+    /// A picture subtitle read by OCR into WebVTT: players may show it like a text track.
+    pub ocr: bool,
 }
 
 /// Stream fields written by a probe; `id` and `file_id` are assigned on insert.
@@ -223,6 +229,7 @@ pub struct NewStream {
     pub height: Option<i64>,
     pub is_default: bool,
     pub external_path: Option<String>,
+    pub external_fingerprint: Option<String>,
 }
 
 const FILE_COLS: &str =
@@ -325,26 +332,26 @@ pub async fn library_files(
     .await?)
 }
 
+const STREAM_COLS: &str = "id, file_id, idx, type, codec, profile, language, title, channels,
+    width, height, is_default, external_path, external_fingerprint, ocr";
+
 pub async fn streams(pool: &SqlitePool, file_id: i64) -> Result<Vec<Stream>, DbError> {
-    Ok(sqlx::query_as(
-        "SELECT id, file_id, idx, type, codec, profile, language, title, channels, width, height,
-           is_default, external_path
-         FROM streams WHERE file_id = ?1 ORDER BY external_path IS NOT NULL, idx",
-    )
+    Ok(sqlx::query_as(&format!(
+        "SELECT {STREAM_COLS}
+         FROM streams WHERE file_id = ?1 ORDER BY external_path IS NOT NULL, idx"
+    ))
     .bind(file_id)
     .fetch_all(pool)
     .await?)
 }
 
 pub async fn stream(pool: &SqlitePool, id: i64) -> Result<Option<Stream>, DbError> {
-    Ok(sqlx::query_as(
-        "SELECT id, file_id, idx, type, codec, profile, language, title, channels, width, height,
-           is_default, external_path
-         FROM streams WHERE id = ?1",
+    Ok(
+        sqlx::query_as(&format!("SELECT {STREAM_COLS} FROM streams WHERE id = ?1"))
+            .bind(id)
+            .fetch_optional(pool)
+            .await?,
     )
-    .bind(id)
-    .fetch_optional(pool)
-    .await?)
 }
 
 pub async fn insert_file(
@@ -411,27 +418,129 @@ pub async fn save_probe(
         .execute(&mut *tx)
         .await?;
     for s in streams {
-        sqlx::query(
-            "INSERT INTO streams (file_id, idx, type, codec, profile, language, title, channels,
-               width, height, is_default, external_path)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
-        )
-        .bind(file_id)
-        .bind(s.idx)
-        .bind(&s.kind)
-        .bind(&s.codec)
-        .bind(&s.profile)
-        .bind(&s.language)
-        .bind(&s.title)
-        .bind(s.channels)
-        .bind(s.width)
-        .bind(s.height)
-        .bind(s.is_default)
-        .bind(&s.external_path)
-        .execute(&mut *tx)
-        .await?;
+        insert_stream(&mut tx, file_id, s).await?;
     }
     tx.commit().await?;
+    Ok(())
+}
+
+async fn insert_stream(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    file_id: i64,
+    s: &NewStream,
+) -> Result<(), DbError> {
+    sqlx::query(
+        "INSERT INTO streams (file_id, idx, type, codec, profile, language, title, channels,
+           width, height, is_default, external_path, external_fingerprint)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+    )
+    .bind(file_id)
+    .bind(s.idx)
+    .bind(&s.kind)
+    .bind(&s.codec)
+    .bind(&s.profile)
+    .bind(&s.language)
+    .bind(&s.title)
+    .bind(s.channels)
+    .bind(s.width)
+    .bind(s.height)
+    .bind(s.is_default)
+    .bind(&s.external_path)
+    .bind(&s.external_fingerprint)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+/// (path, fingerprint) of each sidecar subtitle stored for the probed files of a library,
+/// keyed by file id, so a scan can tell which sidecars were added, changed or removed.
+pub async fn library_sidecars(
+    pool: &SqlitePool,
+    library_id: i64,
+) -> Result<HashMap<i64, Vec<(String, Option<String>)>>, DbError> {
+    let rows: Vec<(i64, String, Option<String>)> = sqlx::query_as(
+        "SELECT s.file_id, s.external_path, s.external_fingerprint
+         FROM streams s JOIN files f ON f.id = s.file_id JOIN items i ON i.id = f.item_id
+         WHERE i.library_id = ?1 AND s.external_path IS NOT NULL
+         ORDER BY s.file_id, s.idx",
+    )
+    .bind(library_id)
+    .fetch_all(pool)
+    .await?;
+    let mut out: HashMap<i64, Vec<(String, Option<String>)>> = HashMap::new();
+    for (file_id, path, fp) in rows {
+        out.entry(file_id).or_default().push((path, fp));
+    }
+    Ok(out)
+}
+
+/// Swaps a file's sidecar subtitle streams for `sidecars`, leaving its probed streams alone:
+/// a subtitle file added next to an unchanged video needs no new probe.
+pub async fn replace_sidecars(
+    pool: &SqlitePool,
+    file_id: i64,
+    sidecars: &[NewStream],
+) -> Result<(), DbError> {
+    let mut tx = pool.begin().await?;
+    sqlx::query("DELETE FROM streams WHERE file_id = ?1 AND external_path IS NOT NULL")
+        .bind(file_id)
+        .execute(&mut *tx)
+        .await?;
+    for s in sidecars {
+        insert_stream(&mut tx, file_id, s).await?;
+    }
+    tx.commit().await?;
+    Ok(())
+}
+
+/// A subtitle stream with what the background extraction needs of its file.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct SubtitleJob {
+    pub stream_id: i64,
+    pub file_id: i64,
+    pub idx: i64,
+    pub codec: Option<String>,
+    pub language: Option<String>,
+    pub external_path: Option<String>,
+    pub external_fingerprint: Option<String>,
+    pub ocr: bool,
+    pub path: String,
+    pub size: i64,
+    pub mtime: i64,
+    pub duration_s: Option<f64>,
+}
+
+/// Every subtitle stream of a library's probed files, grouped by file.
+pub async fn library_subtitles(
+    pool: &SqlitePool,
+    library_id: i64,
+) -> Result<Vec<SubtitleJob>, DbError> {
+    Ok(sqlx::query_as(
+        "SELECT s.id AS stream_id, s.file_id, s.idx, s.codec, s.language, s.external_path,
+           s.external_fingerprint, s.ocr, f.path, f.size, f.mtime, f.duration_s
+         FROM streams s JOIN files f ON f.id = s.file_id JOIN items i ON i.id = f.item_id
+         WHERE i.library_id = ?1 AND f.probe_status = 'ok' AND s.type = 'subtitle'
+         ORDER BY i.added_at DESC, f.id, s.idx",
+    )
+    .bind(library_id)
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn set_stream_ocr(pool: &SqlitePool, stream_id: i64, ocr: bool) -> Result<(), DbError> {
+    sqlx::query("UPDATE streams SET ocr = ?2 WHERE id = ?1")
+        .bind(stream_id)
+        .bind(ocr)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// The subtitle cache was cleared: OCR results are gone with it.
+pub async fn clear_stream_ocr(pool: &SqlitePool) -> Result<(), DbError> {
+    sqlx::query("UPDATE streams SET ocr = 0 WHERE ocr = 1")
+        .execute(pool)
+        .await?;
     Ok(())
 }
 
@@ -1020,4 +1129,95 @@ pub async fn set_track_choice(
         .execute(pool)
         .await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn pool() -> SqlitePool {
+        // One connection: every in-memory connection is its own empty database.
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        crate::run_migrations(&pool).await.unwrap();
+        pool
+    }
+
+    fn sidecar(path: &str, fp: &str) -> NewStream {
+        NewStream {
+            idx: 10_000,
+            kind: "subtitle".into(),
+            codec: Some("srt".into()),
+            external_path: Some(path.into()),
+            external_fingerprint: Some(fp.into()),
+            ..Default::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn sidecars_are_replaced_without_touching_probed_streams() {
+        let db = pool().await;
+        let lib = crate::libraries::create(&db, "Movies", "movie", &[])
+            .await
+            .unwrap();
+        let item = find_or_create(
+            &db,
+            lib,
+            NewItem::Movie {
+                title: "Film",
+                year: None,
+            },
+        )
+        .await
+        .unwrap();
+        let file = insert_file(&db, item, "/m/Film.mkv", 10, 1, "10-1")
+            .await
+            .unwrap();
+        let video = NewStream {
+            idx: 0,
+            kind: "video".into(),
+            ..Default::default()
+        };
+        let pgs = NewStream {
+            idx: 2,
+            kind: "subtitle".into(),
+            codec: Some("hdmv_pgs_subtitle".into()),
+            ..Default::default()
+        };
+        save_probe(
+            &db,
+            file,
+            None,
+            Some(60.0),
+            None,
+            &[video, pgs, sidecar("/m/Film.en.srt", "5-1")],
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            library_sidecars(&db, lib).await.unwrap()[&file],
+            vec![("/m/Film.en.srt".to_string(), Some("5-1".to_string()))]
+        );
+
+        replace_sidecars(&db, file, &[sidecar("/m/Film.fr.srt", "7-2")])
+            .await
+            .unwrap();
+        let all = streams(&db, file).await.unwrap();
+        assert_eq!(all.len(), 3);
+        assert_eq!(
+            all.last().and_then(|s| s.external_path.as_deref()),
+            Some("/m/Film.fr.srt")
+        );
+
+        let subs = library_subtitles(&db, lib).await.unwrap();
+        assert_eq!(subs.len(), 2);
+        let image = subs.iter().find(|s| s.idx == 2).unwrap();
+        set_stream_ocr(&db, image.stream_id, true).await.unwrap();
+        assert!(stream(&db, image.stream_id).await.unwrap().unwrap().ocr);
+        clear_stream_ocr(&db).await.unwrap();
+        assert!(!stream(&db, image.stream_id).await.unwrap().unwrap().ocr);
+    }
 }
