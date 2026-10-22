@@ -11,6 +11,8 @@ import { api, frameUrl, imageUrl, sharperImageUrl } from '@/lib/api'
 import { useIsAdmin } from '@/lib/auth'
 import { FixMatch } from './FixMatch'
 import { SeriesTracks } from './SeriesTracks'
+import { ContentRatingButton } from './ContentRating'
+import { ShareButton } from '@/features/shares/ShareButton'
 import { clock, fileSize, progressOf, runtime, subtitleOf, trackLabel } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import { useMpv } from '@/lib/mpv'
@@ -291,6 +293,8 @@ export function ItemPage() {
           <CopyLinkButton />
           {admin && data.tracks && <SeriesTracks showId={item.id} tracks={data.tracks} />}
           {admin && (item.kind === 'movie' || item.kind === 'show') && <FixMatch item={item} />}
+          {admin && (item.kind === 'movie' || item.kind === 'show' || item.kind === 'video') && <ContentRatingButton item={item} />}
+          {admin && <ShareButton item={item} />}
         </div>
       </Hero>
       {item.kind === 'show' && (

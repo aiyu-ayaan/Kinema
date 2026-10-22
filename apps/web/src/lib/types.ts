@@ -9,9 +9,48 @@ export interface User {
   has_pin: boolean
 }
 
+/** A profile on the picker, as seen from this device's network. */
+export interface ProfileCard extends User {
+  /** Opens with one tap from here (home network, and no lock or a PIN skipped at home). */
+  opens_without_lock: boolean
+  /** No lock, so it cannot be opened away from home. */
+  home_only: boolean
+}
+
+export type SubtitleMode = 'off' | 'always' | 'foreign'
+
+/** Track languages: ISO 639-2, '' for the file's default, null to follow the server. */
+export interface Languages {
+  audio_language: string | null
+  subtitle_language: string | null
+  subtitle_mode: SubtitleMode | null
+}
+
+/** A profile's preferences; limits and LAN unlock are set by an admin. */
+export interface Prefs extends Languages {
+  /** Minimum-age scale 0..18; null = no limit. */
+  max_rating: number | null
+  allow_unrated: boolean
+  /** A PIN profile opens without it on the home network. */
+  lan_unlock: boolean
+}
+
+export interface ProfileOptions {
+  track_languages: string[]
+  subtitle_modes: SubtitleMode[]
+  rating_levels: number[]
+}
+
+export interface MyProfile {
+  user: User
+  preferences: Prefs
+  options: ProfileOptions
+}
+
 /** A profile as the admin edits it. Empty `library_ids` means every library. */
 export interface ManagedUser extends User {
   library_ids: number[]
+  preferences: Prefs
 }
 
 export interface ProfileInput {
@@ -22,6 +61,51 @@ export interface ProfileInput {
   password?: string
   pin?: string
   library_ids: number[]
+  /** undefined keeps them */
+  preferences?: Prefs
+}
+
+export interface ImportResult {
+  imported: number
+  unmatched: number
+  kept: number
+  lock_applied: boolean
+}
+
+export interface Share {
+  id: number
+  created_by: number
+  creator_name: string | null
+  item_id: number
+  item_title: string | null
+  item_kind: ItemKind | null
+  label: string | null
+  created_at: number
+  expires_at: number
+  revoked_at: number | null
+}
+
+export interface CreatedShare {
+  share: Share
+  /** Shown once; the server keeps only a hash. */
+  token: string
+  /** Client route, `/s/<token>`. */
+  path: string
+}
+
+export interface ShareFile {
+  id: number
+  container: string | null
+  duration_s: number | null
+  streams: Stream[]
+}
+
+/** What a share-link viewer sees: one title and what is under it. */
+export interface ShareView {
+  share: { label: string | null; expires_at: number; target_id: number }
+  item: ItemCard
+  children: ItemCard[]
+  files: ShareFile[]
 }
 
 export type LibraryKind = 'movie' | 'show' | 'other'
@@ -60,6 +144,8 @@ export interface ItemCard {
   duration_s: number | null
   child_count: number
   added_at: number
+  /** Certification ("PG-13"), inherited from the show; '' looked up and unrated. */
+  content_rating: string | null
 }
 
 export interface Stream {

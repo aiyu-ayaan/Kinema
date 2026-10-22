@@ -174,10 +174,15 @@ function UserMenu() {
         title={t(dark ? 'theme.light' : 'theme.dark')}
         icon={dark ? <Sun size={18} /> : <Moon size={18} />}
       />
-      <span className="hidden h-8 items-center gap-2 rounded-full border border-border bg-raised ps-1 pe-3 text-label font-medium sm:flex">
+      <Link
+        to="/profile"
+        title={t('profile.open')}
+        className="flex h-8 items-center gap-2 rounded-full border border-border bg-raised ps-1 pe-1 text-label font-medium hover:border-border-strong sm:pe-3"
+      >
         {user && <Avatar name={user.name} color={user.avatar} size={24} />}
-        {user?.name}
-      </span>
+        <span className="hidden sm:inline">{user?.name}</span>
+        <span className="sr-only sm:hidden">{t('profile.open')}</span>
+      </Link>
       {/* Signing out returns to the profile picker, which is how profiles switch. */}
       <Button variant="ghost" onClick={signOut} aria-label={t('auth.switchProfile')} title={t('auth.switchProfile')} icon={<UserSwitch size={18} />} />
       {typeof window !== 'undefined' && (window.kinema?.chooseServer || window.desktop?.chooseServer) && (

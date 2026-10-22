@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, LockSimple, PencilSimple, Plus, ShieldCheck, Trash } from '@phosphor-icons/react'
+import { ArrowsLeftRight, Check, HouseLine, LockSimple, PencilSimple, Plus, ShieldCheck, ShieldStar, Trash } from '@phosphor-icons/react'
 import { Avatar } from '@/components/ui/Avatar'
 import { avatarColors } from '@/components/ui/avatarColors'
 import { Button } from '@/components/ui/Button'
 import { Badge, Card, CardHeader, ErrorText, Skeleton } from '@/components/ui/Card'
-import { SettingRow, Switch } from '@/components/ui/Controls'
+import { Select, SettingRow, Switch } from '@/components/ui/Controls'
 import { Field } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { api } from '@/lib/api'
@@ -13,9 +13,12 @@ import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { t } from '@/lib/i18n'
 import { useLibraries } from '@/lib/queries'
-import type { AvatarColor, ManagedUser, ProfileInput } from '@/lib/types'
+import type { AvatarColor, ManagedUser, Prefs, ProfileInput } from '@/lib/types'
+import { LanguageFields, TransferModal } from '@/features/profiles/ProfileFields'
+import { ratingLabel } from '@/features/profiles/rating'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
+const NO_PREFS: Prefs = { audio_language: null, subtitle_language: null, subtitle_mode: null, max_rating: null, allow_unrated: false, lan_unlock: false }
 const colors = Object.keys(avatarColors) as AvatarColor[]
 
 /** Add or edit a profile. `user` null means a new one. */
@@ -31,6 +34,9 @@ function ProfileEditor({ user, open, onClose }: { user: ManagedUser | null; open
   const [removePin, setRemovePin] = useState(false)
   const [limited, setLimited] = useState((user?.library_ids.length ?? 0) > 0)
   const [libraryIds, setLibraryIds] = useState<number[]>(user?.library_ids ?? [])
+  const [prefs, setPrefs] = useState<Prefs>(user?.preferences ?? NO_PREFS)
+  const { data: mine } = useQuery({ queryKey: ['my-profile'], queryFn: api.myProfile })
+  const willHavePin = !removePin && (pin !== '' || !!user?.has_pin)
 
   const save = useMutation({
     mutationFn: (p: ProfileInput) => (user ? api.updateUser(user.id, p) : api.createUser(p)),
@@ -55,6 +61,8 @@ function ProfileEditor({ user, open, onClose }: { user: ManagedUser | null; open
       password: password || undefined,
       pin: removePin ? '' : pin || undefined,
       library_ids: !isAdmin && limited ? libraryIds : [],
+      // Admins are never limited and always need their password.
+      preferences: isAdmin ? { ...prefs, max_rating: null, allow_unrated: false, lan_unlock: false } : { ...prefs, lan_unlock: prefs.lan_unlock && willHavePin },
     })
   }
 
@@ -173,6 +181,49 @@ function ProfileEditor({ user, open, onClose }: { user: ManagedUser | null; open
             )}
           </div>
         )}
+        {!isAdmin && (
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-1 text-label font-medium">{t('household.title')}</legend>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="household-limit" className="text-label">
+                {t('household.limit')}
+              </label>
+              <Select
+                id="household-limit"
+                aria-describedby="household-limit-hint"
+                value={prefs.max_rating ?? ''}
+                onChange={(e) => setPrefs({ ...prefs, max_rating: e.target.value === '' ? null : Number(e.target.value) })}
+              >
+                <option value="">{t('household.noLimit')}</option>
+                {(mine?.options.rating_levels ?? []).map((age) => (
+                  <option key={age} value={age}>
+                    {ratingLabel(age)}
+                  </option>
+                ))}
+              </Select>
+              <p id="household-limit-hint" className="text-caption text-muted">
+                {t('household.limitHint')}
+              </p>
+            </div>
+            <div className="-mx-4 divide-y divide-border border-y border-border">
+              {prefs.max_rating != null && (
+                <SettingRow label={t('household.unrated')} description={t('household.unratedHint')}>
+                  <Switch checked={prefs.allow_unrated} onChange={(v) => setPrefs({ ...prefs, allow_unrated: v })} label={t('household.unrated')} />
+                </SettingRow>
+              )}
+              <SettingRow label={t('household.lanUnlock')} description={willHavePin ? t('household.lanUnlockHint') : t('household.lanUnlockNeedsPin')}>
+                <Switch checked={prefs.lan_unlock && willHavePin} onChange={(v) => willHavePin && setPrefs({ ...prefs, lan_unlock: v })} label={t('household.lanUnlock')} />
+              </SettingRow>
+            </div>
+          </fieldset>
+        )}
+        {mine && (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-label font-medium">{t('profile.languages')}</legend>
+            <p className="text-caption text-muted">{t('household.languagesHint')}</p>
+            <LanguageFields idPrefix="edit" value={prefs} onChange={(l) => setPrefs({ ...prefs, ...l })} options={mine.options} />
+          </fieldset>
+        )}
         {user && user.id === me?.id && <p className="text-caption text-subtle">{t('users.editingSelf')}</p>}
         <ErrorText>{save.error && errorText(save.error)}</ErrorText>
       </form>
@@ -186,6 +237,7 @@ export function UsersSection() {
   const { data: users, isLoading } = useQuery({ queryKey: ['users'], queryFn: api.users })
   const { data: libraries } = useLibraries()
   const [editing, setEditing] = useState<ManagedUser | null | 'new'>(null)
+  const [transfer, setTransfer] = useState<ManagedUser | null>(null)
   const remove = useMutation({
     mutationFn: api.deleteUser,
     onSuccess: () => {
@@ -226,9 +278,22 @@ export function UsersSection() {
                     {t(u.has_password ? 'users.lockPassword' : 'users.lockPin')}
                   </Badge>
                 )}
+                {!u.is_admin && u.preferences.max_rating != null && (
+                  <Badge tone="warn">
+                    <ShieldStar size={12} weight="fill" aria-hidden />
+                    {ratingLabel(u.preferences.max_rating)}
+                  </Badge>
+                )}
+                {!u.is_admin && u.preferences.lan_unlock && u.has_pin && (
+                  <Badge>
+                    <HouseLine size={12} weight="fill" aria-hidden />
+                    {t('household.lanUnlock')}
+                  </Badge>
+                )}
               </p>
               <p className="truncate text-caption text-muted">{u.library_ids.length > 0 ? t('users.limitedTo', { names: libraryNames(u.library_ids) }) : t('users.accessAll')}</p>
             </div>
+            <Button size="sm" variant="ghost" aria-label={t('transfer.open', { name: u.name })} title={t('transfer.title')} icon={<ArrowsLeftRight size={16} />} onClick={() => setTransfer(u)} />
             <Button size="sm" variant="ghost" aria-label={t('users.edit')} title={t('users.edit')} icon={<PencilSimple size={16} />} onClick={() => setEditing(u)} />
             <Button
               size="sm"
@@ -249,6 +314,21 @@ export function UsersSection() {
       )}
       {/* key remounts the editor so each open starts from that profile's values. */}
       {editing && <ProfileEditor key={editing === 'new' ? 'new' : editing.id} user={editing === 'new' ? null : editing} open onClose={() => setEditing(null)} />}
+      {transfer && (
+        <TransferModal
+          open
+          onClose={() => setTransfer(null)}
+          name={transfer.name}
+          withLock
+          onExport={(includeLock) => api.exportUser(transfer.id, includeLock)}
+          onImport={async (data, applyLock) => {
+            const r = await api.importUser(transfer.id, data, applyLock)
+            qc.invalidateQueries({ queryKey: ['users'] })
+            qc.invalidateQueries({ queryKey: ['profiles'] })
+            return r
+          }}
+        />
+      )}
     </Card>
   )
 }
