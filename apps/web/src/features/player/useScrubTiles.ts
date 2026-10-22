@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from '@/lib/api'
+import { api, session } from '@/lib/api'
 import { parseTimeline, type ScrubTile } from '@/lib/scrub'
 
 /** How long to wait before asking again while the server makes the sheets, and how many times. */
@@ -21,7 +21,10 @@ export function useScrubTiles(itemId: number): ScrubTile[] {
         const text = await api.timelineText(itemId)
         if (cancelled) return
         if (text != null) {
-          setTiles(parseTimeline(text, `/api/items/${itemId}`))
+          const parsed = parseTimeline(text, `/api/items/${itemId}`)
+          const token = session.token
+          const query = token ? `?token=${encodeURIComponent(token)}` : ''
+          setTiles(query ? parsed.map((t) => ({ ...t, url: `${t.url}${query}` })) : parsed)
         } else if (++tries < MAX_TRIES) {
           timer = window.setTimeout(load, RETRY_MS)
         }

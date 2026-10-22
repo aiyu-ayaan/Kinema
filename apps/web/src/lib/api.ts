@@ -181,7 +181,10 @@ export const api = {
   clearMarker: (id: number, kind: 'intro' | 'credits') => request<void>('DELETE', `/items/${id}/markers/${kind}`),
   /** The scrub-thumbnail index (WebVTT); null while the server is still making the sheets (202). */
   timelineText: async (id: number) => {
-    const res = await fetch(`/api/items/${id}/timeline.vtt`)
+    const headers: Record<string, string> = {}
+    const token = session.token
+    if (token) headers.Authorization = `Bearer ${token}`
+    const res = await fetch(`/api/items/${id}/timeline.vtt`, { headers })
     if (res.status === 202) return null
     if (!res.ok) throw new ApiError(res.status, 'timeline', res.statusText)
     return res.text()
