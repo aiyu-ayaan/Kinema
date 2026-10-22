@@ -2,7 +2,9 @@ pub mod error;
 pub mod items;
 pub mod libraries;
 pub mod markers;
+pub mod profiles;
 pub mod settings;
+pub mod shares;
 pub mod users;
 
 pub use error::DbError;
