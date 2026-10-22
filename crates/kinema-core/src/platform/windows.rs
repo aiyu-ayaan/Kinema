@@ -14,6 +14,11 @@ pub fn configure_playback_process(cmd: &mut Command) {
     cmd.creation_flags(BELOW_NORMAL_PRIORITY_CLASS);
 }
 
+/// Not implemented on Windows yet (would need NtSuspendProcess): HLS runs there are not paused.
+pub fn suspend_process(_pid: u32, _suspend: bool) -> Result<(), std::io::Error> {
+    Err(std::io::ErrorKind::Unsupported.into())
+}
+
 /// Terminate child process and job objects cleanly on Windows
 pub fn kill_child_process_group(_pid: u32) -> Result<(), std::io::Error> {
     Ok(())

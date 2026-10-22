@@ -1,4 +1,6 @@
 pub mod error;
+pub mod hls;
+pub mod keyframes;
 pub mod markers;
 pub mod ocr;
 pub mod playback;

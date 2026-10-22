@@ -14,8 +14,10 @@ mod access;
 mod auth;
 mod discovery;
 mod error;
+mod hls;
 mod i18n;
 mod jobs;
+mod keyframes;
 mod markers;
 mod routes;
 mod scan;
@@ -111,6 +113,8 @@ async fn main() -> anyhow::Result<()> {
         marker_jobs: jobs::Jobs::new("skip markers"),
         subtitle_jobs: jobs::Jobs::new("subtitles"),
         ocr,
+        keyframe_jobs: jobs::Jobs::new("keyframe index"),
+        hls: hls::HlsSessions::default(),
         watchers: Arc::new(Mutex::new(HashMap::new())),
         changes,
         probe_slots: Arc::new(Semaphore::new(2)),
@@ -125,6 +129,7 @@ async fn main() -> anyhow::Result<()> {
             .and_then(|(_, fp)| fp.as_deref().map(Arc::from)),
     };
 
+    hls::purge(&state);
     // Watch every library and catch up on changes made while the server was off.
     tokio::spawn(scan::debounce_changes(state.clone(), changes_rx));
     tokio::spawn(scan::scheduled_rescans(state.clone()));

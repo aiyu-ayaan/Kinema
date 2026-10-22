@@ -1,6 +1,7 @@
 pub mod collections;
 pub mod error;
 pub mod items;
+pub mod keyframes;
 pub mod libraries;
 pub mod markers;
 pub mod playlists;

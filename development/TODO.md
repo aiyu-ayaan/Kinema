@@ -46,16 +46,18 @@
 - [x] Web integration: server change button on profile picker, setup, settings, and user menu
 
 ## Playback speed (Plex pain points)
-- [ ] Store keyframe/Cues index at probe time (M1)
+- [x] Store keyframe/Cues index at probe time (M1): Matroska Cues, MP4 stss, bounded ffprobe packet scan; remux plan start from it
 - [ ] Direct play: ranged `sendfile`, no session (M1)
 - [x] Scan-time subtitle extraction to cached WebVTT (M4)
 - [x] Client-side subtitle track switch, no player reload (M4)
-- [ ] HLS seek reuses existing segments; keep idle session 60 s (M4)
 - [x] Optional OCR of PGS/VobSub to WebVTT (M4)
 - [ ] Android: offer picture subtitles that have `ocr: true` (web and desktop mpv do)
 - [ ] Bundle `tesseract` (+ eng model) in AppImage / Windows / Docker, or document installing it
 - [ ] Prune subtitle cache entries of old file versions (they stay until the cache is cleared)
 - [ ] OCR: check accuracy on real Blu-ray PGS and DVD VobSub (only a generated PGS sample was tested)
+- [x] HLS seek reuses existing segments; keep idle session 60 s (M4): server side, `/api/hls/{id}/index.m3u8` + `{n}.ts`
+- [ ] Pause HLS runs on Windows (`platform::suspend_process`, e.g. NtSuspendProcess); unthrottled there for now
+- [ ] fMP4 HLS segments (HEVC copy for players without HEVC-in-TS)
 
 ## Packaging (end goal)
 - [x] Decisions: GPL ffmpeg as separate process; static musl (Linux) + MSVC (Windows); aarch64 in first release

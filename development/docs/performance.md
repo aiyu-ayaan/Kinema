@@ -34,6 +34,7 @@
 ## Throttling
 
 - A live re-encode is held to 30 s ahead of real time, then paced to playback (see `media-pipeline.md` § 4).
+- An HLS run (remux or re-encode) is stopped (SIGSTOP) once it is 30 s past the last segment asked for and continued when the player nears; idle sessions end after 60 s (`media-pipeline.md` 6a). Not on Windows yet.
 - Each re-encode gets a share of the cores (`-threads`, Auto = cores / `max_transcodes`), so even the full-speed lead never takes the whole machine.
 
 - Scan and thumbnail workers pause while any transcode session is active or while system load per core exceeds 0.8.

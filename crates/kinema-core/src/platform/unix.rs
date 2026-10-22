@@ -22,6 +22,23 @@ fn lower_priority(cmd: &mut Command, increment: i32) {
     }
 }
 
+/// Pauses (SIGSTOP) or resumes (SIGCONT) a child: an HLS run far enough ahead of the player waits
+/// without holding any CPU, and keeps its place.
+pub fn suspend_process(pid: u32, suspend: bool) -> Result<(), std::io::Error> {
+    let signal = if suspend {
+        libc::SIGSTOP
+    } else {
+        libc::SIGCONT
+    };
+    let pid = libc::pid_t::try_from(pid).map_err(std::io::Error::other)?;
+    // SAFETY: kill() only sends a signal; the pid is a child we spawned and still own.
+    if unsafe { libc::kill(pid, signal) } == 0 {
+        Ok(())
+    } else {
+        Err(std::io::Error::last_os_error())
+    }
+}
+
 /// Terminate child process cleanly on Unix
 pub fn kill_child_process_group(_pid: u32) -> Result<(), std::io::Error> {
     Ok(())

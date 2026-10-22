@@ -42,8 +42,10 @@ This is Kinema's own API. It is not Plex-compatible.
 | PUT | `/shelves/{id}/hidden` | `{hidden}`: hide or show a shelf for this profile only |
 | GET | `/genres` | Admin: genre names, for the shelf form |
 | PUT | `/items/{id}/tracks` | Admin, show only: `{audio, subtitle}` as positions among an episode's audio / subtitle streams; `null` follows the Languages settings, subtitle `-1` is off |
-| GET | `/files/{id}/plan?audio=&start=&hevc=&av1=&raw=` | `{mode: direct\|remux\|transcode, duration_s, audio, start, subtitle}`; audio and subtitle follow the show's track choice, then the Languages settings. `raw=true` always plans direct (a player that decodes anything, mpv) |
+| GET | `/files/{id}/plan?audio=&start=&hevc=&av1=&raw=` | `{mode: direct\|remux\|transcode, duration_s, audio, start, subtitle}`; audio and subtitle follow the show's track choice, then the Languages settings. `raw=true` always plans direct (a player that decodes anything, mpv). For a remux, `start` comes from the stored keyframe index when there is one (ffprobe otherwise) |
 | GET | `/stream/{id}?audio=&start=&hevc=&av1=&raw=` | Direct (Range) or fMP4 pipe, per the plan; `raw=true` always serves the file as it is |
+| GET | `/hls/{id}/index.m3u8?audio=&hevc=&av1=` | VOD HLS playlist for the plan's remux or transcode (a direct-play file is remuxed). Segment URIs repeat the chosen audio. 409 `media.hls_unavailable` when the file is unprobed, or for copied video without a keyframe index yet (`media-pipeline.md` 6a) |
+| GET | `/hls/{id}/{n}.ts?audio=&hevc=&av1=` | MPEG-TS segment `n`: from disk when already cut, else waits for the live run or restarts ffmpeg at `n`; session kept 60 s idle. 503 `media.transcode_busy` past the transcode limit |
 | GET | `/subtitles/{stream_id}` | Text subtitle, or picture subtitle read by OCR (`ocr: true` on the stream), as WebVTT from the cache; a text track not cached yet is extracted once. 400 `media.subtitle_unsupported` for a picture track without OCR, `media.subtitle_failed` when conversion failed |
 | GET | `/images/{size}/{name}` | TMDB art, cached |
 | GET | `/items/{id}/thumb` | Video frame JPEG from the background thumbnail cache; 404 until made |

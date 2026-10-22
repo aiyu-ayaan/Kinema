@@ -26,6 +26,8 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/files/:id/plan", get(plan))
         .route("/stream/:id", get(stream))
+        .route("/hls/:id/index.m3u8", get(hls_playlist))
+        .route("/hls/:id/:segment", get(hls_segment))
         .route("/subtitles/:stream_id", get(subtitle))
         .route("/images/:size/:name", get(image))
         .route("/items/:id/thumb", get(thumb))
@@ -196,12 +198,25 @@ async fn plan(
             },
             Some(bins),
         ) => {
-            let mapped: Vec<i64> = [c.video, c.audio]
-                .into_iter()
-                .flatten()
-                .map(|i| c.streams[i].idx)
-                .collect();
-            playback::seek_landing(bins, std::path::Path::new(&c.file.path), q.start, &mapped).await
+            // The stored keyframe index answers at once; without one (not built yet, or no cheap
+            // source), ask ffprobe.
+            match crate::keyframes::load(&state, id).await {
+                Some(index) => index.landing(q.start),
+                None => {
+                    let mapped: Vec<i64> = [c.video, c.audio]
+                        .into_iter()
+                        .flatten()
+                        .map(|i| c.streams[i].idx)
+                        .collect();
+                    playback::seek_landing(
+                        bins,
+                        std::path::Path::new(&c.file.path),
+                        q.start,
+                        &mapped,
+                    )
+                    .await
+                }
+            }
         }
         // Re-encoding decodes up to `start` and cuts there exactly.
         _ => q.start.max(0.0),
@@ -303,6 +318,138 @@ async fn stream(
         Body::from_stream(body),
     )
         .into_response())
+}
+
+/// (copy video, copy audio) for HLS. MPEG-TS segments carry AAC and MP3 as they are; other audio is
+/// re-encoded. A file the browser could direct-play is remuxed whole.
+fn hls_mode(c: &Chosen) -> ApiResult<(bool, bool)> {
+    if c.file.probe_status != "ok" {
+        return Err(ApiError::new(StatusCode::CONFLICT, "media.hls_unavailable"));
+    }
+    let (copy_video, copy_audio) = match c.plan {
+        Plan::Direct => (c.video.is_some(), true),
+        Plan::Stream {
+            copy_video,
+            copy_audio,
+        } => (copy_video, copy_audio),
+    };
+    let ts_audio = c
+        .audio
+        .is_none_or(|i| matches!(c.streams[i].codec.as_deref(), Some("aac" | "mp3")));
+    Ok((copy_video, copy_audio && ts_audio))
+}
+
+/// Segment start times: keyframes for copied video (needs the stored index), a fixed grid otherwise.
+async fn hls_starts(state: &AppState, c: &Chosen, copy_video: bool) -> ApiResult<Vec<f64>> {
+    let duration = c
+        .file
+        .duration_s
+        .ok_or_else(|| ApiError::new(StatusCode::CONFLICT, "media.hls_unavailable"))?;
+    if !copy_video {
+        return Ok(kinema_media::hls::grid_segments(duration));
+    }
+    let index = crate::keyframes::load(state, c.file.id)
+        .await
+        .ok_or_else(|| ApiError::new(StatusCode::CONFLICT, "media.hls_unavailable"))?;
+    Ok(kinema_media::hls::copy_segments(&index.times, duration))
+}
+
+/// The chosen audio pinned in the segment URLs, so every segment reaches the same session.
+fn hls_query(c: &Chosen, q: &PlayQuery) -> String {
+    let audio = c
+        .audio
+        .map(|i| format!("audio={}&", c.streams[i].idx))
+        .unwrap_or_default();
+    format!("{audio}hevc={}&av1={}", q.hevc, q.av1)
+}
+
+async fn hls_playlist(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<i64>,
+    Query(q): Query<PlayQuery>,
+) -> ApiResult<Response> {
+    access::check_file(&state, &user, id).await?;
+    let c = choose(&state, user.id, id, &q).await?;
+    let (copy_video, _) = hls_mode(&c)?;
+    let starts = hls_starts(&state, &c, copy_video).await?;
+    let body = kinema_media::hls::playlist(
+        &starts,
+        c.file.duration_s.unwrap_or_default(),
+        &hls_query(&c, &q),
+    );
+    Ok((
+        [
+            (
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/vnd.apple.mpegurl"),
+            ),
+            (CACHE_CONTROL, HeaderValue::from_static("no-store")),
+        ],
+        body,
+    )
+        .into_response())
+}
+
+async fn hls_segment(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, segment)): Path<(i64, String)>,
+    Query(q): Query<PlayQuery>,
+    req: Request,
+) -> ApiResult<Response> {
+    let n: usize = segment
+        .strip_suffix(".ts")
+        .and_then(|s| s.parse().ok())
+        .ok_or_else(ApiError::not_found)?;
+    access::check_file(&state, &user, id).await?;
+    let c = choose(&state, user.id, id, &q).await?;
+    let (copy_video, copy_audio) = hls_mode(&c)?;
+    let audio_idx = c.audio.map_or(-1, |i| c.streams[i].idx);
+    let key = format!(
+        "{}-{id}-{audio_idx}-{}-{}",
+        user.id, copy_video as u8, copy_audio as u8
+    );
+    let owned = |i: usize| crate::hls::OwnedTrack {
+        index: c.streams[i].idx,
+        codec: c.streams[i].codec.clone(),
+        profile: c.streams[i].profile.clone(),
+    };
+    let session = state
+        .hls
+        .session(&state, key, user.id, id, async || {
+            let settings = state.settings();
+            Ok(crate::hls::Spec {
+                path: PathBuf::from(&c.file.path),
+                video: c.video.map(owned),
+                audio: c.audio.map(owned),
+                copy_video,
+                copy_audio,
+                preset: settings.transcode_preset.clone(),
+                crf: settings.transcode_crf,
+                max_height: settings.transcode_max_height,
+                threads: playback::transcode_threads(
+                    settings.transcode_threads,
+                    settings.max_transcodes,
+                ),
+                hardware: settings.transcode_hardware,
+                starts: hls_starts(&state, &c, copy_video).await?,
+            })
+        })
+        .await?;
+    let path = state.hls.segment(&state, &session, n).await?;
+    let mut res = ServeFile::new(&path)
+        .oneshot(req)
+        .await
+        .map_err(|_| ApiError::internal())?
+        .into_response();
+    let headers = res.headers_mut();
+    headers.insert(CONTENT_TYPE, HeaderValue::from_static("video/mp2t"));
+    headers.insert(
+        CACHE_CONTROL,
+        HeaderValue::from_static("private, max-age=3600"),
+    );
+    Ok(res)
 }
 
 /// WebVTT for a subtitle stream. Normally made by the background job after a scan
