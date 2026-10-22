@@ -14,7 +14,6 @@ use kinema_db::items::{self, ItemCard};
 use kinema_db::playlists::{self, Playlist};
 use kinema_db::users::User;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 
 const MAX_ITEMS: usize = 5000;
 const PLAYABLE: &[&str] = &["movie", "episode", "video"];
@@ -44,11 +43,8 @@ struct PlaylistDetail {
     items: Vec<ItemCard>,
 }
 
-fn visible_items(cards: Vec<ItemCard>, visible: &Option<HashSet<i64>>) -> Vec<ItemCard> {
-    cards
-        .into_iter()
-        .filter(|c| access::allows(visible, c.library_id))
-        .collect()
+fn visible_items(cards: Vec<ItemCard>, visible: &access::Policy) -> Vec<ItemCard> {
+    cards.into_iter().filter(|c| visible.allows(c)).collect()
 }
 
 fn summary(playlist: Playlist, user: &User, items: &[ItemCard]) -> PlaylistSummary {
@@ -64,7 +60,7 @@ fn summary(playlist: Playlist, user: &User, items: &[ItemCard]) -> PlaylistSumma
 pub async fn summaries(
     state: &AppState,
     user: &User,
-    visible: &Option<HashSet<i64>>,
+    visible: &access::Policy,
 ) -> ApiResult<Vec<PlaylistSummary>> {
     let mut out = Vec::new();
     for p in playlists::list_visible(&state.db, user.id).await? {
@@ -78,7 +74,7 @@ async fn list(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
 ) -> ApiResult<Json<Vec<PlaylistSummary>>> {
-    let visible = access::visible(&state, &user).await?;
+    let visible = access::policy(&state, &user).await?;
     Ok(Json(summaries(&state, &user, &visible).await?))
 }
 
@@ -105,11 +101,11 @@ async fn check_playable(state: &AppState, user: &User, ids: &[i64]) -> ApiResult
     if ids.len() > MAX_ITEMS {
         return Err(ApiError::bad_request("playlists.too_many"));
     }
-    let visible = access::visible(state, user).await?;
+    let visible = access::policy(state, user).await?;
     for id in ids {
         let card = items::card(&state.db, user.id, *id)
             .await?
-            .filter(|c| access::allows(&visible, c.library_id))
+            .filter(|c| visible.allows(c))
             .ok_or_else(ApiError::not_found)?;
         if !PLAYABLE.contains(&card.kind.as_str()) {
             return Err(ApiError::bad_request("playlists.item_unplayable"));
@@ -148,7 +144,7 @@ async fn create(
 
 async fn detail_of(state: &AppState, user: &User, id: i64) -> ApiResult<PlaylistDetail> {
     let playlist = visible_playlist(state, user, id).await?;
-    let visible = access::visible(state, user).await?;
+    let visible = access::policy(state, user).await?;
     let items = visible_items(playlists::items(&state.db, user.id, id).await?, &visible);
     Ok(PlaylistDetail {
         summary: summary(playlist, user, &items),

@@ -246,7 +246,7 @@ pub(crate) async fn plan_for(
         ) => {
             // The stored keyframe index answers at once; without one (not built yet, or no cheap
             // source), ask ffprobe.
-            match crate::keyframes::load(&state, id).await {
+            match crate::keyframes::load(state, id).await {
                 Some(index) => index.landing(q.start),
                 None => {
                     let mapped: Vec<i64> = [c.video, c.audio]
@@ -429,7 +429,8 @@ async fn hls_playlist(
     Query(q): Query<PlayQuery>,
 ) -> ApiResult<Response> {
     access::check_file(&state, &user, id).await?;
-    let c = choose(&state, user.id, id, &q).await?;
+    let langs = Langs::for_user(&state, user.id).await?;
+    let c = choose(&state, user.id, &langs, id, &q).await?;
     let (copy_video, _) = hls_mode(&c)?;
     let starts = hls_starts(&state, &c, copy_video).await?;
     let body = kinema_media::hls::playlist(
@@ -462,7 +463,8 @@ async fn hls_segment(
         .and_then(|s| s.parse().ok())
         .ok_or_else(ApiError::not_found)?;
     access::check_file(&state, &user, id).await?;
-    let c = choose(&state, user.id, id, &q).await?;
+    let langs = Langs::for_user(&state, user.id).await?;
+    let c = choose(&state, user.id, &langs, id, &q).await?;
     let (copy_video, copy_audio) = hls_mode(&c)?;
     let audio_idx = c.audio.map_or(-1, |i| c.streams[i].idx);
     let key = format!(

@@ -36,6 +36,11 @@ impl Policy {
             )
     }
 
+    /// The libraries the profile may open, for queries that filter in SQL; None = all.
+    pub fn library_scope(&self) -> Option<Vec<i64>> {
+        self.libraries.as_ref().map(|v| v.iter().copied().collect())
+    }
+
     pub fn retain(&self, cards: &mut Vec<ItemCard>) {
         cards.retain(|c| self.allows(c));
     }

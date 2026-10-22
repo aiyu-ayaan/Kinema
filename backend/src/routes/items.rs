@@ -82,9 +82,9 @@ async fn home(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiRes
     Ok(Json(Home {
         continue_watching,
         shelves,
-        playlists: playlists::summaries(&state, &user, &visible).await?,
-        collections: collections::summaries(&state, &user, &visible).await?,
-        genre_shelves: collections::home_shelves(&state, &user, &visible).await?,
+        playlists: playlists::summaries(&state, &user, &policy).await?,
+        collections: collections::summaries(&state, &user, &policy).await?,
+        genre_shelves: collections::home_shelves(&state, &user, &policy).await?,
     }))
 }
 

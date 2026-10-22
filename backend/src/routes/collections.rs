@@ -14,7 +14,6 @@ use kinema_db::items::{self, ItemCard};
 use kinema_db::shelves::{self, Shelf};
 use kinema_db::users::User;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 
 const TOP_LEVEL: &[&str] = &["movie", "show", "video"];
 const SHELF_ITEMS: i64 = 24;
@@ -59,11 +58,11 @@ fn summarize(collection: Collection, items: &[ItemCard]) -> CollectionSummary {
 async fn visible_members(
     state: &AppState,
     user: &User,
-    visible: &Option<HashSet<i64>>,
+    visible: &access::Policy,
     id: i64,
 ) -> ApiResult<Vec<ItemCard>> {
     let mut cards = collections::items(&state.db, user.id, id).await?;
-    cards.retain(|c| access::allows(visible, c.library_id));
+    cards.retain(|c| visible.allows(c));
     Ok(cards)
 }
 
@@ -71,7 +70,7 @@ async fn visible_members(
 pub async fn summaries(
     state: &AppState,
     user: &User,
-    visible: &Option<HashSet<i64>>,
+    visible: &access::Policy,
 ) -> ApiResult<Vec<CollectionSummary>> {
     let mut out = Vec::new();
     for c in collections::list(&state.db).await? {
@@ -87,7 +86,7 @@ async fn list(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
 ) -> ApiResult<Json<Vec<CollectionSummary>>> {
-    let visible = access::visible(&state, &user).await?;
+    let visible = access::policy(&state, &user).await?;
     Ok(Json(summaries(&state, &user, &visible).await?))
 }
 
@@ -95,7 +94,7 @@ async fn detail_of(state: &AppState, user: &User, id: i64) -> ApiResult<Collecti
     let collection = collections::get(&state.db, id)
         .await?
         .ok_or_else(ApiError::not_found)?;
-    let visible = access::visible(state, user).await?;
+    let visible = access::policy(state, user).await?;
     let items = visible_members(state, user, &visible, id).await?;
     if items.is_empty() && !user.is_admin {
         return Err(ApiError::not_found());
@@ -328,12 +327,12 @@ pub struct GenreShelf {
 pub async fn home_shelves(
     state: &AppState,
     user: &User,
-    visible: &Option<HashSet<i64>>,
+    visible: &access::Policy,
 ) -> ApiResult<Vec<GenreShelf>> {
-    let scope: Option<Vec<i64>> = visible.as_ref().map(|v| v.iter().copied().collect());
+    let scope = visible.library_scope();
     let mut out = Vec::new();
     for shelf in shelves::shown_to(&state.db, user.id).await? {
-        let items = shelves::genre_items(
+        let mut items = shelves::genre_items(
             &state.db,
             user.id,
             &shelf.genre,
@@ -341,6 +340,7 @@ pub async fn home_shelves(
             SHELF_ITEMS,
         )
         .await?;
+        visible.retain(&mut items);
         if !items.is_empty() {
             out.push(GenreShelf {
                 id: shelf.id,
