@@ -119,6 +119,7 @@ import com.aiyu.kinema.core.ItemDetail
 import com.aiyu.kinema.core.PlayCaps
 import com.aiyu.kinema.core.PlaybackPlan
 import com.aiyu.kinema.core.Stream
+import com.aiyu.kinema.core.StreamSeek
 import com.aiyu.kinema.core.parseVtt
 import com.aiyu.kinema.playback.Playback
 import com.aiyu.kinema.ui.theme.PlayerTheme
@@ -338,7 +339,17 @@ private fun Player(detail: ItemDetail, startAt: Double, large: Boolean, fullscre
         if (plan?.mode == "direct") {
             time = target
             player.seekTo((target * 1000).toLong())
-        } else load(audio, target)
+        } else {
+            // Inside what this stream already holds: jump there and leave the server's ffmpeg running. Not while a
+            // stream is loading: the player still reports the old one.
+            val local = if (buffering) null else StreamSeek.bufferedTargetMs(
+                target, offset, player.currentPosition, player.bufferedPosition, player.isCurrentMediaItemSeekable,
+            )
+            if (local != null) {
+                time = target
+                player.seekTo(local)
+            } else load(audio, target)
+        }
     }
 
     DisposableEffect(player) {

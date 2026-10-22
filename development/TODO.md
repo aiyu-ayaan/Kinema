@@ -33,7 +33,8 @@
 - [x] Media3 player: direct / remux / transcode, audio + subtitle switch, resume, next episode, double-tap seek
 - [x] Predictive back on every page (Navigation 3) and inside the tab host
 - [x] Picture-in-picture (back / play / forward actions) and a media session (lock-screen controls); not run on a device yet
-- [ ] Seek inside the buffered part of a remux stream without restarting it
+- [x] Seek inside the buffered part of a remux stream: decision logic (`StreamSeek`) and player hook, only applies when the player reports the stream seekable
+- [ ] Make the piped fMP4 remux/transcode stream seekable inside the buffer for ExoPlayer (custom SeekMap + back buffer, or sidx/HLS) so the above takes effect; verify on a device
 - [ ] Translations (`values-<lang>/strings.xml`)
 
 ## Desktop app (2026-10-20)

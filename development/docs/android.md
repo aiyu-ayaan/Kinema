@@ -84,7 +84,7 @@ stateDiagram-v2
 Same contract as the web player (`apps/web/src/features/player/PlayerPage.tsx`):
 
 1. `GET /files/{id}/plan` with `hevc` / `av1` from `MediaCodecList` decoders.
-2. `direct`: stream the file with Range from 0 and seek locally. `remux` / `transcode`: stream from the requested time; `plan.start` is where the output really begins, so the title time is `start + player position`. Seeks outside the stream restart it.
+2. `direct`: stream the file with Range from 0 and seek locally. `remux` / `transcode`: stream from the requested time; `plan.start` is where the output really begins, so the title time is `start + player position`. A seek inside the part the stream already buffered jumps locally and leaves the server's ffmpeg running (`StreamSeek.bufferedTargetMs`, tested in `StreamSeekTest`); outside it, or while a stream loads, the stream restarts. ExoPlayer maps every seek in a stream it reports as unseekable to t=0, and the piped fragmented MP4 (`empty_moov`, no `sidx`) is such a stream, so the local jump only applies when the player says the stream is seekable (`isCurrentMediaItemSeekable`); otherwise it restarts as before. Not yet confirmed on a device.
 3. Text subtitles come as WebVTT from `/subtitles/{id}` and are drawn over the video at the title time; picture subtitles are listed but disabled.
 4. Progress every 10 s and on leaving; watched at 92 %; the end opens the next episode. **Skip intro** shows while a detected intro plays (media-pipeline.md §7). The **Up next** card (next episode's still, a countdown shade, Play now, hide) slides in from the credits start, or for the last 60 s without credits; a movie shows **Skip credits** instead.
 5. Phones: landscape, immersive, screen kept on while open; restored on close. Only the last player to close restores the window, because "next episode" opens the new player before the old one leaves.
@@ -153,5 +153,5 @@ Every user-facing string is in `app/src/main/res/values/strings.xml` (English). 
 
 ## Shortcuts
 
-- shortcut: remux/transcode seeks always restart the stream, even inside the buffer.
+- shortcut: remux/transcode seeks still restart the stream in practice, because ExoPlayer sees the piped fragmented MP4 as unseekable. Fix: a custom `SeekMap` (seekable inside the buffer, with the duration from the plan, plus a back buffer in `DefaultLoadControl`), or a `sidx`/HLS output from the server.
 - shortcut: no offline downloads.
