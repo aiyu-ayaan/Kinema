@@ -40,6 +40,9 @@ pub struct ServerSettings {
     pub transcode_hardware: bool,
     /// Periodic full rescan for drives without filesystem events (network shares). 0 = off.
     pub rescan_hours: u32,
+    /// Read picture subtitles (PGS, VobSub) into WebVTT with OCR after scans, when
+    /// `tesseract` is installed. Off by default: it is slow on a large library.
+    pub subtitle_ocr: bool,
 }
 
 impl Default for ServerSettings {
@@ -61,6 +64,7 @@ impl Default for ServerSettings {
             transcode_threads: 0,
             transcode_hardware: true,
             rescan_hours: 0,
+            subtitle_ocr: false,
         }
     }
 }

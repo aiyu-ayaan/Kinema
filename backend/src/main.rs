@@ -21,6 +21,7 @@ mod routes;
 mod scan;
 mod server_settings;
 mod state;
+mod subtitles;
 mod thumbs;
 mod tls;
 mod web;
@@ -83,6 +84,16 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
+    let ocr = kinema_media::ocr::OcrTool::detect().map(Arc::new);
+    match &ocr {
+        Some(t) => info!(
+            "Subtitle OCR: {} ({})",
+            t.tesseract.display(),
+            t.languages.join(", ")
+        ),
+        None => info!("tesseract not found; picture subtitles (PGS, VobSub) cannot be read"),
+    }
+
     let rustls = if config.tls.enabled {
         Some(tls::load(&config).await?)
     } else {
@@ -98,6 +109,8 @@ async fn main() -> anyhow::Result<()> {
         scans: jobs::Jobs::new("scan"),
         thumb_jobs: jobs::Jobs::new("thumbnails"),
         marker_jobs: jobs::Jobs::new("skip markers"),
+        subtitle_jobs: jobs::Jobs::new("subtitles"),
+        ocr,
         watchers: Arc::new(Mutex::new(HashMap::new())),
         changes,
         probe_slots: Arc::new(Semaphore::new(2)),

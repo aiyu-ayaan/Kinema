@@ -21,6 +21,9 @@ pub struct AppState {
     pub scans: Jobs,
     pub thumb_jobs: Jobs,
     pub marker_jobs: Jobs,
+    pub subtitle_jobs: Jobs,
+    /// `tesseract` for picture subtitles, found at startup; None leaves them picture-only.
+    pub ocr: Option<Arc<kinema_media::ocr::OcrTool>>,
     pub watchers: Arc<Mutex<HashMap<i64, RecommendedWatcher>>>,
     /// Library ids with filesystem changes, debounced into scans.
     pub changes: UnboundedSender<i64>,

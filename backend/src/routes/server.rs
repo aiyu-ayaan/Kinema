@@ -60,6 +60,7 @@ struct LibraryStatus {
     thumbnails: usize,
     scanning: bool,
     generating_thumbnails: bool,
+    extracting_subtitles: bool,
 }
 
 #[derive(Serialize)]
@@ -113,6 +114,7 @@ async fn status(State(state): State<AppState>, _: AdminUser) -> ApiResult<Json<S
         libs.push(LibraryStatus {
             scanning: scan::is_scanning(&state, lib.id),
             generating_thumbnails: thumbs::is_running(&state, lib.id),
+            extracting_subtitles: crate::subtitles::is_running(&state, lib.id),
             id: lib.id,
             name: lib.name,
             kind: lib.kind,
@@ -177,6 +179,13 @@ async fn clear_cache(
     if dir == "thumbs" {
         for lib in libraries::list(&state.db).await? {
             thumbs::spawn(state.clone(), lib.id);
+        }
+    }
+    if dir == "subtitles" {
+        // OCR results went with the files; extraction fills the cache again in the background.
+        items::clear_stream_ocr(&state.db).await?;
+        for lib in libraries::list(&state.db).await? {
+            crate::subtitles::spawn(state.clone(), lib.id);
         }
     }
     Ok(StatusCode::NO_CONTENT)
