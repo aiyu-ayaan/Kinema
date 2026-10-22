@@ -142,6 +142,7 @@
     <string name="player_pip">Picture-in-picture</string>
     <string name="player_fullscreen">Full screen</string>
     <string name="player_exit_fullscreen">Exit full screen</string>
+    <string name="player_minimize">Minimize</string>
     <string name="player_up_next_list">Episodes and more</string>
     <string name="watch_episodes">Episodes</string>
     <string name="watch_more">More to watch</string>

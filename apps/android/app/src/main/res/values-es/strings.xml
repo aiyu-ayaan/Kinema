@@ -35,6 +35,7 @@
     <string name="player_pip">Imagen en imagen</string>
     <string name="player_fullscreen">Pantalla completa</string>
     <string name="player_exit_fullscreen">Salir de pantalla completa</string>
+    <string name="player_minimize">Minimizar</string>
     <string name="player_tracks">Audio y subtítulos</string>
     <string name="player_audio">Audio</string>
     <string name="player_subtitles">Subtítulos</string>

@@ -158,6 +158,64 @@ fun Modifier.swipeLevels(levels: SwipeLevels, onSwipe: (Swipe?) -> Unit) = point
     )
 }
 
+/** Continuous downward drag on the video or player that pulls it down and minimizes when released past threshold. */
+fun Modifier.swipeDownToMinimize(
+    enabled: Boolean = true,
+    onDrag: (Float) -> Unit,
+    onRelease: (Boolean) -> Unit,
+) = if (!enabled) this else pointerInput(Unit) {
+    var totalDy = 0f
+    detectVerticalDragGestures(
+        onDragStart = {
+            totalDy = 0f
+        },
+        onDragEnd = {
+            val passed = totalDy > 100.dp.toPx()
+            onRelease(passed)
+            totalDy = 0f
+        },
+        onDragCancel = {
+            onRelease(false)
+            totalDy = 0f
+        },
+        onVerticalDrag = { change, dy ->
+            if (dy > 0 || totalDy > 0f) {
+                totalDy = maxOf(0f, totalDy + dy)
+                onDrag(totalDy)
+                change.consume()
+            }
+        },
+    )
+}
+
+/** Swiping up on the miniplayer expands it back to the full player; swiping down dismisses it. */
+fun Modifier.miniPlayerGestures(
+    onExpand: () -> Unit,
+    onClose: () -> Unit,
+) = pointerInput(Unit) {
+    var totalDy = 0f
+    detectVerticalDragGestures(
+        onDragStart = {
+            totalDy = 0f
+        },
+        onDragEnd = {
+            if (totalDy < -36.dp.toPx()) {
+                onExpand()
+            } else if (totalDy > 50.dp.toPx()) {
+                onClose()
+            }
+            totalDy = 0f
+        },
+        onDragCancel = {
+            totalDy = 0f
+        },
+        onVerticalDrag = { change, dy ->
+            totalDy += dy
+            change.consume()
+        },
+    )
+}
+
 /** Swiping down from the upper portion of the video smoothly triggers Picture-in-Picture. */
 fun Modifier.swipeDownToPip(onSwipeDown: () -> Unit) = pointerInput(onSwipeDown) {
     var eligible = false

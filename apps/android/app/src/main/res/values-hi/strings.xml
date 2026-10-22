@@ -35,6 +35,7 @@
     <string name="player_pip">पिक्चर-इन-पिक्चर</string>
     <string name="player_fullscreen">फ़ुल स्क्रीन</string>
     <string name="player_exit_fullscreen">फ़ुल स्क्रीन से बाहर निकलें</string>
+    <string name="player_minimize">छोटा करें</string>
     <string name="player_tracks">ऑडियो और सबटाइटल</string>
     <string name="player_audio">ऑडियो</string>
     <string name="player_subtitles">सबटाइटल</string>
