@@ -178,6 +178,19 @@ pub struct Encode<'a> {
     pub threads: u32,
 }
 
+/// Peak video bitrate in kbit/s for an output height (0 = source, counted as 4K). CRF alone lets a
+/// grainy or fast scene take several times the average; the cap keeps those scenes from spiking the
+/// encoder's work and the network.
+fn max_kbps(max_height: u32) -> u32 {
+    match max_height {
+        1..=480 => 2_000,
+        481..=720 => 4_000,
+        721..=1080 => 8_000,
+        1081..=1440 => 12_000,
+        _ => 20_000,
+    }
+}
+
 /// Threads for one re-encode: an equal share of the cores per allowed conversion, so the cap on
 /// conversions also caps CPU. `configured` 0 is automatic.
 pub fn transcode_threads(configured: u32, max_transcodes: u32) -> u32 {
@@ -290,10 +303,20 @@ pub fn stream_command(
             } else {
                 "scale=-2:ih".to_string()
             };
+            let kbps = max_kbps(encode.max_height);
             cmd.args(["-c:v", "libx264", "-preset", encode.preset, "-crf"])
                 .arg(encode.crf.to_string())
+                .arg("-maxrate")
+                .arg(format!("{kbps}k"))
+                .arg("-bufsize")
+                .arg(format!("{}k", kbps * 2))
                 .args(["-pix_fmt", "yuv420p", "-vf"])
                 .arg(scale);
+            // Slower presets look 20-40 frames ahead; a live stream gains little from more than
+            // veryfast's 10, and each lookahead frame is analysed on top of the encode.
+            if !matches!(encode.preset, "ultrafast" | "superfast" | "veryfast") {
+                cmd.args(["-rc-lookahead", "10"]);
+            }
             if let Some(n) = &threads {
                 cmd.args(["-threads", n]);
             }
@@ -465,6 +488,8 @@ mod tests {
         };
         assert_eq!(count(false), 2);
         assert_eq!(count(true), 0);
+        assert_eq!(max_kbps(1080), 8_000);
+        assert_eq!(max_kbps(0), 20_000);
         assert_eq!(transcode_threads(5, 2), 5);
         assert!(transcode_threads(0, 8) >= 1);
     }
