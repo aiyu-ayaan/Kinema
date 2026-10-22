@@ -6,6 +6,7 @@ pub mod matching;
 pub mod media;
 pub mod metadata_edit;
 pub mod playlists;
+pub mod scrub;
 pub mod server;
 pub mod settings;
 pub mod users;
@@ -24,6 +25,7 @@ pub fn api_router() -> Router<AppState> {
         .merge(playlists::router())
         .merge(collections::router())
         .merge(media::router())
+        .merge(scrub::router())
         .merge(settings::router())
         .merge(users::router())
 }

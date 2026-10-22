@@ -27,7 +27,7 @@ This is Kinema's own API. It is not Plex-compatible.
 | PUT | `/items/{id}/progress` | `{position_s, watched?}` |
 | PUT | `/items/{id}/watched` | `{watched}`, for the item and every episode under it |
 | PUT | `/items/{id}/track-choice` | `{audio, subtitle}` positions (subtitle `-1` off): this profile's pick, saved by every player and kept on the movie or the show; the plan prefers it over the show's admin choice and the Languages settings |
-| PUT / DELETE | `/items/{id}/markers/{intro\|credits}` | Admin: `{start_s, end_s}` sets a marker on the title's main file that detection never replaces; DELETE drops it and looks for it again. Markers come with each file in `GET /items/{id}` as `markers: [{kind, start_s, end_s, source}]` |
+| PUT / DELETE | `/items/{id}/markers/{intro\|credits}` | Admin: `{start_s, end_s}` sets a marker on the title's main file that detection never replaces; DELETE drops it and looks for it again. Markers come with each file in `GET /items/{id}` as `markers: [{kind, start_s, end_s, source}]` (`source`: `chapter`, `audio`, `black`, `text`, `manual`). The web player's admin panel (Skip markers) uses these two calls |
 | PATCH | `/items/{id}/metadata` | Admin: `{title?, year?, summary?, rating?}` saves the given fields and locks them (empty summary, year 0 or rating 0 clears); returns `{locked_fields}` |
 | PUT | `/items/{id}/locks` | Admin: `{fields}` sets exactly which of `title, year, summary, rating, poster, backdrop, genres` are locked against rescans, refreshes and Fix match; `GET /items/{id}` returns `locked_fields` and `collections` |
 | PUT | `/libraries/{id}/roots` | Admin: `{roots: [{path, poll, poll_interval_min}]}` sets each folder's scan mode (events, or polling every 1 to 1440 min); `GET /libraries` returns `root_options` next to `roots` |
@@ -97,8 +97,8 @@ The tables below are the full target API.
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/images/{key}?w=400` | Poster/backdrop/thumb, WebP, `Cache-Control: immutable` |
-| GET | `/items/{id}/timeline.vtt` | Scrub-thumbnail index |
-| GET | `/items/{id}/sprite.jpg` | Scrub sprite sheet |
+| GET | `/items/{id}/timeline.vtt` | Implemented. Scrub-thumbnail index of the title's main file (`sprites/{n}.jpg#xywh=x,y,w,h` cues, relative to the VTT). 202 + `Retry-After: 15` while the sheets are being made (the first request starts them), 404 when none can be made |
+| GET | `/items/{id}/sprites/{n}` | Implemented. Scrub sprite sheet `n` (JPEG, 10x10 tiles of 160x90); same 202/404 rules |
 
 ## Playback
 

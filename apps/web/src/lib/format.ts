@@ -18,6 +18,13 @@ export function clock(seconds: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`
 }
 
+/** "83", "1:23" or "1:02:03" back to seconds; null for anything else. */
+export function parseClock(text: string): number | null {
+  const parts = text.trim().split(':')
+  if (parts.length > 3 || parts.some((p) => !/^\d+(\.\d+)?$/.test(p))) return null
+  return parts.reduce((acc, p) => acc * 60 + Number(p), 0)
+}
+
 const languageNames = (() => {
   try {
     return new Intl.DisplayNames([navigator.language, 'en'], { type: 'language' })

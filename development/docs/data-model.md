@@ -78,7 +78,7 @@ CREATE TABLE markers (
   kind TEXT NOT NULL CHECK (kind IN ('intro','credits')),
   start_s REAL NOT NULL,
   end_s REAL NOT NULL,
-  source TEXT NOT NULL,            -- chapter|audio|black|manual; detection never replaces manual
+  source TEXT NOT NULL,            -- chapter|audio|black|text|manual; detection never replaces manual (migration 20261022400001 re-queues files without credits once for `text`)
   PRIMARY KEY (file_id, kind)
 );
 

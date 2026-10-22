@@ -83,25 +83,28 @@ async fn find(
         }
     }
 
+    let tail_from = (duration - TAIL_S).max(duration / 2.0);
+    let span = |start| Span {
+        start,
+        end: duration,
+    };
     if credits.is_none() && duration > 300.0 {
-        match slot(
-            state,
-            detect::black_runs(bins, path, (duration - TAIL_S).max(duration / 2.0)),
-        )
-        .await
-        {
+        match slot(state, detect::black_runs(bins, path, tail_from)).await {
             Some(Ok(runs)) => {
-                credits = detect::credits_from_black(&runs, duration).map(|start| {
-                    (
-                        Span {
-                            start,
-                            end: duration,
-                        },
-                        "black",
-                    )
-                });
+                credits = detect::credits_from_black(&runs, duration).map(|s| (span(s), "black"));
             }
             Some(Err(e)) => warn!("black frames of {}: {e}", file.path),
+            None => {}
+        }
+    }
+
+    // Credits over lit footage: no black, and no shared song (a movie, or an episode without a neighbour).
+    if credits.is_none() && duration > 300.0 {
+        match slot(state, detect::tail_looks(bins, path, tail_from)).await {
+            Some(Ok(looks)) => {
+                credits = detect::credits_from_looks(&looks, duration).map(|s| (span(s), "text"));
+            }
+            Some(Err(e)) => warn!("credit text check of {}: {e}", file.path),
             None => {}
         }
     }

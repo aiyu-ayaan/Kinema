@@ -152,6 +152,19 @@ export const api = {
     return res.text()
   },
 
+  /** Admin: sets the intro or credits of the title's main file; detection never replaces it. */
+  setMarker: (id: number, kind: 'intro' | 'credits', start_s: number, end_s: number) =>
+    request<void>('PUT', `/items/${id}/markers/${kind}`, { start_s, end_s }),
+  /** Admin: drops the marker; the server looks for it again in the background. */
+  clearMarker: (id: number, kind: 'intro' | 'credits') => request<void>('DELETE', `/items/${id}/markers/${kind}`),
+  /** The scrub-thumbnail index (WebVTT); null while the server is still making the sheets (202). */
+  timelineText: async (id: number) => {
+    const res = await fetch(`/api/items/${id}/timeline.vtt`)
+    if (res.status === 202) return null
+    if (!res.ok) throw new ApiError(res.status, 'timeline', res.statusText)
+    return res.text()
+  },
+
   settings: () => request<SettingsView>('GET', '/settings'),
   saveServerSettings: (s: ServerOptions) => request<SettingsView>('PUT', '/settings/server', s),
   saveTmdbKey: (tmdb_api_key: string) => request<SettingsView>('PUT', '/settings/tmdb', { tmdb_api_key }),
