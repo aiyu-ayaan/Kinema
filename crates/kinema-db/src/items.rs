@@ -28,7 +28,7 @@ pub struct ItemCard {
     pub added_at: i64,
 }
 
-const CARD_SELECT: &str =
+pub(crate) const CARD_SELECT: &str =
     "SELECT i.id, i.library_id, i.parent_id, i.kind, i.title, i.year, i.season_no, i.episode_no,
   i.summary, i.rating,
   COALESCE(i.poster, p.poster, g.poster) AS poster,
@@ -695,8 +695,158 @@ pub struct Meta {
     pub cast: Option<Vec<CastMember>>,
 }
 
-/// Fills metadata; `None` fields keep what the scanner found.
+/// Fields a user can edit and lock. A locked field is never overwritten by a rescan,
+/// a TMDB refresh or Fix match.
+pub const LOCKABLE: &[&str] = &[
+    "title", "year", "summary", "rating", "poster", "backdrop", "genres",
+];
+
+fn is_locked(locked: &str, field: &str) -> bool {
+    locked.split(',').any(|f| f == field)
+}
+
+/// Keeps only known field names, in `LOCKABLE` order, without duplicates.
+pub fn normalize_locked<S: AsRef<str>>(fields: &[S]) -> String {
+    LOCKABLE
+        .iter()
+        .filter(|f| fields.iter().any(|g| g.as_ref() == **f))
+        .copied()
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+impl Meta {
+    /// Drops every field the item has locked, so saving the rest cannot touch them.
+    pub fn without_locked(&self, locked: &str) -> Meta {
+        let mut m = self.clone();
+        if is_locked(locked, "title") {
+            m.title = None;
+        }
+        if is_locked(locked, "year") {
+            m.year = None;
+        }
+        if is_locked(locked, "summary") {
+            m.summary = None;
+        }
+        if is_locked(locked, "rating") {
+            m.rating = None;
+        }
+        if is_locked(locked, "poster") {
+            m.poster = None;
+        }
+        if is_locked(locked, "backdrop") {
+            m.backdrop = None;
+        }
+        if is_locked(locked, "genres") {
+            m.genres.clear();
+        }
+        m
+    }
+}
+
+/// SQL that resets a column to NULL unless the row has it locked.
+fn reset_unless_locked(field: &str) -> String {
+    format!(
+        "{field} = CASE WHEN instr(',' || locked_fields || ',', ',{field},') > 0 THEN {field} ELSE NULL END"
+    )
+}
+
+pub async fn locked_fields(pool: &SqlitePool, id: i64) -> Result<Vec<String>, DbError> {
+    let s: Option<String> = sqlx::query_scalar("SELECT locked_fields FROM items WHERE id = ?1")
+        .bind(id)
+        .fetch_optional(pool)
+        .await?;
+    Ok(s.unwrap_or_default()
+        .split(',')
+        .filter(|f| !f.is_empty())
+        .map(str::to_string)
+        .collect())
+}
+
+/// Replaces the item's locked set (unknown names are ignored).
+pub async fn set_locked_fields<S: AsRef<str>>(
+    pool: &SqlitePool,
+    id: i64,
+    fields: &[S],
+) -> Result<(), DbError> {
+    sqlx::query("UPDATE items SET locked_fields = ?2 WHERE id = ?1")
+        .bind(id)
+        .bind(normalize_locked(fields))
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// A manual edit. Every field given is saved and locked.
+#[derive(Debug, Clone, Default)]
+pub struct Edit {
+    pub title: Option<String>,
+    pub year: Option<i64>,
+    pub summary: Option<String>,
+    pub rating: Option<f64>,
+}
+
+pub async fn edit_meta(pool: &SqlitePool, id: i64, e: &Edit) -> Result<(), DbError> {
+    let mut tx = pool.begin().await?;
+    let mut lock: Vec<&str> = Vec::new();
+    if let Some(title) = &e.title {
+        sqlx::query("UPDATE items SET title = ?2, sort_title = ?3 WHERE id = ?1")
+            .bind(id)
+            .bind(title)
+            .bind(sort_title(title))
+            .execute(&mut *tx)
+            .await?;
+        lock.push("title");
+    }
+    if let Some(year) = e.year {
+        sqlx::query("UPDATE items SET year = ?2 WHERE id = ?1")
+            .bind(id)
+            .bind(Some(year).filter(|y| *y > 0))
+            .execute(&mut *tx)
+            .await?;
+        lock.push("year");
+    }
+    if let Some(summary) = &e.summary {
+        sqlx::query("UPDATE items SET summary = ?2 WHERE id = ?1")
+            .bind(id)
+            .bind(Some(summary.as_str()).filter(|s| !s.trim().is_empty()))
+            .execute(&mut *tx)
+            .await?;
+        lock.push("summary");
+    }
+    if let Some(rating) = e.rating {
+        sqlx::query("UPDATE items SET rating = ?2 WHERE id = ?1")
+            .bind(id)
+            .bind(Some(rating).filter(|r| *r > 0.0))
+            .execute(&mut *tx)
+            .await?;
+        lock.push("rating");
+    }
+    let current: String = sqlx::query_scalar("SELECT locked_fields FROM items WHERE id = ?1")
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await?
+        .unwrap_or_default();
+    let mut all: Vec<&str> = current.split(',').collect();
+    all.extend(lock);
+    sqlx::query("UPDATE items SET locked_fields = ?2, updated_at = ?3 WHERE id = ?1")
+        .bind(id)
+        .bind(normalize_locked(&all))
+        .bind(now())
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Fills metadata; `None` fields keep what the scanner found, and locked fields are never touched.
 pub async fn save_meta(pool: &SqlitePool, id: i64, m: &Meta) -> Result<(), DbError> {
+    let locked: String = sqlx::query_scalar("SELECT locked_fields FROM items WHERE id = ?1")
+        .bind(id)
+        .fetch_optional(pool)
+        .await?
+        .unwrap_or_default();
+    let m = &m.without_locked(&locked);
     let cast_json = m.cast.as_ref().and_then(|c| serde_json::to_string(c).ok());
     let mut tx = pool.begin().await?;
     sqlx::query(
@@ -752,24 +902,37 @@ pub async fn save_meta(pool: &SqlitePool, id: i64, m: &Meta) -> Result<(), DbErr
 /// match survives. For a show, seasons and episodes are reset and looked up again.
 pub async fn clear_meta(pool: &SqlitePool, id: i64) -> Result<(), DbError> {
     let mut tx = pool.begin().await?;
-    sqlx::query("DELETE FROM item_genres WHERE item_id = ?1")
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
+    // Locked fields survive: the user edited them by hand.
     sqlx::query(
-        "UPDATE items SET tmdb_id = NULL, tvmaze_id = NULL, year = NULL, summary = NULL, rating = NULL,
-           runtime_s = NULL, poster = NULL, backdrop = NULL, cast_json = NULL WHERE id = ?1",
+        "DELETE FROM item_genres WHERE item_id = ?1
+           AND NOT EXISTS (SELECT 1 FROM items WHERE id = ?1 AND instr(',' || locked_fields || ',', ',genres,') > 0)",
     )
     .bind(id)
     .execute(&mut *tx)
     .await?;
-    sqlx::query(
-        "UPDATE items SET meta_tried = 0, summary = NULL, rating = NULL, runtime_s = NULL,
-           poster = NULL, backdrop = NULL, cast_json = NULL,
-           title = CASE kind WHEN 'episode' THEN 'Episode ' || episode_no ELSE title END,
-           sort_title = CASE kind WHEN 'episode' THEN 'episode ' || episode_no ELSE sort_title END
+    sqlx::query(&format!(
+        "UPDATE items SET tmdb_id = NULL, tvmaze_id = NULL, {}, {}, {}, {}, {}, runtime_s = NULL, cast_json = NULL WHERE id = ?1",
+        reset_unless_locked("year"),
+        reset_unless_locked("summary"),
+        reset_unless_locked("rating"),
+        reset_unless_locked("poster"),
+        reset_unless_locked("backdrop"),
+    ))
+    .bind(id)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(&format!(
+        "UPDATE items SET meta_tried = 0, runtime_s = NULL, cast_json = NULL, {}, {}, {}, {},
+           title = CASE WHEN instr(',' || locked_fields || ',', ',title,') > 0 THEN title
+                        WHEN kind = 'episode' THEN 'Episode ' || episode_no ELSE title END,
+           sort_title = CASE WHEN instr(',' || locked_fields || ',', ',title,') > 0 THEN sort_title
+                             WHEN kind = 'episode' THEN 'episode ' || episode_no ELSE sort_title END
          WHERE parent_id = ?1 OR parent_id IN (SELECT id FROM items WHERE parent_id = ?1)",
-    )
+        reset_unless_locked("summary"),
+        reset_unless_locked("rating"),
+        reset_unless_locked("poster"),
+        reset_unless_locked("backdrop"),
+    ))
     .bind(id)
     .execute(&mut *tx)
     .await?;

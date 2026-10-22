@@ -1,8 +1,13 @@
+pub mod collections;
 pub mod error;
 pub mod items;
 pub mod libraries;
 pub mod markers;
+pub mod playlists;
 pub mod settings;
+pub mod shelves;
+#[cfg(test)]
+mod tests;
 pub mod users;
 
 pub use error::DbError;

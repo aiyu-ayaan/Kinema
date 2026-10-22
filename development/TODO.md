@@ -112,3 +112,18 @@ Trigger: transcode-only viewing took every core while Plex stayed quiet on the s
 - [ ] VA-API: bundled ffmpeg aborts against the host libva (`vaMapBuffer2`); see the packaging spike
 - [ ] Per-stream fallback to libx264 when the GPU encoder fails after startup
 - [ ] AMF (AMD on Windows)
+
+## Locked fields, polling, playlists (2026-10-22)
+- [x] `items.locked_fields`: edited fields survive rescans, TMDB refresh and Fix match; Edit details dialog with a lock per field
+- [x] Per-root polling for NFS/SMB (`library_roots.poll`, interval 1 to 1440 min, default 5), directory-hash diff, bounded at 500k entries
+- [x] Playlists: CRUD, add from the item page, playlist page with reorder, owner-only edits, shared read-only, autoplay of the next entry
+- [x] Collections: TMDB `belongs_to_collection` on match, manual admin collections, Home row and collection page
+- [x] Genre shelves on Home ("Oh, The Horror!" seeded), admin settings, per-profile hide
+- [ ] Add to playlist from poster cards and the watch page, not only the item page
+- [ ] Drag and drop reordering in playlists (buttons only now), shuffle at play time, playlists of music tracks
+- [ ] Remove a single title from a collection in the UI (API only)
+- [ ] Keep an edited title when a new file of the same release is scanned (grouping still uses the parsed name)
+- [ ] Upload or pick a custom poster and backdrop (only locking the current art exists)
+- [ ] Android: playlists, collections and genre shelves
+- [ ] Smart playlists, share links for playlists
+- [ ] Try polling on a real NFS/SMB mount (tested on a local folder only)

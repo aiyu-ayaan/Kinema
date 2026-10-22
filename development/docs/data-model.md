@@ -26,6 +26,8 @@ CREATE TABLE libraries (
 CREATE TABLE library_roots (
   library_id INTEGER NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,
   path TEXT NOT NULL,
+  poll INTEGER NOT NULL DEFAULT 0,               -- 1: list the folder on a timer instead of watching it (migration 20261022500002)
+  poll_interval_min INTEGER NOT NULL DEFAULT 5,  -- 1..1440
   PRIMARY KEY (library_id, path)
 );
 
@@ -47,6 +49,7 @@ CREATE TABLE items (
   tvmaze_id INTEGER,               -- shows matched on TVmaze when TMDB had no key or no match
   poster TEXT,                     -- image cache key
   backdrop TEXT,
+  locked_fields TEXT NOT NULL DEFAULT '',  -- comma separated: title,year,summary,rating,poster,backdrop,genres (migration 20261022500001)
   added_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -132,6 +135,22 @@ CREATE TABLE playlist_items (
   item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
   position INTEGER NOT NULL,
   PRIMARY KEY (playlist_id, position)
+);
+
+-- Franchise groups (migration 20261022500003). tmdb_id is set for groups TMDB reported, NULL for manual ones.
+CREATE TABLE collections (id INTEGER PRIMARY KEY, name TEXT NOT NULL, tmdb_id INTEGER UNIQUE, created_at INTEGER NOT NULL);
+CREATE TABLE collection_items (
+  collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+  item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  PRIMARY KEY (collection_id, item_id)
+);
+
+-- Home shelves: titled genre queries. Admin defines them, a profile hides any for itself.
+CREATE TABLE shelves (id INTEGER PRIMARY KEY, title TEXT NOT NULL, genre TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL);
+CREATE TABLE shelf_hidden (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  shelf_id INTEGER NOT NULL REFERENCES shelves(id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, shelf_id)
 );
 
 CREATE TABLE user_library_access (

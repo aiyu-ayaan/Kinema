@@ -19,6 +19,20 @@ clients (web SPA, Android app, desktop app; desktop may hand a title to a local 
             (walk + watch)
 ```
 
+## Change detection
+
+```mermaid
+flowchart LR
+  FS["library root"] -->|"event-driven (default)"| W["notify watcher"]
+  FS -->|"poll=1, every N min"| P["scan::poll_roots<br/>directory listing hash per folder"]
+  W --> D["debounce 10 s"]
+  P -->|"snapshot differs"| S["scan job"]
+  D --> S
+  S --> DB[(SQLite)]
+```
+
+Roots with `poll=1` are left out of the watcher (`scan::watch_lib`). The poller keeps one hash per directory in memory (`kinema-scanner::poll`), wakes every 30 s to see which roots are due, and takes its first snapshot as the baseline without scanning.
+
 ## ffmpeg resolution
 
 `kinema-media` owns one resolver for `ffmpeg` and `ffprobe`: `KINEMA_FFMPEG` env, then the user-updated copy in `$XDG_DATA_HOME/kinema/ffmpeg/`, then the bundled `$APPDIR/usr/bin`, then `PATH`. Where the kernel has a V4L2 HEVC decoder (Raspberry Pi 5) it also finds an ffmpeg that can use it (`hevc_drm`) for HEVC re-encodes. See `packaging.md`.

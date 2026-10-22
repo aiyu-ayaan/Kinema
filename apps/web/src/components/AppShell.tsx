@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowCircleUp, GearSix, HardDrives, House, List, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
+import { ArrowCircleUp, GearSix, HardDrives, House, List, ListBullets, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
 import { Avatar } from './ui/Avatar'
 import { SettingsNav } from '@/features/settings/SettingsNav'
 import { UpdatePrompt } from './UpdatePrompt'
@@ -119,6 +119,7 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3">
       <NavItem to="/" end icon={House} label={t('nav.home')} onClick={onNavigate} />
+      <NavItem to="/playlists" icon={ListBullets} label={t('nav.playlists')} onClick={onNavigate} />
       {libraries && libraries.length > 0 && (
         <p className="mt-4 px-3 pb-1 text-caption font-semibold uppercase tracking-wider text-subtle">{t('nav.libraries')}</p>
       )}

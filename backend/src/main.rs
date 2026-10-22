@@ -116,8 +116,10 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(scan::debounce_changes(state.clone(), changes_rx));
     tokio::spawn(scan::scheduled_rescans(state.clone()));
     tokio::spawn(discovery::run(state.clone()));
+    // Polled folders: the first snapshot is the baseline, taken as the startup scans below begin.
+    tokio::spawn(scan::poll_roots(state.clone()));
     for lib in kinema_db::libraries::list(&state.db).await? {
-        scan::watch(&state, lib.id, &lib.roots);
+        scan::watch_lib(&state, &lib);
         scan::spawn_scan(state.clone(), lib.id);
     }
 

@@ -47,6 +47,10 @@ Matches the target reference screen:
 - Poster cards: 2:3 art, title, year or `S1 · E5`, watched check, partial-progress bar.
 - Dark theme default, light theme optional.
 
+## Playlists, collections and shelves
+
+`/playlists` lists a profile's playlists and the shared ones and creates new ones; `/playlists/{id}` plays, reorders, removes, renames, shares and deletes (owner) or just plays (others). `/collections/{id}` is a poster grid of a franchise. Home gets genre shelves (each with Hide, and a "Hidden shelves" line to bring them back), a Collections row and a Playlists row. The item page action row has Add to playlist (playable items), and for admins Add to collection, Edit details (text fields plus a lock toggle per field) and Fix match. Settings, Libraries has a per-library "Folder scan mode" dialog (poll or watch, interval) and Settings, Home shelves manages the shelves. Code: `features/playlists/`, `features/item/EditMetadata.tsx`, `features/settings/{LibraryFolders,ShelvesSection}.tsx`.
+
 ## Watch page
 
 `/play/{id}` is a YouTube-style watch page (`features/player/PlayerPage.tsx`, `WatchPanels.tsx`): the video across the window with the title, links and story under it, and the up-next list beside it from 1024 px (under it below that). The list is the season's episodes with pinned season chips, or more titles from the library for a movie. `t` toggles theater mode (video across the full width, details and list under it, kept per browser), `f` full screen. Skip intro, Skip credits and the Up next card follow the markers (media-pipeline.md §7).

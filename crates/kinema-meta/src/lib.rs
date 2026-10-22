@@ -33,6 +33,8 @@ pub struct Details {
     pub backdrop: Option<String>,
     pub genres: Vec<String>,
     pub cast: Vec<CastMember>,
+    /// The franchise TMDB groups a movie in: (collection id, name).
+    pub collection: Option<(i64, String)>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -131,6 +133,14 @@ struct RawDetails {
     genres: Vec<Genre>,
     #[serde(default)]
     credits: Option<RawCredits>,
+    #[serde(default)]
+    belongs_to_collection: Option<RawCollection>,
+}
+
+#[derive(Deserialize)]
+struct RawCollection {
+    id: i64,
+    name: String,
 }
 
 #[derive(Deserialize)]
@@ -316,6 +326,7 @@ impl TmdbClient {
             backdrop: d.backdrop_path,
             genres: d.genres.into_iter().map(|g| g.name).collect(),
             cast,
+            collection: d.belongs_to_collection.map(|c| (c.id, c.name)),
         })
     }
 

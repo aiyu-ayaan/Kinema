@@ -3,7 +3,7 @@
 
 use crate::state::AppState;
 use kinema_db::items::{self, Meta, NewItem, NewStream};
-use kinema_db::{libraries, settings};
+use kinema_db::{collections, libraries, settings};
 use kinema_meta::TmdbClient;
 use kinema_meta::tvmaze::{self, TvmazeClient};
 use kinema_scanner::{FoundFile, parse};
@@ -97,6 +97,22 @@ pub fn watch(state: &AppState, library_id: i64, roots: &[String]) {
     }
 }
 
+/// Starts the watcher for the folders of a library that are not polled (see `poll_roots`).
+/// With none left the watcher is dropped.
+pub fn watch_lib(state: &AppState, lib: &libraries::Library) {
+    let roots: Vec<String> = lib
+        .root_options
+        .iter()
+        .filter(|o| !o.poll)
+        .map(|o| o.path.clone())
+        .collect();
+    if roots.is_empty() {
+        unwatch(state, lib.id);
+    } else {
+        watch(state, lib.id, &roots);
+    }
+}
+
 /// Applies the watch setting to every library.
 pub async fn rewatch_all(state: &AppState) {
     if let Ok(mut watchers) = state.watchers.lock() {
@@ -104,8 +120,79 @@ pub async fn rewatch_all(state: &AppState) {
     }
     if let Ok(libs) = libraries::list(&state.db).await {
         for lib in libs {
-            watch(state, lib.id, &lib.roots);
+            watch_lib(state, &lib);
         }
+    }
+}
+
+/// How often the poller wakes to see which polled folders are due.
+const POLL_TICK: Duration = Duration::from_secs(30);
+
+/// A folder is polled again once `interval_min` minutes passed since its last poll; one never
+/// polled is due at once (its first snapshot is the baseline).
+fn poll_due(since_last: Option<Duration>, interval_min: i64) -> bool {
+    let wait = Duration::from_secs(
+        interval_min.clamp(libraries::POLL_MIN, libraries::POLL_MAX) as u64 * 60,
+    );
+    since_last.is_none_or(|d| d >= wait)
+}
+
+/// Polls folders marked "poll" (network shares that send no filesystem events). A poll lists
+/// directories and compares them with the last snapshot; only a difference triggers a scan.
+/// One folder at a time, so even many shares cost little.
+pub async fn poll_roots(state: AppState) {
+    use kinema_scanner::poll;
+    let mut last: HashMap<(i64, String), (std::time::Instant, poll::Snapshot)> = HashMap::new();
+    loop {
+        let libs = libraries::list(&state.db).await.unwrap_or_default();
+        let polled: HashSet<(i64, String)> = libs
+            .iter()
+            .flat_map(|l| {
+                l.root_options
+                    .iter()
+                    .filter(|o| o.poll)
+                    .map(|o| (l.id, o.path.clone()))
+            })
+            .collect();
+        last.retain(|k, _| polled.contains(k));
+        for lib in &libs {
+            for o in lib.root_options.iter().filter(|o| o.poll) {
+                let key = (lib.id, o.path.clone());
+                let since = last.get(&key).map(|(at, _)| at.elapsed());
+                if !poll_due(since, o.poll_interval_min) {
+                    continue;
+                }
+                let root = PathBuf::from(&o.path);
+                let snap =
+                    tokio::task::spawn_blocking(move || poll::snapshot(&root, poll::MAX_ENTRIES))
+                        .await;
+                let Ok(snap) = snap else { continue };
+                if !snap.reachable {
+                    // Not mounted right now: keep the old baseline, retry next interval.
+                    if let Some((at, _)) = last.get_mut(&key) {
+                        *at = std::time::Instant::now();
+                    }
+                    continue;
+                }
+                if snap.truncated {
+                    warn!(
+                        "library {}: {} has more than {} entries; only the first are polled",
+                        lib.name,
+                        o.path,
+                        poll::MAX_ENTRIES
+                    );
+                }
+                let changed = last
+                    .get(&key)
+                    .is_some_and(|(_, old)| !poll::diff(old, &snap).is_empty());
+                last.insert(key, (std::time::Instant::now(), snap));
+                if changed {
+                    info!("library {}: {} changed, scanning", lib.name, o.path);
+                    spawn_scan(state.clone(), lib.id);
+                }
+            }
+        }
+        tokio::time::sleep(POLL_TICK).await;
     }
 }
 
@@ -464,6 +551,7 @@ async fn fetch_metadata(state: &AppState, library_id: i64) -> anyhow::Result<()>
         };
         match found {
             Ok(Some(d)) => {
+                let collection = d.collection.clone();
                 let meta = Meta {
                     tmdb_id: Some(d.tmdb_id),
                     title: Some(d.title).filter(|t| !t.is_empty()),
@@ -478,6 +566,9 @@ async fn fetch_metadata(state: &AppState, library_id: i64) -> anyhow::Result<()>
                     ..Default::default()
                 };
                 items::save_meta(db, target.id, &meta).await?;
+                if let Some((collection_id, name)) = collection {
+                    collections::assign_tmdb(db, target.id, collection_id, &name).await?;
+                }
             }
             Ok(None) if is_show => match tvmaze_show(&tvmaze, &target).await {
                 Ok(Some(show)) => {
@@ -604,4 +695,20 @@ async fn save_season(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn polled_folders_are_due_after_their_interval() {
+        assert!(poll_due(None, 5));
+        assert!(!poll_due(Some(Duration::from_secs(299)), 5));
+        assert!(poll_due(Some(Duration::from_secs(300)), 5));
+        // Out-of-range intervals are clamped, never a busy loop or a never-polled folder.
+        assert!(!poll_due(Some(Duration::from_secs(30)), 0));
+        assert!(poll_due(Some(Duration::from_secs(60)), 0));
+        assert!(!poll_due(Some(Duration::from_secs(86_399)), 1_000_000));
+    }
 }

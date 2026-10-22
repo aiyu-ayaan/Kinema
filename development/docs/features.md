@@ -12,7 +12,7 @@ Modeled on the Plex home screen: left sidebar of libraries, "Continue Watching" 
 | Photos | Folders and albums, EXIF date. |
 | Other videos | Home videos with no online lookup. |
 
-Each library has: name, type, one or more root folders, language, and a scan schedule.
+Each library has: name, type, one or more root folders, language, and a scan schedule. Each root is either watched with filesystem events (default) or polled every 1 to 1440 minutes (default 5) for network shares that send no events: a poll lists the folder tree (names, plus size and mtime of video files), compares one hash per directory with the last snapshot and scans only when one differs. Polls are bounded to 500,000 entries per folder and run one folder at a time; a folder that is not mounted is skipped instead of looking empty. See `architecture.md`.
 
 ## Home screen
 
