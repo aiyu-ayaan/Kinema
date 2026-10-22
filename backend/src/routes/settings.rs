@@ -2,7 +2,7 @@ use crate::auth::AdminUser;
 use crate::error::{ApiError, ApiResult};
 use crate::server_settings::{self, ServerSettings};
 use crate::state::AppState;
-use crate::{scan, thumbs};
+use crate::{scan, subtitles, thumbs};
 use axum::extract::State;
 use axum::routing::{get, put};
 use axum::{Json, Router};
@@ -34,6 +34,8 @@ struct SettingsView {
     ffmpeg_found: bool,
     /// The GPU encoder found at startup, e.g. "NVENC".
     hardware_encoder: Option<&'static str>,
+    /// Language models of the OCR tool found at startup; None without `tesseract`.
+    ocr_languages: Option<Vec<String>>,
     options: Options,
 }
 
@@ -47,6 +49,7 @@ async fn view(state: &AppState) -> Json<SettingsView> {
             .as_ref()
             .and_then(|b| b.hw_encoder.as_ref())
             .map(|e| e.name()),
+        ocr_languages: state.ocr.as_ref().map(|t| t.languages.clone()),
         options: Options {
             presets: server_settings::PRESETS,
             max_heights: server_settings::MAX_HEIGHTS,
@@ -79,6 +82,11 @@ async fn write_server(
     }
     if old.watch_changes != new.watch_changes {
         scan::rewatch_all(&state).await;
+    }
+    if new.subtitle_ocr && !old.subtitle_ocr && state.ocr.is_some() {
+        for lib in libraries::list(&state.db).await? {
+            subtitles::spawn(state.clone(), lib.id);
+        }
     }
     if new.thumbnails && (!old.thumbnails || old.thumbnail_position != new.thumbnail_position) {
         for lib in libraries::list(&state.db).await? {

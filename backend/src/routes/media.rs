@@ -135,9 +135,14 @@ struct PlanResponse {
     subtitle: Option<i64>,
 }
 
+/// A text track, or a picture track already read by OCR: either has a WebVTT to show.
+fn has_vtt(s: &Stream) -> bool {
+    subtitles::is_text_subtitle(s.codec.as_deref()) || s.ocr
+}
+
 /// The default subtitle per the admin's subtitle mode and language.
 fn default_subtitle(state: &AppState, c: &Chosen) -> Option<i64> {
-    // The show's own choice wins; -1 is off. Image subtitles cannot be shown, so they mean off too.
+    // The show's own choice wins; -1 is off. Picture subtitles without OCR cannot be shown, so they mean off too.
     if let Some(n) = c.series.subtitle {
         let n = usize::try_from(n).ok()?;
         return c
@@ -145,7 +150,7 @@ fn default_subtitle(state: &AppState, c: &Chosen) -> Option<i64> {
             .iter()
             .filter(|st| st.kind == "subtitle")
             .nth(n)
-            .filter(|st| subtitles::is_text_subtitle(st.codec.as_deref()))
+            .filter(|st| has_vtt(st))
             .map(|st| st.id);
     }
     let s = state.settings();
@@ -164,7 +169,7 @@ fn default_subtitle(state: &AppState, c: &Chosen) -> Option<i64> {
     let text: Vec<&Stream> = c
         .streams
         .iter()
-        .filter(|st| st.kind == "subtitle" && subtitles::is_text_subtitle(st.codec.as_deref()))
+        .filter(|st| st.kind == "subtitle" && has_vtt(st))
         .collect();
     text.iter()
         .find(|st| lang_matches(st.language.as_deref(), &s.preferred_subtitle_language))
@@ -300,7 +305,8 @@ async fn stream(
         .into_response())
 }
 
-/// WebVTT for a subtitle stream, extracted once and cached by file mtime.
+/// WebVTT for a subtitle stream. Normally made by the background job after a scan
+/// (`crate::subtitles`); a text track it has not reached yet is extracted here once.
 async fn subtitle(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -311,28 +317,48 @@ async fn subtitle(
         .filter(|s| s.kind == "subtitle")
         .ok_or_else(ApiError::not_found)?;
     access::check_file(&state, &user, s.file_id).await?;
-    if !subtitles::is_text_subtitle(s.codec.as_deref()) {
+    let text = subtitles::is_text_subtitle(s.codec.as_deref());
+    if !text && !s.ocr {
         return Err(ApiError::bad_request("media.subtitle_unsupported"));
     }
     let file = items::file(&state.db, s.file_id)
         .await?
         .ok_or_else(ApiError::not_found)?;
     let dir = state.cache_dir("subtitles");
-    let out = dir.join(format!("{}-{}-{}.vtt", file.id, file.mtime, s.idx));
+    let key = subtitles::CacheKey {
+        file_id: file.id,
+        size: file.size,
+        mtime: file.mtime,
+        idx: s.idx,
+        sidecar: s
+            .external_path
+            .as_deref()
+            .map(|p| (p, s.external_fingerprint.as_deref().unwrap_or("0"))),
+    };
+    let (out, failed) = key.paths(&dir);
     if !out.exists() {
+        // OCR is far too slow for a request; only the background job reads picture tracks.
+        if !text {
+            return Err(ApiError::bad_request("media.subtitle_unsupported"));
+        }
+        if failed.exists() {
+            return Err(ApiError::bad_request("media.subtitle_failed"));
+        }
         let bins = state
             .bins
             .clone()
             .ok_or_else(|| ApiError::bad_request("media.ffmpeg_missing"))?;
         tokio::fs::create_dir_all(&dir).await?;
-        match &s.external_path {
-            Some(ext) => {
-                subtitles::extract_vtt(&bins, std::path::Path::new(ext), None, &out).await?
-            }
+        let made = match &s.external_path {
+            Some(ext) => subtitles::extract_vtt(&bins, std::path::Path::new(ext), None, &out).await,
             None => {
                 subtitles::extract_vtt(&bins, std::path::Path::new(&file.path), Some(s.idx), &out)
-                    .await?
+                    .await
             }
+        };
+        if made.is_err() {
+            let _ = tokio::fs::write(&failed, b"").await;
+            return Err(ApiError::bad_request("media.subtitle_failed"));
         }
     }
     let body = tokio::fs::read(&out).await?;

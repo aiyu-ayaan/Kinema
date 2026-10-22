@@ -6,7 +6,7 @@ use kinema_db::items::{self, Meta, NewItem, NewStream};
 use kinema_db::{collections, libraries, settings};
 use kinema_meta::TmdbClient;
 use kinema_meta::tvmaze::{self, TvmazeClient};
-use kinema_scanner::{FoundFile, parse};
+use kinema_scanner::{FoundFile, MediaWalk, Sidecar, parse};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -19,7 +19,8 @@ pub fn is_scanning(state: &AppState, library_id: i64) -> bool {
 }
 
 /// Starts a scan, or asks the running one to go again when it finishes.
-/// Thumbnails and skip markers for whatever the scan found follow in their own background jobs.
+/// Thumbnails, subtitles and skip markers for whatever the scan found follow in their own
+/// background jobs.
 pub fn spawn_scan(state: AppState, library_id: i64) {
     let jobs = state.scans.clone();
     jobs.spawn(library_id, move || {
@@ -27,6 +28,7 @@ pub fn spawn_scan(state: AppState, library_id: i64) {
         async move {
             scan(&state, library_id).await?;
             crate::thumbs::spawn(state.clone(), library_id);
+            crate::subtitles::spawn(state.clone(), library_id);
             crate::markers::spawn(state, library_id);
             Ok(())
         }
@@ -224,23 +226,35 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
         })
         .collect();
     let walk_roots = roots.clone();
-    let found: Vec<(PathBuf, FoundFile)> = tokio::task::spawn_blocking(move || {
-        walk_roots
-            .iter()
-            .flat_map(|root| {
-                kinema_scanner::walk_videos(root)
-                    .into_iter()
-                    .map(|f| (root.clone(), f))
-            })
-            .collect()
-    })
-    .await?;
+    let (found, subtitle_files): (Vec<(PathBuf, FoundFile)>, Vec<FoundFile>) =
+        tokio::task::spawn_blocking(move || {
+            let mut found = Vec::new();
+            let mut subs = Vec::new();
+            for root in &walk_roots {
+                let MediaWalk { videos, subtitles } = kinema_scanner::walk_media(root);
+                found.extend(videos.into_iter().map(|f| (root.clone(), f)));
+                subs.extend(subtitles);
+            }
+            (found, subs)
+        })
+        .await?;
+    let subs_by_dir = kinema_scanner::subtitles_by_dir(&subtitle_files);
+    let sidecars_of = |video: &Path| {
+        let in_dir = video
+            .parent()
+            .and_then(|d| subs_by_dir.get(d))
+            .map(Vec::as_slice)
+            .unwrap_or_default();
+        kinema_scanner::sidecars_for(video, in_dir)
+    };
+    let stored_sidecars = items::library_sidecars(&state.db, library_id).await?;
 
     let series_dirs = numbered_series_dirs(&found);
     let mut seen = HashSet::new();
     let mut to_probe = Vec::new();
     let mut added = 0usize;
     let mut moved = 0usize;
+    let mut resubbed = 0usize;
     for (root, f) in &found {
         let path = f.path.to_string_lossy().into_owned();
         seen.insert(path.clone());
@@ -248,8 +262,21 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
         let fingerprint = format!("{}-{}", f.size, f.mtime);
         match items::file_by_path(&state.db, &path).await? {
             Some(existing) if existing.size == f.size as i64 && existing.mtime == f.mtime => {
+                let sidecars = sidecars_of(&f.path);
                 if existing.probe_status == "pending" {
-                    to_probe.push((existing.id, f.path.clone()));
+                    to_probe.push((existing.id, f.path.clone(), sidecars));
+                } else if existing.probe_status == "ok" {
+                    // A subtitle added, edited or removed next to an unchanged video:
+                    // update its sidecar streams without probing the video again.
+                    let stored = stored_sidecars
+                        .get(&existing.id)
+                        .map(Vec::as_slice)
+                        .unwrap_or_default();
+                    if sidecars_changed(stored, &sidecars) {
+                        items::replace_sidecars(&state.db, existing.id, &sidecar_streams(sidecars))
+                            .await?;
+                        resubbed += 1;
+                    }
                 }
                 // Filed as a movie by an older parser: move it under its show.
                 if let (Some(ep), Some(item_id)) = (
@@ -265,7 +292,7 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
             Some(existing) => {
                 items::reset_file(&state.db, existing.id, f.size as i64, f.mtime, &fingerprint)
                     .await?;
-                to_probe.push((existing.id, f.path.clone()));
+                to_probe.push((existing.id, f.path.clone(), sidecars_of(&f.path)));
             }
             None => {
                 let item_id =
@@ -279,7 +306,7 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
                     &fingerprint,
                 )
                 .await?;
-                to_probe.push((id, f.path.clone()));
+                to_probe.push((id, f.path.clone(), sidecars_of(&f.path)));
                 added += 1;
             }
         }
@@ -297,7 +324,8 @@ async fn scan(state: &AppState, library_id: i64) -> anyhow::Result<()> {
         items::delete_files(&state.db, &gone).await?;
     }
     info!(
-        "library {} scanned: {} files, {added} new, {moved} regrouped, {} removed, {} to probe",
+        "library {} scanned: {} files, {added} new, {moved} regrouped, {} removed, {} to probe, \
+         {resubbed} with changed subtitle files",
         lib.name,
         found.len(),
         if roots_ok { gone.len() } else { 0 },
@@ -437,12 +465,41 @@ async fn create_item(
     Ok(id)
 }
 
-async fn probe_all(state: &AppState, files: Vec<(i64, PathBuf)>) {
+/// Did the sidecar subtitles of a video change since they were stored?
+fn sidecars_changed(stored: &[(String, Option<String>)], found: &[Sidecar]) -> bool {
+    stored.len() != found.len()
+        || stored.iter().zip(found).any(|((path, fp), sc)| {
+            *path != sc.path.to_string_lossy() || fp.as_deref() != Some(sc.fingerprint.as_str())
+        })
+}
+
+/// Sidecars as subtitle streams, indexed after any embedded stream.
+fn sidecar_streams(sidecars: Vec<Sidecar>) -> Vec<NewStream> {
+    sidecars
+        .into_iter()
+        .enumerate()
+        .map(|(n, sc)| NewStream {
+            idx: 10_000 + n as i64,
+            kind: "subtitle".into(),
+            codec: sc
+                .path
+                .extension()
+                .map(|e| e.to_string_lossy().to_lowercase()),
+            language: sc.language,
+            title: sc.title,
+            external_path: Some(sc.path.to_string_lossy().into_owned()),
+            external_fingerprint: Some(sc.fingerprint),
+            ..Default::default()
+        })
+        .collect()
+}
+
+async fn probe_all(state: &AppState, files: Vec<(i64, PathBuf, Vec<Sidecar>)>) {
     let Some(bins) = state.bins.clone() else {
         return;
     };
     let mut set = JoinSet::new();
-    for (id, path) in files {
+    for (id, path, sidecars) in files {
         let state = state.clone();
         let bins = bins.clone();
         set.spawn(async move {
@@ -465,31 +522,10 @@ async fn probe_all(state: &AppState, files: Vec<(i64, PathBuf)>) {
                             width: s.width,
                             height: s.height,
                             is_default: s.is_default,
-                            external_path: None,
+                            ..Default::default()
                         })
                         .collect();
-                    let sidecars = {
-                        let path = path.clone();
-                        tokio::task::spawn_blocking(move || {
-                            kinema_scanner::sidecar_subtitles(&path)
-                        })
-                        .await
-                        .unwrap_or_default()
-                    };
-                    for (n, sc) in sidecars.into_iter().enumerate() {
-                        streams.push(NewStream {
-                            idx: 10_000 + n as i64,
-                            kind: "subtitle".into(),
-                            codec: sc
-                                .path
-                                .extension()
-                                .map(|e| e.to_string_lossy().to_lowercase()),
-                            language: sc.language,
-                            title: sc.title,
-                            external_path: Some(sc.path.to_string_lossy().into_owned()),
-                            ..Default::default()
-                        });
-                    }
+                    streams.extend(sidecar_streams(sidecars));
                     items::save_probe(
                         &state.db,
                         id,
@@ -710,5 +746,42 @@ mod tests {
         assert!(!poll_due(Some(Duration::from_secs(30)), 0));
         assert!(poll_due(Some(Duration::from_secs(60)), 0));
         assert!(!poll_due(Some(Duration::from_secs(86_399)), 1_000_000));
+    }
+
+    fn sc(path: &str, fp: &str) -> Sidecar {
+        Sidecar {
+            path: PathBuf::from(path),
+            language: None,
+            title: None,
+            fingerprint: fp.into(),
+        }
+    }
+
+    #[test]
+    fn sidecar_changes() {
+        let stored = vec![("/m/A.en.srt".to_string(), Some("1-2".to_string()))];
+        assert!(!sidecars_changed(&stored, &[sc("/m/A.en.srt", "1-2")]));
+        // Edited, added, removed, and stored before fingerprints existed.
+        assert!(sidecars_changed(&stored, &[sc("/m/A.en.srt", "3-4")]));
+        assert!(sidecars_changed(
+            &stored,
+            &[sc("/m/A.en.srt", "1-2"), sc("/m/A.fr.srt", "1-2")]
+        ));
+        assert!(sidecars_changed(&stored, &[]));
+        assert!(sidecars_changed(
+            &[("/m/A.en.srt".to_string(), None)],
+            &[sc("/m/A.en.srt", "1-2")]
+        ));
+        assert!(!sidecars_changed(&[], &[]));
+    }
+
+    #[test]
+    fn sidecar_streams_carry_their_version() {
+        let s = sidecar_streams(vec![sc("/m/A.en.SRT", "1-2"), sc("/m/A.fr.ass", "3-4")]);
+        assert_eq!(s[0].idx, 10_000);
+        assert_eq!(s[1].idx, 10_001);
+        assert_eq!(s[0].codec.as_deref(), Some("srt"));
+        assert_eq!(s[1].external_fingerprint.as_deref(), Some("3-4"));
+        assert_eq!(s[1].kind, "subtitle");
     }
 }

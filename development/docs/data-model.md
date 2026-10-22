@@ -92,7 +92,11 @@ CREATE TABLE streams (
   channels INTEGER,
   width INTEGER,
   height INTEGER,
-  is_default INTEGER NOT NULL DEFAULT 0
+  is_default INTEGER NOT NULL DEFAULT 0,
+  title TEXT, profile TEXT,
+  external_path TEXT,              -- sidecar subtitle file, NULL for embedded
+  external_fingerprint TEXT,       -- sidecar "size-mtime"; a change re-syncs sidecars without a probe
+  ocr INTEGER NOT NULL DEFAULT 0   -- picture subtitle read by OCR into the WebVTT cache
 );
 
 CREATE TABLE genres (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE);

@@ -1,5 +1,6 @@
 pub mod error;
 pub mod markers;
+pub mod ocr;
 pub mod playback;
 pub mod probe;
 pub mod resolver;

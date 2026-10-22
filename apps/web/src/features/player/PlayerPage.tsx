@@ -113,7 +113,8 @@ function TrackMenu({
           {option(t('player.subtitlesOff'), sub == null, () => onSub(null))}
           {subs.map((s, i) => {
             const text = isTextSub(s)
-            return option(trackLabel(s, i + 1), s.id === sub, () => onSub(s.id), !text, text ? undefined : t('player.subtitleImage'))
+            const note = !text ? t('player.subtitleImage') : s.ocr ? t('player.subtitleOcr') : undefined
+            return option(trackLabel(s, i + 1), s.id === sub, () => onSub(s.id), !text, note)
           })}
         </ul>
       </div>
@@ -347,16 +348,27 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     [report, qc],
   )
 
-  // Subtitles are fetched once per track and drawn over the video.
+  // Subtitles are fetched once per track and drawn over the video: switching never touches the
+  // video stream, and switching back to a track already seen needs no request.
+  const cueCache = useRef(new Map<number, Cue[]>())
   useEffect(() => {
     if (subId == null) {
       setCues([])
       return
     }
+    const cached = cueCache.current.get(subId)
+    if (cached) {
+      setCues(cached)
+      return
+    }
     let cancelled = false
     api
       .subtitleText(subId)
-      .then((text) => !cancelled && setCues(parseVtt(text)))
+      .then((text) => {
+        const parsed = parseVtt(text)
+        cueCache.current.set(subId, parsed)
+        if (!cancelled) setCues(parsed)
+      })
       .catch(() => !cancelled && setCues([]))
     return () => {
       cancelled = true
