@@ -1,5 +1,6 @@
 pub mod error;
 pub mod parse;
+pub mod poll;
 pub mod watch;
 
 pub use error::ScannerError;
