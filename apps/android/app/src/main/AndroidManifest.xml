@@ -7,6 +7,7 @@
     <!-- Playback keeps going with the app in the background, with controls in the notification. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- The app updates itself from its GitHub releases; Android's installer still asks before anything changes. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 

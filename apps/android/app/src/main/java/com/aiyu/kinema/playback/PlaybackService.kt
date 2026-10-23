@@ -1,9 +1,14 @@
 package com.aiyu.kinema.playback
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.os.Bundle
+import androidx.core.app.NotificationCompat
 import androidx.media3.common.Player
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
@@ -56,7 +61,8 @@ object Playback {
         this.player = null
         this.sessionPlayer = null
         controls = null
-        context.stopService(Intent(context, PlaybackService::class.java))
+        changed?.invoke()
+        runCatching { context.stopService(Intent(context, PlaybackService::class.java)) }
     }
 }
 
@@ -141,7 +147,12 @@ class PlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        val player = Playback.sessionPlayer ?: Playback.player ?: return stopSelf()
+        ensureNotificationChannel()
+        val player = Playback.sessionPlayer ?: Playback.player
+        if (player == null) {
+            safeStartForegroundAndStop()
+            return
+        }
         val open = packageManager.getLaunchIntentForPackage(packageName)?.let {
             PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         }
@@ -155,31 +166,100 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (session == null) {
+            safeStartForegroundAndStop()
+            return START_NOT_STICKY
+        }
         sync()
         return super.onStartCommand(intent, flags, startId)
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        try {
+            super.onUpdateNotification(session, startInForegroundRequired)
+        } catch (_: Throwable) {
+            if (startInForegroundRequired) {
+                runCatching {
+                    val notification = fallbackNotification()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+                    } else {
+                        startForeground(NOTIFICATION_ID, notification)
+                    }
+                }
+            }
+        }
+    }
+
     /** Swiped away from recents: nothing to come back to, so stop instead of playing on. */
     override fun onTaskRemoved(rootIntent: Intent?) {
-        session?.player?.pause()
-        stopSelf()
+        runCatching { session?.player?.pause() }
+        safeStop()
     }
 
     override fun onDestroy() {
         if (Playback.changed === listener) Playback.changed = null
-        session?.release()
+        runCatching { session?.release() }
         session = null
+        runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
         super.onDestroy()
     }
 
     /** A newer player screen took over (next episode), or its buttons changed. */
     private fun sync() {
         val s = session ?: return
-        val player = Playback.sessionPlayer ?: Playback.player ?: return
+        val player = Playback.sessionPlayer ?: Playback.player
+        if (player == null) {
+            safeStop()
+            return
+        }
         if (s.player !== player) s.player = player
         s.setMediaButtonPreferences(buttons())
+    }
+
+    private fun safeStop() {
+        runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
+        stopSelf()
+    }
+
+    private fun safeStartForegroundAndStop() {
+        runCatching {
+            ensureNotificationChannel()
+            val notification = fallbackNotification()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        }
+        stopSelf()
+    }
+
+    private fun fallbackNotification() = NotificationCompat.Builder(this, CHANNEL_ID)
+        .setSmallIcon(R.drawable.ic_pip_play)
+        .setContentTitle(getString(R.string.app_name))
+        .setSilent(true)
+        .setPriority(NotificationCompat.PRIORITY_MIN)
+        .build()
+
+    private fun ensureNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = getSystemService(NotificationManager::class.java) ?: return
+            if (manager.getNotificationChannel(CHANNEL_ID) == null) {
+                val channel = NotificationChannel(
+                    CHANNEL_ID,
+                    getString(R.string.player_notification_channel),
+                    NotificationManager.IMPORTANCE_LOW,
+                ).apply {
+                    description = getString(R.string.player_notification_channel_desc)
+                    setShowBadge(false)
+                }
+                manager.createNotificationChannel(channel)
+            }
+        }
     }
 
     /** Back 10 s, play/pause (added by Media3), forward 10 s in the compact view; next episode and stop when expanded. */
@@ -234,6 +314,8 @@ class PlaybackService : MediaSessionService() {
     }
 
     private companion object {
+        const val CHANNEL_ID = "kinema_playback_channel"
+        const val NOTIFICATION_ID = 1001
         val BACK = SessionCommand("kinema.back10", Bundle.EMPTY)
         val FORWARD = SessionCommand("kinema.forward10", Bundle.EMPTY)
         val NEXT = SessionCommand("kinema.next", Bundle.EMPTY)

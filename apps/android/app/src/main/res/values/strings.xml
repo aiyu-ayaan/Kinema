@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Every user-facing string of the app. English is the default; translations go in values-<lang>/strings.xml. -->
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="app_name">Kinema</string>
     <!-- Shared actions -->
     <string name="action_back">Back</string>
     <string name="action_cancel">Cancel</string>
@@ -188,6 +189,8 @@
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_dynamic">Wallpaper colors</string>
     <string name="settings_dynamic_hint">Tint the app with colors from your wallpaper</string>
+    <string name="player_notification_channel">Media Playback</string>
+    <string name="player_notification_channel_desc">Playback controls and media notification</string>
     <string name="settings_playback">Playback</string>
     <string name="settings_pip">Picture-in-picture</string>
     <string name="settings_pip_on">Leaving the app keeps the video playing in a small window. Closing the window pauses it.</string>
