@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.media.AudioManager
 import android.media.MediaCodecList
+import android.util.Rational
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -227,20 +228,17 @@ fun PlayerScreen(
     BackHandler(fullscreen) { fullscreen = false; lastFullscreen = false }
     BackHandler(!fullscreen && !isMinimized) { onMinimize() }
 
-    val bgAlpha by animateFloatAsState(
-        targetValue = if (isMinimized) 0f else 1f,
-        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-        label = "playerBgAlpha",
-    )
     PlayerTheme {
-        Box(Modifier.fillMaxSize().then(if (!isMinimized) Modifier.background(Color.Black.copy(alpha = bgAlpha)) else Modifier)) {
+        Box(Modifier.fillMaxSize()) {
             when (val s = loader.state.value) {
-                Load.Loading -> if (!isMinimized) LoadingIndicator(Modifier.align(Alignment.Center).size(72.dp))
-                is Load.Failed -> if (!isMinimized) ErrorState(errorText(s.error), loader.reload)
+                Load.Loading -> if (!isMinimized) Box(Modifier.fillMaxSize().background(Color.Black)) { LoadingIndicator(Modifier.align(Alignment.Center).size(72.dp)) }
+                is Load.Failed -> if (!isMinimized) Box(Modifier.fillMaxSize().background(Color.Black)) { ErrorState(errorText(s.error), loader.reload) }
                 is Load.Ok -> {
                     val detail = s.value
                     if (detail.files.isEmpty()) {
-                        if (!isMinimized) MessageState(Icons.Rounded.SubtitlesOff, stringResource(R.string.player_no_file), null, action = stringResource(R.string.action_back), onAction = onClose)
+                        if (!isMinimized) Box(Modifier.fillMaxSize().background(Color.Black)) {
+                            MessageState(Icons.Rounded.SubtitlesOff, stringResource(R.string.player_no_file), null, action = stringResource(R.string.action_back), onAction = onClose)
+                        }
                     } else {
                         val at = remember(detail.item.id) { start ?: if (detail.item.watched) 0.0 else detail.item.positionS ?: 0.0 }
                         key(detail.item.id) {
@@ -499,22 +497,31 @@ private fun Player(
     LaunchedEffect(poke, playing, tracks, upNext) {
         if (playing && !tracks && !upNext) { delay(3_000); chrome = false }
     }
-    val inPip = rememberPictureInPicture(player, enabled = pipEnabled, playing = playing)
+    val density = LocalDensity.current
+    var watchVideoBounds by remember { mutableStateOf<Rect?>(null) }
+    val defaultTop = with(density) { WindowInsets.systemBars.asPaddingValues().calculateTopPadding().toPx() }
+    val screenWidthPx = with(density) { LocalConfiguration.current.screenWidthDp.dp.toPx() }
+    val screenHeightPx = with(density) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
+    val startBounds = if (fullscreen) {
+        Rect(0f, 0f, screenWidthPx, screenHeightPx)
+    } else {
+        watchVideoBounds ?: Rect(0f, defaultTop, screenWidthPx, defaultTop + screenWidthPx * 9f / 16f)
+    }
+    val pipSourceRect = remember(startBounds) {
+        android.graphics.Rect(
+            startBounds.left.roundToInt(),
+            startBounds.top.roundToInt(),
+            startBounds.right.roundToInt(),
+            startBounds.bottom.roundToInt(),
+        )
+    }
+    val inPip = rememberPictureInPicture(player, enabled = pipEnabled, playing = playing, sourceRect = pipSourceRect)
     val levels = if (!large || fullscreen) rememberSwipeLevels(player) else null
     var swipe by remember { mutableStateOf<Swipe?>(null) }
-    // The floating window is too small for controls: video and subtitles only.
-    if (inPip) {
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
-            ContentFrame(player, Modifier.fillMaxSize(), surfaceType = SURFACE_TYPE_TEXTURE_VIEW, contentScale = ContentScale.Fit)
-            Subtitles(cues, time, lifted = false, small = true)
-        }
-        return
-    }
-    val showChrome = chrome || !playing || error != null
+    val showChrome = !inPip && (chrome || !playing || error != null)
 
     val onTracks: (() -> Unit)? = if (audios.size > 1 || subs.isNotEmpty()) ({ tracks = true; poke++ }) else null
     var seekHint by remember { mutableStateOf<Pair<Boolean, Int>?>(null) }
-    var watchVideoBounds by remember { mutableStateOf<Rect?>(null) }
     val dockAnim = remember { Animatable(if (isMinimized) 1f else 0f) }
     val motion = MaterialTheme.motionScheme
 
@@ -547,9 +554,9 @@ private fun Player(
     )
 
     val keys = remember { FocusRequester() }
-    LaunchedEffect(tracks) { if (!tracks) runCatching { keys.requestFocus() } }
+    LaunchedEffect(tracks, isMinimized) { if (!tracks && !isMinimized) runCatching { keys.requestFocus() } }
     fun onKey(e: KeyEvent): Boolean {
-        if (e.type != KeyEventType.KeyDown || e.isCtrlPressed || e.isAltPressed || e.isMetaPressed || tracks || error != null) return false
+        if (isMinimized || e.type != KeyEventType.KeyDown || e.isCtrlPressed || e.isAltPressed || e.isMetaPressed || tracks || error != null) return false
         val repeat = e.nativeKeyEvent.repeatCount > 0
         when (e.key) {
             Key.DirectionLeft -> seek(now() - 10)
@@ -563,22 +570,22 @@ private fun Player(
         return true
     }
 
-    BoxWithConstraints(
+    val focusModifier = if (!isMinimized) {
         Modifier
-            .fillMaxSize()
             .onPreviewKeyEvent(::onKey)
             .focusRequester(keys)
             .focusable()
+    } else Modifier
+
+    BoxWithConstraints(
+        Modifier
+            .fillMaxSize()
+            .then(focusModifier)
     ) {
-        val density = LocalDensity.current
-        val screenWidth = maxWidth
-        val screenHeight = maxHeight
-        val screenWidthPx = with(density) { screenWidth.toPx() }
-        val screenHeightPx = with(density) { screenHeight.toPx() }
-        val dockProgress = if (fullscreen) 0f else dockAnim.value
+        val dockProgress = (if (fullscreen) 0f else dockAnim.value).coerceIn(0f, 1f)
 
         // 1. WatchLayout in background (fades out as video docks into miniplayer)
-        if (!fullscreen && dockProgress < 1f) {
+        if (!fullscreen && !inPip && dockProgress < 1f) {
             Box(
                 Modifier
                     .fillMaxSize()
@@ -601,11 +608,9 @@ private fun Player(
         }
 
         // 2. Single Persistent Video Frame
-        val videoModifier = if (fullscreen) {
+        val videoModifier = if (fullscreen || inPip) {
             Modifier.fillMaxSize()
         } else {
-            val defaultTop = with(density) { WindowInsets.systemBars.asPaddingValues().calculateTopPadding().toPx() }
-            val startBounds = watchVideoBounds ?: Rect(0f, defaultTop, screenWidthPx, defaultTop + screenWidthPx * 9f / 16f)
             val startW = startBounds.width.coerceAtLeast(1f)
             val startH = startBounds.height.coerceAtLeast(1f)
             val startX = startBounds.left
@@ -637,8 +642,12 @@ private fun Player(
                     this.translationX = transX
                     this.translationY = transY
                     this.shadowElevation = elevation
-                    this.shape = RoundedCornerShape(cornerRadius.toDp().coerceAtLeast(0.dp))
-                    this.clip = true
+                    if (progress > 0.01f) {
+                        this.shape = RoundedCornerShape(cornerRadius.toDp().coerceAtLeast(0.dp))
+                        this.clip = true
+                    } else {
+                        this.clip = false
+                    }
                 }
         }
 
@@ -660,6 +669,7 @@ private fun Player(
             swipe = swipe,
             levels = levels,
             isFull = fullscreen,
+            inPip = inPip,
             dockProgress = dockProgress,
             videoGestures = videoGestures,
             onTap = { chrome = !chrome; poke++ },
@@ -677,7 +687,7 @@ private fun Player(
             },
             onTracks = onTracks,
             onFill = { fill = !fill; poke++ },
-            onPip = if (pipEnabled && context.findActivity() != null) { { enterPip(context.findActivity()!!, playing) } } else null,
+            onPip = if (pipEnabled && context.findActivity() != null) { { enterPip(context.findActivity()!!, playing, aspect = Rational(16, 9), sourceRect = pipSourceRect) } } else null,
             onList = if (fullscreen) ({ upNext = true; poke++ }) else null,
             onPlay = { if (player.isPlaying) player.pause() else player.play(); poke++ },
             onBack10 = { seek(now() - 10); poke++ },
@@ -796,30 +806,54 @@ private fun TopBar(
     val item = detail.item
     val title = if (item.kind == "episode") item.showTitle ?: item.title else item.title
     val subtitle = if (item.kind == "episode") listOfNotNull(subtitleOf(item), item.title).joinToString(" · ") else item.year?.toString()
-    Row(Modifier.fillMaxWidth().displayCutoutPadding().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .displayCutoutPadding()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
         val backIcon = if (!isFullscreen) Icons.Rounded.ExpandMore else Icons.AutoMirrored.Rounded.ArrowBack
         val backLabel = if (!isFullscreen) stringResource(R.string.player_minimize) else stringResource(R.string.action_back)
-        IconButton(onBack) { Icon(backIcon, backLabel, tint = Color.White) }
-        // In the watch page the title sits under the video instead.
-        Column(Modifier.weight(1f).padding(horizontal = 8.dp).graphicsLayer { alpha = if (showTitle) 1f else 0f }) {
-            Text(title, style = MaterialTheme.typography.titleLarge, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (item.kind == "episode" && item.episodeNo != null) {
-                EpisodeLinks(item, onOpen, Color.White, " · ${item.title}", MaterialTheme.typography.bodyMedium, Modifier, Color.White.copy(alpha = 0.7f))
+        IconButton(onBack, modifier = Modifier.size(40.dp)) { Icon(backIcon, backLabel, tint = Color.White) }
+
+        if (showTitle) {
+            Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
+                Text(title, style = MaterialTheme.typography.titleLarge, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (item.kind == "episode" && item.episodeNo != null) {
+                    EpisodeLinks(item, onOpen, Color.White, " · ${item.title}", MaterialTheme.typography.bodyMedium, Modifier, Color.White.copy(alpha = 0.7f))
+                } else if (subtitle != null) {
+                    Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
-            else if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        } else {
+            Spacer(Modifier.weight(1f))
         }
+
         plan?.let {
             val mode = when (it.mode) {
                 "direct" -> R.string.player_mode_direct
                 "remux" -> R.string.player_mode_remux
                 else -> R.string.player_mode_transcode
             }
-            Tag(stringResource(mode), container = Color.White.copy(alpha = 0.15f), content = Color.White)
+            Surface(
+                color = Color.White.copy(alpha = 0.15f),
+                contentColor = Color.White,
+                shape = CircleShape,
+                modifier = Modifier.padding(end = 4.dp),
+            ) {
+                Text(
+                    stringResource(mode),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                )
+            }
         }
-        onPip?.let { IconButton(it) { Icon(Icons.Rounded.PictureInPictureAlt, stringResource(R.string.player_pip), tint = Color.White) } }
-        IconButton(onFill) { Icon(Icons.Rounded.AspectRatio, stringResource(if (fill) R.string.player_fit else R.string.player_fill), tint = if (fill) MaterialTheme.colorScheme.primary else Color.White) }
-        onTracks?.let { IconButton(it) { Icon(if (subtitlesOn) Icons.Rounded.Subtitles else Icons.Rounded.SubtitlesOff, stringResource(R.string.player_tracks), tint = Color.White) } }
-        onList?.let { IconButton(it) { Icon(Icons.AutoMirrored.Rounded.PlaylistPlay, stringResource(R.string.player_up_next_list), tint = Color.White) } }
+        onPip?.let { IconButton(it, modifier = Modifier.size(40.dp)) { Icon(Icons.Rounded.PictureInPictureAlt, stringResource(R.string.player_pip), tint = Color.White) } }
+        IconButton(onFill, modifier = Modifier.size(40.dp)) { Icon(Icons.Rounded.AspectRatio, stringResource(if (fill) R.string.player_fit else R.string.player_fill), tint = if (fill) MaterialTheme.colorScheme.primary else Color.White) }
+        onTracks?.let { IconButton(it, modifier = Modifier.size(40.dp)) { Icon(if (subtitlesOn) Icons.Rounded.Subtitles else Icons.Rounded.SubtitlesOff, stringResource(R.string.player_tracks), tint = Color.White) } }
+        onList?.let { IconButton(it, modifier = Modifier.size(40.dp)) { Icon(Icons.AutoMirrored.Rounded.PlaylistPlay, stringResource(R.string.player_up_next_list), tint = Color.White) } }
     }
 }
 
@@ -834,12 +868,14 @@ private fun CenterControls(playing: Boolean, onPlay: () -> Unit, onBack10: () ->
     val spring = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     LaunchedEffect(playing) { progress.animateTo(if (playing) 1f else 0f, spring) }
     val source = remember { MutableInteractionSource() }
-    val skip = if (small) 48.dp else 64.dp
-    val skipIcon = if (small) 32.dp else 40.dp
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(if (small) 24.dp else 40.dp), verticalAlignment = Alignment.CenterVertically) {
+    val skip = if (small) 40.dp else 56.dp
+    val skipIcon = if (small) 24.dp else 36.dp
+    val playSize = if (small) 52.dp else 80.dp
+    val playIcon = if (small) 26.dp else 40.dp
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(if (small) 16.dp else 36.dp), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onBack10, Modifier.size(skip)) { Icon(Icons.Rounded.Replay10, stringResource(R.string.player_back10), tint = Color.White, modifier = Modifier.size(skipIcon)) }
         Box(
-            Modifier.size(if (small) 64.dp else 88.dp).pressScale(source).clip(MorphShape(morph) { progress.value }).background(MaterialTheme.colorScheme.primary)
+            Modifier.size(playSize).pressScale(source).clip(MorphShape(morph) { progress.value }).background(MaterialTheme.colorScheme.primary)
                 .clickable(source, null, onClick = onPlay)
                 .graphicsLayer { rotationZ = (1f - progress.value) * 30f },
             contentAlignment = Alignment.Center,
@@ -848,7 +884,7 @@ private fun CenterControls(playing: Boolean, onPlay: () -> Unit, onBack10: () ->
                 if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                 stringResource(if (playing) R.string.player_pause else R.string.action_play),
                 tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(if (small) 32.dp else 44.dp).graphicsLayer { rotationZ = -(1f - progress.value) * 30f },
+                modifier = Modifier.size(playIcon).graphicsLayer { rotationZ = -(1f - progress.value) * 30f },
             )
         }
         IconButton(onForward10, Modifier.size(skip)) { Icon(Icons.Rounded.Forward10, stringResource(R.string.player_forward10), tint = Color.White, modifier = Modifier.size(skipIcon)) }
@@ -868,26 +904,53 @@ private class MorphShape(private val morph: Morph, private val progress: () -> F
 }
 
 @Composable
-private fun BottomBar(time: Double, duration: Double?, onScrub: (Float) -> Unit, onScrubEnd: () -> Unit, onStop: () -> Unit, fullscreen: Boolean?, onFullscreen: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth().navigationBarsPadding().displayCutoutPadding().padding(horizontal = 24.dp, vertical = 12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+private fun BottomBar(
+    time: Double,
+    duration: Double?,
+    onScrub: (Float) -> Unit,
+    onScrubEnd: () -> Unit,
+    onStop: () -> Unit,
+    fullscreen: Boolean?,
+    onFullscreen: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .displayCutoutPadding()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // Stop: saves where you are and leaves the player (the web player's stop button).
-            IconButton(onStop) { Icon(Icons.Rounded.Stop, stringResource(R.string.player_stop), tint = Color.White) }
-            Text(clock(time), style = MaterialTheme.typography.labelLarge, color = Color.White)
+            IconButton(onStop, modifier = Modifier.size(36.dp)) { Icon(Icons.Rounded.Stop, stringResource(R.string.player_stop), tint = Color.White) }
+            Text(clock(time), style = MaterialTheme.typography.labelMedium, color = Color.White)
             if (duration != null && duration > 0) {
                 Slider(
                     value = time.toFloat().coerceIn(0f, duration.toFloat()),
                     onValueChange = onScrub,
                     onValueChangeFinished = onScrubEnd,
                     valueRange = 0f..duration.toFloat(),
-                    colors = SliderDefaults.colors(inactiveTrackColor = Color.White.copy(alpha = 0.25f)),
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.25f),
+                    ),
+                    thumb = {
+                        Box(
+                            Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                        )
+                    },
                     modifier = Modifier.weight(1f),
                 )
-                Text(clock(duration), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.7f))
+                Text(clock(duration), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.7f))
             } else Spacer(Modifier.weight(1f))
             // Tablets only: a phone is always full screen.
             fullscreen?.let {
-                IconButton(onFullscreen) {
+                IconButton(onFullscreen, modifier = Modifier.size(36.dp)) {
                     Icon(if (it) Icons.Rounded.FullscreenExit else Icons.Rounded.Fullscreen, stringResource(if (it) R.string.player_exit_fullscreen else R.string.player_fullscreen), tint = Color.White)
                 }
             }
@@ -948,6 +1011,7 @@ private fun VideoContainer(
     swipe: Swipe?,
     levels: SwipeLevels?,
     isFull: Boolean,
+    inPip: Boolean,
     dockProgress: Float,
     videoGestures: Modifier,
     onTap: () -> Unit,
@@ -972,19 +1036,17 @@ private fun VideoContainer(
     nav: Navigator,
 ) {
     val file = detail.files.first()
-    val progress = dockProgress.coerceIn(0f, 1f)
-    val isMini = progress > 0.8f
-    val fullAlpha = (1f - progress * 2.5f).coerceIn(0f, 1f)
-    val miniAlpha = ((progress - 0.4f) / 0.6f).coerceIn(0f, 1f)
+    val progress = if (inPip) 0f else dockProgress.coerceIn(0f, 1f)
+    val isMini = !inPip && progress >= 0.95f
+    val fullAlpha = if (inPip) 0f else (1f - progress * 2.5f).coerceIn(0f, 1f)
+    val miniAlpha = if (inPip) 0f else ((progress - 0.4f) / 0.6f).coerceIn(0f, 1f)
 
     Box(
         modifier = modifier
             .background(Color.Black)
             .then(
-                if (isFull || progress < 0.2f) {
+                if (inPip) {
                     Modifier
-                        .then(videoGestures)
-                        .pointerTaps(onTap = onTap, onDoubleTap = onDoubleTap)
                 } else if (isMini) {
                     Modifier
                         .miniPlayerGestures(onExpand = onExpand, onClose = onClose)
@@ -993,17 +1055,21 @@ private fun VideoContainer(
                             indication = null,
                             onClick = onExpand,
                         )
-                } else Modifier
+                } else {
+                    Modifier
+                        .then(videoGestures)
+                        .then(if (progress < 0.05f) Modifier.pointerTaps(onTap = onTap, onDoubleTap = onDoubleTap) else Modifier)
+                }
             )
     ) {
         ContentFrame(
             player = player,
             modifier = Modifier.fillMaxSize(),
             surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
-            contentScale = if (fill) ContentScale.Crop else ContentScale.Fit,
+            contentScale = if (fill && !inPip) ContentScale.Crop else ContentScale.Fit,
         )
 
-        Subtitles(cues, time, lifted = showChrome && progress < 0.2f, small = progress > 0.5f)
+        Subtitles(cues, time, lifted = showChrome && progress < 0.2f && !inPip, small = inPip || progress > 0.5f)
 
         // Full player overlays
         if (fullAlpha > 0f) {

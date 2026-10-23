@@ -9,6 +9,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.Rect
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.util.Rational
@@ -62,7 +63,7 @@ private fun pipAction(activity: ComponentActivity, code: Int, action: String, ic
 }
 
 /** Back 10 s, play/pause, forward 10 s; only play/pause when the system allows a single button. */
-private fun pipParams(activity: ComponentActivity, playing: Boolean, aspect: Rational, autoEnter: Boolean?): PictureInPictureParams {
+private fun pipParams(activity: ComponentActivity, playing: Boolean, aspect: Rational, autoEnter: Boolean?, sourceRect: Rect? = null): PictureInPictureParams {
     val toggle = pipAction(
         activity, 1, ACTION_TOGGLE,
         if (playing) R.drawable.ic_pip_pause else R.drawable.ic_pip_play,
@@ -78,13 +79,18 @@ private fun pipParams(activity: ComponentActivity, playing: Boolean, aspect: Rat
     return PictureInPictureParams.Builder()
         .setAspectRatio(aspect)
         .setActions(actions)
-        .apply { if (autoEnter != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setAutoEnterEnabled(autoEnter) }
+        .apply {
+            if (sourceRect != null && sourceRect.width() > 0 && sourceRect.height() > 0) {
+                setSourceRectHint(sourceRect)
+            }
+            if (autoEnter != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setAutoEnterEnabled(autoEnter)
+        }
         .build()
 }
 
-fun enterPip(activity: ComponentActivity, playing: Boolean, aspect: Rational = Rational(16, 9)) {
+fun enterPip(activity: ComponentActivity, playing: Boolean, aspect: Rational = Rational(16, 9), sourceRect: Rect? = null) {
     if (activity.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
-        runCatching { activity.enterPictureInPictureMode(pipParams(activity, playing, aspect, null)) }
+        runCatching { activity.enterPictureInPictureMode(pipParams(activity, playing, aspect, null, sourceRect)) }
     }
 }
 
@@ -93,7 +99,7 @@ fun enterPip(activity: ComponentActivity, playing: Boolean, aspect: Rational = R
  * window that keeps playing; closing that window pauses it. Returns whether the activity is in that window now.
  */
 @Composable
-fun rememberPictureInPicture(player: Player, enabled: Boolean, playing: Boolean): Boolean {
+fun rememberPictureInPicture(player: Player, enabled: Boolean, playing: Boolean, sourceRect: Rect? = null): Boolean {
     val activity = LocalContext.current.findActivity() ?: return false
     val supported = remember(activity) { activity.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) }
     var inPip by remember { mutableStateOf(activity.isInPictureInPictureMode) }
@@ -101,10 +107,10 @@ fun rememberPictureInPicture(player: Player, enabled: Boolean, playing: Boolean)
     val canEnter by rememberUpdatedState(supported && enabled)
     val isPlaying by rememberUpdatedState(playing)
 
-    fun params() = pipParams(activity, isPlaying, aspect, canEnter && isPlaying)
+    fun params() = pipParams(activity, isPlaying, aspect, canEnter && isPlaying, sourceRect)
 
     // Keeps the window's shape and its play/pause button current, and arms auto-enter on Android 12+.
-    LaunchedEffect(supported, enabled, playing, aspect) {
+    LaunchedEffect(supported, enabled, playing, aspect, sourceRect) {
         if (supported) runCatching { activity.setPictureInPictureParams(params()) }
     }
 
@@ -119,9 +125,10 @@ fun rememberPictureInPicture(player: Player, enabled: Boolean, playing: Boolean)
             // Closing the window stops the activity before it leaves picture-in-picture; expanding it does not.
             if (!info.isInPictureInPictureMode && !activity.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) player.pause()
         }
-        // Before Android 12 there is no auto-enter: going home only gives this hint.
         val leaving = Runnable {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && canEnter && isPlaying) runCatching { activity.enterPictureInPictureMode(params()) }
+            if (canEnter && isPlaying && !activity.isInPictureInPictureMode) {
+                runCatching { activity.enterPictureInPictureMode(params()) }
+            }
         }
         val toggle = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {

@@ -249,7 +249,8 @@ fun Modifier.playerVideoGestures(
         },
         onDragCancel = {
             if (!isFullscreen) {
-                onPullDownRelease(false)
+                val passed = totalDy > 65.dp.toPx()
+                onPullDownRelease(passed)
             }
             kind = null
             onSwipeLevel(null)
