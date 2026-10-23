@@ -1,3 +1,15 @@
+## v0.0.1-alpha.8 (2026-10-23)
+
+- !alpha(all) : Release alpha build
+- android(Refactor) : Improve player animation and control sizes for better responsiveness
+- android(Fix) : Fix scrub thumbnail rendering and auto-hide miniplayer controls
+- Add comprehensive Material Design 3 references for theming, typography, shape, elevation, and motion
+- docs(TODO) : Update completed UI features for web and android
+- android(Feature) : Add playlists, collections, genre shelves, and scrub thumbnails
+- web(Feature) : Add quick-add to playlist, watch details playlist button, and shuffle
+- android(Fix) : Fix slide to pip animation and prevent black screen when minimized
+- android(Fix) : Fix ForegroundServiceDidNotStartInTimeException in PlaybackService
+
 ## v0.0.1-alpha.7 (2026-10-22)
 
 - !alpha : Release alpha build
