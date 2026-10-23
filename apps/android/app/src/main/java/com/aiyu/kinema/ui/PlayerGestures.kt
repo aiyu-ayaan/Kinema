@@ -9,6 +9,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
@@ -278,11 +279,15 @@ fun Modifier.playerVideoGestures(
     )
 }
 
-/** Swiping up on the miniplayer expands it back to the full player; swiping down dismisses it. */
+/** Tapping or swiping up on the miniplayer expands it back to the full player; swiping down dismisses it. */
 fun Modifier.miniPlayerGestures(
     onExpand: () -> Unit,
     onClose: () -> Unit,
-) = pointerInput(Unit) {
+) = pointerInput(onExpand) {
+    detectTapGestures(
+        onTap = { onExpand() },
+    )
+}.pointerInput(onExpand, onClose) {
     var totalDy = 0f
     detectVerticalDragGestures(
         onDragStart = {

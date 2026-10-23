@@ -356,9 +356,16 @@ private fun Player(
     var scrub by remember { mutableStateOf<Float?>(null) }
     var scrubTiles by remember { mutableStateOf<List<ScrubTile>>(emptyList()) }
     LaunchedEffect(item.id) {
-        val vtt = repository.request { it.timelineVtt(item.id) }.getOrNull()
-        if (!vtt.isNullOrBlank()) {
-            scrubTiles = parseTimelineVtt(vtt) { relative -> api.spriteUrl(item.id, relative) }
+        var vtt: String? = null
+        var tries = 0
+        while (vtt.isNullOrBlank() && tries < 30) {
+            vtt = repository.request { it.timelineVtt(item.id) }.getOrNull()
+            if (!vtt.isNullOrBlank()) {
+                scrubTiles = parseTimelineVtt(vtt) { relative -> api.spriteUrl(item.id, relative) }
+                break
+            }
+            delay(10_000)
+            tries++
         }
     }
     var playing by remember { mutableStateOf(false) }
@@ -1203,53 +1210,83 @@ private fun VideoContainer(
 
         // Mini player overlays
         if (miniAlpha > 0f) {
-            Box(Modifier.fillMaxSize().graphicsLayer { alpha = miniAlpha }) {
-                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.25f)))
+            var miniControlsVisible by remember { mutableStateOf(false) }
+            var miniControlsKey by remember { mutableIntStateOf(0) }
+
+            LaunchedEffect(isMini, miniControlsKey) {
+                if (isMini) {
+                    miniControlsVisible = true
+                    delay(2500)
+                    miniControlsVisible = false
+                }
+            }
+
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = miniAlpha }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onExpand,
+                    ),
+            ) {
                 Box(
                     Modifier
                         .fillMaxSize()
                         .clip(RoundedCornerShape(16.dp))
                         .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.15f * miniAlpha)), RoundedCornerShape(16.dp)),
                 )
-                if (buffering) {
-                    LoadingIndicator(
-                        modifier = Modifier.align(Alignment.Center).size(36.dp),
-                        color = Color.White,
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.55f))
-                            .clickable(onClick = onPlay),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            contentDescription = stringResource(if (playing) R.string.player_pause else R.string.action_play),
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.55f))
-                        .clickable(onClick = onClose),
-                    contentAlignment = Alignment.Center,
+                AnimatedVisibility(
+                    visible = miniControlsVisible,
+                    enter = fadeIn(tween(200)),
+                    exit = fadeOut(tween(300)),
                 ) {
-                    Icon(
-                        Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.player_dismiss),
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp),
-                    )
+                    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f))) {
+                        if (buffering) {
+                            LoadingIndicator(
+                                modifier = Modifier.align(Alignment.Center).size(36.dp),
+                                color = Color.White,
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.55f))
+                                    .clickable {
+                                        onPlay()
+                                        miniControlsKey++
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                    contentDescription = stringResource(if (playing) R.string.player_pause else R.string.action_play),
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(6.dp)
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.55f))
+                                .clickable(onClick = onClose),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.player_dismiss),
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
                 }
                 val progressFraction = if (duration != null && duration > 0) (time / duration).toFloat().coerceIn(0f, 1f) else 0f
                 LinearProgressIndicator(

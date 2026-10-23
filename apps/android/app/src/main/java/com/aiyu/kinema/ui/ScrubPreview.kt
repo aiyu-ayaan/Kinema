@@ -1,10 +1,10 @@
 package com.aiyu.kinema.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -12,13 +12,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
+import coil3.SingletonImageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.toBitmap
 
 data class ScrubTile(
     val start: Double,
@@ -103,29 +115,53 @@ fun ScrubThumbnail(
     modifier: Modifier = Modifier,
 ) {
     val tile = remember(tiles, time) { tileAt(tiles, time) }
+    val context = LocalContext.current
+    var bitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    var loadedUrl by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(tile?.url) {
+        val url = tile?.url
+        if (url == null) {
+            bitmap = null
+            loadedUrl = null
+            return@LaunchedEffect
+        }
+        if (url == loadedUrl && bitmap != null) return@LaunchedEffect
+
+        val loader = SingletonImageLoader.get(context)
+        val request = ImageRequest.Builder(context)
+            .data(url)
+            .size(coil3.size.Size.ORIGINAL)
+            .build()
+        val result = loader.execute(request)
+        if (result is SuccessResult) {
+            bitmap = result.image.toBitmap().asImageBitmap()
+            loadedUrl = url
+        } else {
+            bitmap = null
+        }
+    }
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        if (tile != null) {
+        if (tile != null && bitmap != null) {
             val scale = 0.9f
             val displayW = (tile.w * scale).dp
             val displayH = (tile.h * scale).dp
-            val sheetW = (tile.w * SHEET_GRID * scale).dp
-            val sheetH = (tile.h * SHEET_GRID * scale).dp
-            Box(
-                Modifier
+            Canvas(
+                modifier = Modifier
                     .size(displayW, displayH)
                     .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
-                    .background(Color.Black),
+                    .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(8.dp)),
             ) {
-                AsyncImage(
-                    model = tile.url,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(sheetW, sheetH)
-                        .offset(x = (-tile.x * scale).dp, y = (-tile.y * scale).dp),
+                drawImage(
+                    image = bitmap!!,
+                    srcOffset = IntOffset(tile.x, tile.y),
+                    srcSize = IntSize(tile.w, tile.h),
+                    dstOffset = IntOffset.Zero,
+                    dstSize = IntSize(size.width.toInt(), size.height.toInt()),
                 )
             }
         }

@@ -132,13 +132,16 @@ class KinemaApi(val baseUrl: String, pin: String?, connectSeconds: Long = 6, pri
         runCatching {
             val req = Request.Builder().url(url("/items/$id/timeline.vtt")).get().build()
             client.newCall(req).execute().use { resp ->
-                if (resp.isSuccessful) resp.body?.string() else null
+                if (resp.code == 200) resp.body?.string() else null
             }
         }.getOrNull()
     }
 
-    fun spriteUrl(itemId: Long, relativePath: String): String =
-        if (relativePath.startsWith("/")) url(relativePath) else url("/items/$itemId/$relativePath")
+    fun spriteUrl(itemId: Long, relativePath: String): String {
+        val base = if (relativePath.startsWith("/")) url(relativePath) else url("/items/$itemId/$relativePath")
+        val t = token()
+        return if (!t.isNullOrEmpty()) "$base?token=${enc(t)}" else base
+    }
 
     suspend fun progress(id: Long, positionS: Double, watched: Boolean) {
         send("PUT", "/items/$id/progress", buildJsonObject { put("position_s", positionS); put("watched", watched) })
