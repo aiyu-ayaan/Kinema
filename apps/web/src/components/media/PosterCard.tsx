@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle, Play } from '@phosphor-icons/react'
 import { Artwork } from './Artwork'
+import { AddToList } from '@/features/playlists/AddToList'
 import { frameUrl } from '@/lib/api'
 import { progressOf, subtitleOf } from '@/lib/format'
 import { t } from '@/lib/i18n'
@@ -26,30 +27,42 @@ export function PosterCard({ item, wide }: { item: ItemCard; wide?: boolean }) {
   return (
     <div className="group block min-w-0" title={item.title}>
       {/* Video / Poster part: clicking plays video if playable, or opens details if container (show/season) */}
-      <Link
-        to={playable ? playTo : detailTo}
-        className="relative block overflow-hidden rounded-lg focus-visible:outline-offset-4"
-        aria-label={playable ? t('player.play') : title}
-      >
-        <Artwork
-          image={wide ? (item.backdrop ?? item.poster) : item.poster}
-          frame={frameUrl(item.id)}
-          title={item.show_title && item.kind !== 'movie' ? item.show_title : item.title}
-          aspect={wide ? 'wide' : 'poster'}
-          className="ring-1 ring-inset ring-white/5 transition-transform duration-base ease-std group-hover:scale-[1.02]"
-        />
+      <div className="relative overflow-hidden rounded-lg">
+        <Link
+          to={playable ? playTo : detailTo}
+          className="block focus-visible:outline-offset-4"
+          aria-label={playable ? t('player.play') : title}
+        >
+          <Artwork
+            image={wide ? (item.backdrop ?? item.poster) : item.poster}
+            frame={frameUrl(item.id)}
+            title={item.show_title && item.kind !== 'movie' ? item.show_title : item.title}
+            aspect={wide ? 'wide' : 'poster'}
+            className="ring-1 ring-inset ring-white/5 transition-transform duration-base ease-std group-hover:scale-[1.02]"
+          />
+          {playable && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 opacity-0 transition-all duration-base group-hover:bg-black/35 group-hover:opacity-100">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-on-primary shadow-overlay transition-transform duration-base group-hover:scale-110">
+                <Play size={20} weight="fill" aria-label={t('player.play')} />
+              </span>
+            </div>
+          )}
+          {item.watched && (
+            <CheckCircle size={22} weight="fill" className="absolute end-2 top-2 rounded-full bg-black/40 text-primary" aria-label={t('item.watched')} />
+          )}
+          {progress != null && <ProgressBar value={progress} />}
+        </Link>
         {playable && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 opacity-0 transition-all duration-base group-hover:bg-black/35 group-hover:opacity-100">
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-on-primary shadow-overlay transition-transform duration-base group-hover:scale-110">
-              <Play size={20} weight="fill" aria-label={t('player.play')} />
-            </span>
+          <div className="absolute start-2 top-2 z-10 opacity-80 transition-opacity duration-base hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
+            <AddToList
+              itemId={item.id}
+              kind="playlist"
+              size="sm"
+              className="h-8 w-8 rounded-full border border-white/20 bg-black/60 text-white shadow-overlay backdrop-blur-sm hover:border-white/40 hover:bg-black/80 hover:text-white"
+            />
           </div>
         )}
-        {item.watched && (
-          <CheckCircle size={22} weight="fill" className="absolute end-2 top-2 rounded-full bg-black/40 text-primary" aria-label={t('item.watched')} />
-        )}
-        {progress != null && <ProgressBar value={progress} />}
-      </Link>
+      </div>
       {/* Details / Text part: clicking opens the details screen */}
       <Link to={detailTo} className="mt-2 block min-w-0 group/text focus-visible:outline-offset-2">
         <p className="truncate text-label font-medium text-fg transition-colors group-hover/text:text-primary">{title}</p>

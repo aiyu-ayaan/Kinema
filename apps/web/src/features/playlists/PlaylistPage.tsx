@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, ListBullets, PencilSimple, Play, Trash, X } from '@phosphor-icons/react'
+import { ArrowDown, ArrowUp, ListBullets, PencilSimple, Play, Shuffle, Trash, X } from '@phosphor-icons/react'
 import { Artwork } from '@/components/media/Artwork'
 import { Button } from '@/components/ui/Button'
 import { EmptyState, ErrorText, PageHeader, Skeleton } from '@/components/ui/Card'
@@ -89,6 +89,16 @@ export function PlaylistPage() {
     activePlaylist.set(id)
     navigate(`/play/${ids[0]}?t=0`)
   }
+  const shuffle = () => {
+    if (ids.length === 0) return
+    const shuffled = [...ids]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    activePlaylist.set(id, shuffled)
+    navigate(`/play/${shuffled[0]}?t=0`)
+  }
   return (
     <div className="anim-enter">
       <PageHeader
@@ -98,6 +108,9 @@ export function PlaylistPage() {
           <>
             <Button variant="primary" icon={<Play size={16} weight="fill" />} onClick={play} disabled={ids.length === 0}>
               {t('playlist.play')}
+            </Button>
+            <Button variant="secondary" icon={<Shuffle size={16} />} onClick={shuffle} disabled={ids.length === 0}>
+              {t('playlist.shuffle')}
             </Button>
             {data.mine && (
               <>

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, FolderPlus, ListPlus, Plus } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/Button'
@@ -19,7 +19,19 @@ interface Target {
  * "Add to playlist" (any profile, playable items) or "Add to collection" (admin, movies and shows):
  * pick a list, or name a new one that starts with this item.
  */
-export function AddToList({ itemId, kind, size = 'lg' }: { itemId: number; kind: 'playlist' | 'collection'; size?: 'md' | 'lg' }) {
+export function AddToList({
+  itemId,
+  kind,
+  size = 'lg',
+  className,
+  children,
+}: {
+  itemId: number
+  kind: 'playlist' | 'collection'
+  size?: 'sm' | 'md' | 'lg'
+  className?: string
+  children?: ReactNode
+}) {
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
@@ -62,14 +74,19 @@ export function AddToList({ itemId, kind, size = 'lg' }: { itemId: number; kind:
     <>
       <Button
         size={size}
+        className={className}
         aria-label={label}
         title={label}
-        icon={isPlaylist ? <ListPlus size={20} /> : <FolderPlus size={20} />}
-        onClick={() => {
+        icon={isPlaylist ? <ListPlus size={size === 'sm' ? 16 : 20} /> : <FolderPlus size={size === 'sm' ? 16 : 20} />}
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
           setDone(null)
           setOpen(true)
         }}
-      />
+      >
+        {children}
+      </Button>
       <Modal open={open} onClose={() => setOpen(false)} title={label}>
         <ul className="flex flex-col gap-1">
           {lists.data?.map((l) => (

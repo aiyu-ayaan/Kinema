@@ -398,6 +398,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement && e.target.type !== 'range') return
+      if ((e.target as HTMLElement)?.closest('dialog')) return
       const v = videoRef.current
       if (!v) return
       if (e.key === ' ' || e.key === 'k') {
@@ -781,7 +782,12 @@ export function PlayerPage() {
   const { data, error } = useQuery({ queryKey: ['item', id], queryFn: () => api.item(id), staleTime: 0 })
   const listId = activePlaylist.id
   const list = useQuery({ queryKey: ['playlist', listId], queryFn: () => api.playlist(listId as number), enabled: listId != null })
-  const listIds = list.data?.items.map((i) => i.id)
+  const defaultListIds = list.data?.items.map((i) => i.id)
+  const customQueue = activePlaylist.queue
+  const listIds =
+    customQueue && defaultListIds && customQueue.length === defaultListIds.length && customQueue.every((qId) => defaultListIds.includes(qId))
+      ? customQueue
+      : defaultListIds
   const playlist = listIds?.includes(id) ? { next: nextInList(listIds, id) } : null
   // Playing something outside the playlist (or a playlist that is gone) leaves playlist mode.
   const leftList = listId != null && ((listIds && !listIds.includes(id)) || list.isError)

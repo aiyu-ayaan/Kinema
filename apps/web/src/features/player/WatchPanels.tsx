@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { CheckCircle, CircleNotch, Info, Play, SkipForward, Star, Subtitles, Waveform, X } from '@phosphor-icons/react'
 import { Artwork } from '@/components/media/Artwork'
 import { EpisodeLinks } from '@/components/media/EpisodeLinks'
+import { AddToList } from '@/features/playlists/AddToList'
 import { api, frameUrl } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { clock, progressOf, runtime, subtitleOf } from '@/lib/format'
@@ -155,6 +156,9 @@ export function WatchDetails({ detail, onTracks }: { detail: ItemDetail; onTrack
             {t('player.tracks')}
           </button>
         )}
+        <AddToList itemId={item.id} kind="playlist" size="md" className="rounded-full">
+          {t('playlist.add')}
+        </AddToList>
       </div>
       {(item.summary || detail.genres.length > 0) && (
         <div className="rounded-lg bg-raised p-3">

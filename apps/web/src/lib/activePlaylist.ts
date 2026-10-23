@@ -13,10 +13,29 @@ export const activePlaylist = {
       return null
     }
   },
-  set(id: number | null) {
+  get queue(): number[] | null {
     try {
-      if (id) sessionStorage.setItem(storageKeys.playlist, String(id))
-      else sessionStorage.removeItem(storageKeys.playlist)
+      const raw = sessionStorage.getItem(storageKeys.playlistQueue)
+      if (!raw) return null
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) && parsed.every((n) => typeof n === 'number') ? parsed : null
+    } catch {
+      return null
+    }
+  },
+  set(id: number | null, queue?: number[] | null) {
+    try {
+      if (id) {
+        sessionStorage.setItem(storageKeys.playlist, String(id))
+        if (queue && queue.length > 0) {
+          sessionStorage.setItem(storageKeys.playlistQueue, JSON.stringify(queue))
+        } else {
+          sessionStorage.removeItem(storageKeys.playlistQueue)
+        }
+      } else {
+        sessionStorage.removeItem(storageKeys.playlist)
+        sessionStorage.removeItem(storageKeys.playlistQueue)
+      }
     } catch {
       /* storage blocked: the player simply falls back to the next episode */
     }
