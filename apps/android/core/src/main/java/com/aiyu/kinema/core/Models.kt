@@ -144,9 +144,68 @@ data class SeriesTracks(val audio: Int? = null, val subtitle: Int? = null, val s
 data class Shelf(val library: Library, val kind: String, val items: List<ItemCard>)
 
 @Serializable
+data class PlaylistSummary(
+    val id: Long,
+    @SerialName("owner_id") val ownerId: Long = 0,
+    @SerialName("owner_name") val ownerName: String = "",
+    val name: String,
+    @SerialName("is_shared") val isShared: Boolean = false,
+    @SerialName("created_at") val createdAt: Long = 0,
+    val mine: Boolean = false,
+    @SerialName("item_count") val itemCount: Int = 0,
+    val poster: String? = null,
+)
+
+@Serializable
+data class PlaylistDetail(
+    val id: Long,
+    @SerialName("owner_id") val ownerId: Long = 0,
+    @SerialName("owner_name") val ownerName: String = "",
+    val name: String,
+    @SerialName("is_shared") val isShared: Boolean = false,
+    val mine: Boolean = false,
+    @SerialName("item_count") val itemCount: Int = 0,
+    val poster: String? = null,
+    val items: List<ItemCard> = emptyList(),
+)
+
+@Serializable
+data class CollectionSummary(
+    val id: Long,
+    val name: String,
+    val overview: String? = null,
+    val poster: String? = null,
+    val backdrop: String? = null,
+    @SerialName("tmdb_id") val tmdbId: Long? = null,
+    @SerialName("item_count") val itemCount: Int = 0,
+)
+
+@Serializable
+data class CollectionDetail(
+    val id: Long,
+    val name: String,
+    val overview: String? = null,
+    val poster: String? = null,
+    val backdrop: String? = null,
+    @SerialName("item_count") val itemCount: Int = 0,
+    val items: List<ItemCard> = emptyList(),
+)
+
+@Serializable
+data class GenreShelf(
+    val id: Long,
+    val title: String,
+    val genre: String,
+    val items: List<ItemCard> = emptyList(),
+)
+
+@Serializable
 data class Home(
     @SerialName("continue_watching") val continueWatching: List<ItemCard> = emptyList(),
     val shelves: List<Shelf> = emptyList(),
+    val playlists: List<PlaylistSummary> = emptyList(),
+    val collections: List<CollectionSummary> = emptyList(),
+    @SerialName("genre_shelves") val genreShelves: List<GenreShelf> = emptyList(),
 )
 
 @Serializable

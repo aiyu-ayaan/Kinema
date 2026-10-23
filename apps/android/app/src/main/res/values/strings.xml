@@ -245,4 +245,33 @@
     <string name="update_github_status">GitHub answered %1$d</string>
     <string name="update_download_status">The download answered %1$d</string>
     <string name="update_conflict">Android refused the update: it is signed with a different key from the installed app. Uninstall this copy first.</string>
+
+    <!-- Playlists and Collections -->
+    <string name="home_shelf_playlists">Playlists</string>
+    <string name="home_shelf_collections">Collections</string>
+    <string name="playlist_title">Playlist</string>
+    <string name="playlist_play_all">Play all</string>
+    <string name="playlist_empty">This playlist is empty</string>
+    <string name="playlist_empty_body">Add movies or episodes to this playlist.</string>
+    <string name="playlist_add">Add to playlist</string>
+    <string name="playlist_create">New playlist</string>
+    <string name="playlist_name">Playlist name</string>
+    <string name="playlist_delete">Delete playlist</string>
+    <string name="playlist_delete_confirm">Delete playlist “%1$s”?</string>
+    <string name="playlist_remove">Remove from playlist</string>
+    <string name="playlist_added">Added to %1$s</string>
+    <string name="playlist_created">Playlist created</string>
+    <string name="collection_title">Collection</string>
+    <string name="collection_empty">This collection is empty</string>
+    <string name="collection_empty_body">No titles in this collection yet.</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_create">Create</string>
+    <plurals name="playlist_items_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <plurals name="collection_items_count">
+        <item quantity="one">%d title</item>
+        <item quantity="other">%d titles</item>
+    </plurals>
 </resources>

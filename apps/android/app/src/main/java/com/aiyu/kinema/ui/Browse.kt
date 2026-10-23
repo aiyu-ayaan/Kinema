@@ -213,6 +213,7 @@ private fun pickFeatures(home: Home): List<Pair<ItemCard, FeatureReason>> {
 
 @Composable
 private fun HomeTab() {
+    val nav = LocalNavigator.current
     val loader = rememberLoad { it.home() }
     val open = rememberOpen()
     val bottom = LocalBottomBarInset.current
@@ -227,6 +228,16 @@ private fun HomeTab() {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = bottom + 32.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
                 item(key = "hero") { Hero(features) }
                 item(key = "continue") { ShelfRow(stringResource(R.string.home_continue), home.continueWatching, open, wide = true) }
+                if (home.playlists.isNotEmpty()) {
+                    item(key = "playlists") {
+                        PlaylistsRow(stringResource(R.string.home_shelf_playlists), home.playlists, onOpen = { nav.go(PlaylistKey(it.id)) })
+                    }
+                }
+                if (home.collections.isNotEmpty()) {
+                    item(key = "collections") {
+                        CollectionsRow(stringResource(R.string.home_shelf_collections), home.collections, onOpen = { nav.go(CollectionKey(it.id)) })
+                    }
+                }
                 items(home.shelves, key = { "${it.library.id}-${it.kind}" }) { shelf ->
                     val title = stringResource(
                         when (shelf.kind) {
@@ -236,6 +247,9 @@ private fun HomeTab() {
                         },
                     )
                     ShelfRow(if (multiple) "$title · ${shelf.library.name}" else title, shelf.items, open, wide = shelf.kind == "episodes")
+                }
+                items(home.genreShelves, key = { "genre-${it.genre}" }) { genreShelf ->
+                    ShelfRow(genreShelf.genre, genreShelf.items, open, wide = false)
                 }
             }
         }

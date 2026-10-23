@@ -33,8 +33,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.FilledTonalButton
@@ -58,6 +60,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.pluralStringResource
+import com.aiyu.kinema.core.CollectionSummary
+import com.aiyu.kinema.core.PlaylistSummary
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Path
@@ -332,3 +337,154 @@ fun Tag(text: String, modifier: Modifier = Modifier, container: Color = Material
         Text(text, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
     }
 }
+
+@Composable
+fun PlaylistCard(
+    playlist: PlaylistSummary,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val source = remember { MutableInteractionSource() }
+    Column(
+        modifier = modifier
+            .pressScale(source)
+            .clip(MaterialTheme.shapes.medium)
+            .clickable(source, null, onClick = onClick),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.secondaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.AutoMirrored.Rounded.PlaylistPlay,
+                null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size(36.dp),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            playlist.name,
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 2.dp),
+        )
+        Text(
+            pluralStringResource(
+                R.plurals.playlist_items_count,
+                playlist.itemCount,
+                playlist.itemCount,
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 2.dp),
+        )
+    }
+}
+
+@Composable
+fun PlaylistsRow(
+    title: String,
+    playlists: List<PlaylistSummary>,
+    onOpen: (PlaylistSummary) -> Unit,
+) {
+    if (playlists.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionTitle(title)
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(playlists, key = { it.id }) { playlist ->
+                PlaylistCard(
+                    playlist = playlist,
+                    onClick = { onOpen(playlist) },
+                    modifier = Modifier.width(180.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CollectionCard(
+    collection: CollectionSummary,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val source = remember { MutableInteractionSource() }
+    Column(
+        modifier = modifier
+            .pressScale(source)
+            .clip(MaterialTheme.shapes.medium)
+            .clickable(source, null, onClick = onClick),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(2f / 3f)
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.tertiaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Rounded.CollectionsBookmark,
+                null,
+                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.size(40.dp),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            collection.name,
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 2.dp),
+        )
+        Text(
+            pluralStringResource(
+                R.plurals.collection_items_count,
+                collection.itemCount,
+                collection.itemCount,
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 2.dp),
+        )
+    }
+}
+
+@Composable
+fun CollectionsRow(
+    title: String,
+    collections: List<CollectionSummary>,
+    onOpen: (CollectionSummary) -> Unit,
+) {
+    if (collections.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionTitle(title)
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(collections, key = { it.id }) { collection ->
+                CollectionCard(
+                    collection = collection,
+                    onClick = { onOpen(collection) },
+                    modifier = Modifier.width(128.dp),
+                )
+            }
+        }
+    }
+}
+

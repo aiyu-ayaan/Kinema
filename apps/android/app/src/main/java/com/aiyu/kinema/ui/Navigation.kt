@@ -63,6 +63,12 @@ data object TabsKey : NavKey
 @Serializable
 data class ItemKey(val id: Long) : NavKey
 
+@Serializable
+data class PlaylistKey(val id: Long) : NavKey
+
+@Serializable
+data class CollectionKey(val id: Long) : NavKey
+
 /** [start] null resumes where the viewer stopped. */
 @Serializable
 data class PlayerKey(val id: Long, val start: Double? = null) : NavKey
@@ -115,6 +121,8 @@ fun AppNavigation() {
                 entryProvider = entryProvider {
                     entry<TabsKey> { Page { MainScreen() } }
                     entry<ItemKey> { Page { ItemScreen(it.id) } }
+                    entry<PlaylistKey> { Page { PlaylistScreen(it.id) } }
+                    entry<CollectionKey> { Page { CollectionScreen(it.id) } }
                     entry<PlayerKey> { PlayerScreen(it.id, it.start, isMinimized = false, onMinimize = {}, onExpand = {}, onClose = { if (stack.size > 1) stack.removeAt(stack.lastIndex) }) }
                     entry<UpdatesKey> { Page { UpdatesScreen() } }
                     entry<AboutKey> { Page { AboutScreen() } }

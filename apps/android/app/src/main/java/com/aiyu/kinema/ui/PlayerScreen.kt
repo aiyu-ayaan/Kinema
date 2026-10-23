@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
@@ -353,6 +354,13 @@ private fun Player(
     var offset by remember { mutableDoubleStateOf(0.0) }
     var time by remember { mutableDoubleStateOf(startAt) }
     var scrub by remember { mutableStateOf<Float?>(null) }
+    var scrubTiles by remember { mutableStateOf<List<ScrubTile>>(emptyList()) }
+    LaunchedEffect(item.id) {
+        val vtt = repository.request { it.timelineVtt(item.id) }.getOrNull()
+        if (!vtt.isNullOrBlank()) {
+            scrubTiles = parseTimelineVtt(vtt) { relative -> api.spriteUrl(item.id, relative) }
+        }
+    }
     var playing by remember { mutableStateOf(false) }
     var buffering by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -658,6 +666,8 @@ private fun Player(
             cues = cues,
             time = scrub?.toDouble() ?: time,
             duration = duration,
+            scrub = scrub,
+            scrubTiles = scrubTiles,
             showChrome = showChrome,
             playing = playing,
             buffering = buffering,
@@ -907,6 +917,8 @@ private class MorphShape(private val morph: Morph, private val progress: () -> F
 private fun BottomBar(
     time: Double,
     duration: Double?,
+    scrub: Float?,
+    scrubTiles: List<ScrubTile>,
     onScrub: (Float) -> Unit,
     onScrubEnd: () -> Unit,
     onStop: () -> Unit,
@@ -921,6 +933,26 @@ private fun BottomBar(
             .displayCutoutPadding()
             .padding(horizontal = 16.dp, vertical = 4.dp),
     ) {
+        if (scrub != null && duration != null && duration > 0) {
+            val frac = (scrub / duration.toFloat()).coerceIn(0.05f, 0.95f)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 48.dp),
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth(frac)
+                        .wrapContentWidth(Alignment.End),
+                ) {
+                    ScrubThumbnail(
+                        tiles = scrubTiles,
+                        time = scrub.toDouble(),
+                        modifier = Modifier.padding(bottom = 6.dp),
+                    )
+                }
+            }
+        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // Stop: saves where you are and leaves the player (the web player's stop button).
             IconButton(onStop, modifier = Modifier.size(36.dp)) { Icon(Icons.Rounded.Stop, stringResource(R.string.player_stop), tint = Color.White) }
@@ -1000,6 +1032,8 @@ private fun VideoContainer(
     cues: List<Cue>,
     time: Double,
     duration: Double?,
+    scrub: Float?,
+    scrubTiles: List<ScrubTile>,
     showChrome: Boolean,
     playing: Boolean,
     buffering: Boolean,
@@ -1141,6 +1175,8 @@ private fun VideoContainer(
                         BottomBar(
                             time = time,
                             duration = duration,
+                            scrub = scrub,
+                            scrubTiles = scrubTiles,
                             onScrub = onScrub,
                             onScrubEnd = onScrubEnd,
                             onStop = onStop,

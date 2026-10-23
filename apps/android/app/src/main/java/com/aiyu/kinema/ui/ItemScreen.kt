@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Person
@@ -69,6 +70,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -116,11 +118,13 @@ private fun ItemContent(detail: ItemDetail) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val repository = LocalRepository.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     val c = MaterialTheme.colorScheme
     val list = rememberLazyListState()
     var watched by remember(item) { mutableStateOf(item.watched) }
+    var showPlaylistSheet by remember { mutableStateOf(false) }
     val failed = stringResource(R.string.error_generic)
     val session by repository.session.collectAsStateWithLifecycle()
     val admin = (session as? Session.SignedIn)?.user?.isAdmin == true
@@ -170,6 +174,12 @@ private fun ItemContent(detail: ItemDetail) {
                             shapes = IconButtonDefaults.toggleableShapes(),
                         ) {
                             Icon(if (watched) Icons.Rounded.CheckCircle else Icons.Rounded.Check, stringResource(if (watched) R.string.item_mark_unwatched else R.string.item_mark_watched))
+                        }
+                        FilledTonalIconButton(
+                            onClick = { showPlaylistSheet = true },
+                            modifier = Modifier.size(64.dp),
+                        ) {
+                            Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, stringResource(R.string.playlist_add))
                         }
                         // Saving is admin only on the server.
                         if (admin) detail.tracks?.let { SeriesTracksButton(item.id, it) { scope.launch { snackbar.showSnackbar(failed) } } }
@@ -222,6 +232,17 @@ private fun ItemContent(detail: ItemDetail) {
                 }
             }
             detail.files.firstOrNull()?.let { file -> item(key = "file") { FileInfo(file) } }
+        }
+        if (showPlaylistSheet) {
+            AddToPlaylistSheet(
+                itemId = item.id,
+                onDismiss = { showPlaylistSheet = false },
+                onSuccess = { name ->
+                    scope.launch {
+                        snackbar.showSnackbar(context.getString(R.string.playlist_added, name))
+                    }
+                },
+            )
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding())
     }

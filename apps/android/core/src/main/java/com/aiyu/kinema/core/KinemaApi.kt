@@ -15,6 +15,8 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.add
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -105,6 +107,38 @@ class KinemaApi(val baseUrl: String, pin: String?, connectSeconds: Long = 6, pri
     suspend fun libraryItems(id: Long) = call("GET", "/libraries/$id/items", ListSerializer(ItemCard.serializer()))
     suspend fun search(q: String) = call("GET", "/search?q=${enc(q)}", ListSerializer(ItemCard.serializer()))
     suspend fun item(id: Long) = call("GET", "/items/$id", ItemDetail.serializer())
+
+    suspend fun playlists() = call("GET", "/playlists", ListSerializer(PlaylistSummary.serializer()))
+    suspend fun playlist(id: Long) = call("GET", "/playlists/$id", PlaylistDetail.serializer())
+    suspend fun createPlaylist(name: String, itemIds: List<Long> = emptyList()) =
+        call("POST", "/playlists", PlaylistDetail.serializer(), buildJsonObject {
+            put("name", name)
+            putJsonArray("item_ids") { itemIds.forEach { add(it) } }
+        })
+    suspend fun addToPlaylist(id: Long, itemIds: List<Long>) =
+        call("POST", "/playlists/$id/items", PlaylistDetail.serializer(), buildJsonObject {
+            putJsonArray("item_ids") { itemIds.forEach { add(it) } }
+        })
+    suspend fun setPlaylistItems(id: Long, itemIds: List<Long>) =
+        call("PUT", "/playlists/$id/items", PlaylistDetail.serializer(), buildJsonObject {
+            putJsonArray("item_ids") { itemIds.forEach { add(it) } }
+        })
+    suspend fun deletePlaylist(id: Long) = send("DELETE", "/playlists/$id")
+
+    suspend fun collections() = call("GET", "/collections", ListSerializer(CollectionSummary.serializer()))
+    suspend fun collection(id: Long) = call("GET", "/collections/$id", CollectionDetail.serializer())
+
+    suspend fun timelineVtt(id: Long): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            val req = Request.Builder().url(url("/items/$id/timeline.vtt")).get().build()
+            client.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful) resp.body?.string() else null
+            }
+        }.getOrNull()
+    }
+
+    fun spriteUrl(itemId: Long, relativePath: String): String =
+        if (relativePath.startsWith("/")) url(relativePath) else url("/items/$itemId/$relativePath")
 
     suspend fun progress(id: Long, positionS: Double, watched: Boolean) {
         send("PUT", "/items/$id/progress", buildJsonObject { put("position_s", positionS); put("watched", watched) })
