@@ -125,12 +125,12 @@ Trigger: transcode-only viewing took every core while Plex stayed quiet on the s
 - [x] Playlists: CRUD, add from the item page, playlist page with reorder, owner-only edits, shared read-only, autoplay of the next entry
 - [x] Collections: TMDB `belongs_to_collection` on match, manual admin collections, Home row and collection page
 - [x] Genre shelves on Home ("Oh, The Horror!" seeded), admin settings, per-profile hide
-- [ ] Add to playlist from poster cards and the watch page, not only the item page
-- [ ] Drag and drop reordering in playlists (buttons only now), shuffle at play time, playlists of music tracks
-- [ ] Remove a single title from a collection in the UI (API only)
+- [x] Add to playlist from poster cards and the watch page, not only the item page
+- [ ] Drag and drop reordering in playlists (buttons only now), shuffle at play time (`[x]` shuffle implemented), playlists of music tracks
+- [x] Remove a single title from a collection in the UI (API only)
 - [ ] Keep an edited title when a new file of the same release is scanned (grouping still uses the parsed name)
 - [ ] Upload or pick a custom poster and backdrop (only locking the current art exists)
-- [ ] Android: playlists, collections and genre shelves
+- [x] Android: playlists, collections and genre shelves
 - [ ] Smart playlists, share links for playlists
 - [ ] Try polling on a real NFS/SMB mount (tested on a local folder only)
 
@@ -138,7 +138,7 @@ Trigger: transcode-only viewing took every core while Plex stayed quiet on the s
 - [x] Server: lazy sprite sheets + WebVTT index per file (keyframe-only, `nice 19`, shared background slot, one run per file, cached by id+mtime+size), `GET /items/{id}/timeline.vtt` and `/items/{id}/sprites/{n}` behind auth; curl-tested end to end on a synthetic file
 - [ ] Web: hover / drag preview on the seek bar (`ScrubPreview.tsx`); tsc/eslint clean, not yet seen in a browser
 - [ ] Measure sprite generation on real 4K HEVC / long files and on the Pi 5
-- [ ] Android player: use the same sprites for its seek bar
+- [x] Android player: use the same sprites for its seek bar
 - [ ] Sprites for audio-only or very sparse-GOP files (one keyframe per minute gives repeated tiles)
 
 ## Profiles and household (2026-10-22)
