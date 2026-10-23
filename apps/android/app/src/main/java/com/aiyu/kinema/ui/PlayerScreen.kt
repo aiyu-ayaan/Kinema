@@ -639,23 +639,17 @@ private fun Player(
             val endY = screenHeightPx - miniHeightPx - marginBottomPx
 
             val progress = dockProgress.coerceIn(0f, 1f)
-            val scale = lerp(1f, miniWidthPx / startW, progress).coerceAtLeast(0.01f)
+            val curW = lerp(startW, miniWidthPx, progress)
+            val curH = lerp(startH, miniHeightPx, progress)
             val curX = lerp(startX, endX, progress)
             val curY = lerp(startY, endY, progress)
-            val transX = curX - startX
-            val transY = curY - startY
-            val cornerRadius = lerp(0f, with(density) { 16.dp.toPx() } / scale, progress).coerceAtLeast(0f)
+            val cornerRadius = lerp(0f, with(density) { 16.dp.toPx() }, progress).coerceAtLeast(0f)
             val elevation = lerp(0f, with(density) { 10.dp.toPx() }, progress).coerceAtLeast(0f)
 
             Modifier
-                .offset { IntOffset(startX.roundToInt(), startY.roundToInt()) }
-                .size(with(density) { startW.toDp() }, with(density) { startH.toDp() })
+                .offset { IntOffset(curX.roundToInt(), curY.roundToInt()) }
+                .size(with(density) { curW.toDp() }, with(density) { curH.toDp() })
                 .graphicsLayer {
-                    this.scaleX = scale
-                    this.scaleY = scale
-                    this.transformOrigin = TransformOrigin(0f, 0f)
-                    this.translationX = transX
-                    this.translationY = transY
                     this.shadowElevation = elevation
                     if (progress > 0.01f) {
                         this.shape = RoundedCornerShape(cornerRadius.toDp().coerceAtLeast(0.dp))
@@ -885,11 +879,11 @@ private fun CenterControls(playing: Boolean, onPlay: () -> Unit, onBack10: () ->
     val spring = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     LaunchedEffect(playing) { progress.animateTo(if (playing) 1f else 0f, spring) }
     val source = remember { MutableInteractionSource() }
-    val skip = if (small) 40.dp else 56.dp
-    val skipIcon = if (small) 24.dp else 36.dp
-    val playSize = if (small) 52.dp else 80.dp
-    val playIcon = if (small) 26.dp else 40.dp
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(if (small) 16.dp else 36.dp), verticalAlignment = Alignment.CenterVertically) {
+    val skip = if (small) 44.dp else 52.dp
+    val skipIcon = if (small) 28.dp else 34.dp
+    val playSize = if (small) 56.dp else 76.dp
+    val playIcon = if (small) 28.dp else 38.dp
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(if (small) 24.dp else 48.dp), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onBack10, Modifier.size(skip)) { Icon(Icons.Rounded.Replay10, stringResource(R.string.player_back10), tint = Color.White, modifier = Modifier.size(skipIcon)) }
         Box(
             Modifier.size(playSize).pressScale(source).clip(MorphShape(morph) { progress.value }).background(MaterialTheme.colorScheme.primary)
@@ -973,8 +967,21 @@ private fun BottomBar(
                     colors = SliderDefaults.colors(
                         thumbColor = MaterialTheme.colorScheme.primary,
                         activeTrackColor = MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.25f),
+                        inactiveTrackColor = Color.White.copy(alpha = 0.28f),
                     ),
+                    track = { state ->
+                        SliderDefaults.Track(
+                            sliderState = state,
+                            modifier = Modifier.height(4.dp),
+                            thumbTrackGapSize = 0.dp,
+                            trackInsideCornerSize = 0.dp,
+                            drawStopIndicator = null,
+                            colors = SliderDefaults.colors(
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.28f),
+                            ),
+                        )
+                    },
                     thumb = {
                         Box(
                             Modifier
