@@ -261,7 +261,7 @@ internal fun UpNextList(
     val seasons = rememberLoad(item.showId) { api -> if (episode) item.showId?.let { api.item(it).children.filter { s -> s.kind == "season" } }.orEmpty() else emptyList() }
     val list = rememberLoad(item.id, season) { api ->
         if (episode) season?.let { api.item(it).children }.orEmpty()
-        else api.libraryItems(item.libraryId).filter { it.playable && it.id != item.id && it.kind == item.kind }
+        else api.libraryPage(item.libraryId, if (item.kind == "show") "show" else "movie", "rating", 0, 60).items.filter { it.playable && it.id != item.id && it.kind == item.kind }
             .sortedWith(compareByDescending<ItemCard> { it.progress != null }.thenBy { it.watched }.thenByDescending { it.rating ?: 0.0 })
             .take(40)
     }

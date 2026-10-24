@@ -104,7 +104,15 @@ class KinemaApi(val baseUrl: String, pin: String?, connectSeconds: Long = 6, pri
 
     suspend fun home() = call("GET", "/home", Home.serializer())
     suspend fun libraries() = call("GET", "/libraries", ListSerializer(Library.serializer()))
-    suspend fun libraryItems(id: Long) = call("GET", "/libraries/$id/items", ListSerializer(ItemCard.serializer()))
+    /** Every show of a library, unpaged: a short list for the switcher and its chips. */
+    suspend fun libraryShows(id: Long) = call("GET", "/libraries/$id/items?type=show", ListSerializer(ItemCard.serializer()))
+
+    /** [type] is "movie" (everything but shows), "show" or null for both; [sort] is title, added, year or rating. */
+    suspend fun libraryPage(id: Long, type: String?, sort: String, offset: Long, limit: Int) = call(
+        "GET",
+        "/libraries/$id/items?sort=$sort&offset=$offset&limit=$limit" + (type?.let { "&type=$it" } ?: ""),
+        LibraryPage.serializer(),
+    )
     suspend fun search(q: String) = call("GET", "/search?q=${enc(q)}", ListSerializer(ItemCard.serializer()))
     suspend fun item(id: Long) = call("GET", "/items/$id", ItemDetail.serializer())
 

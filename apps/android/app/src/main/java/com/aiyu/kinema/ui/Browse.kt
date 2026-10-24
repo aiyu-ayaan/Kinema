@@ -33,6 +33,7 @@ import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -69,6 +70,9 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -117,6 +121,9 @@ import com.aiyu.kinema.core.Library
 import com.aiyu.kinema.ui.theme.rememberReducedMotion
 import kotlin.math.absoluteValue
 import kotlinx.coroutines.delay
+
+/** Titles per library request: a few screens of posters. */
+private const val LIBRARY_PAGE = 120
 
 /** A server read: loading, the value, or why it failed. A reload keeps the last value on screen. */
 sealed interface Load<out T> {
@@ -372,7 +379,7 @@ private fun LibraryTab(switcher: Boolean, onSwitcherDismiss: () -> Unit) {
             }
             var selected by rememberSaveable { mutableStateOf(libs.first().id) }
             val open = rememberOpen()
-            val shows = rememberLoad(libs) { api -> libs.filter { it.showCount > 0 }.associate { l -> l.id to api.libraryItems(l.id).filter { it.kind == "show" } } }
+            val shows = rememberLoad(libs) { api -> libs.filter { it.showCount > 0 }.associate { l -> l.id to api.libraryShows(l.id) } }
             val lib = libs.firstOrNull { it.id == selected } ?: libs.first()
             // Kept here, not in the sheet, so a collapsed library stays collapsed the next time it opens.
             var collapsed by rememberSaveable { mutableStateOf(emptyList<Long>()) }
@@ -397,16 +404,34 @@ private fun LibraryTab(switcher: Boolean, onSwitcherDismiss: () -> Unit) {
                 }
             }
             Spacer(Modifier.height(8.dp))
-            val items = rememberLoad(lib.id) { it.libraryItems(lib.id) }
+            // Like the web sidebar: a mixed library lists its movies, its shows hang below it as chips.
+            val mixed = lib.showCount > 0 && lib.showCount < lib.itemCount
+            val first = rememberLoad(lib.id) { it.libraryPage(lib.id, if (mixed) "movie" else null, "title", 0, LIBRARY_PAGE) }
+            val repository = LocalRepository.current
+            val scope = rememberCoroutineScope()
             val motion = MaterialTheme.motionScheme
             AnimatedContent(lib.id, label = "library", transitionSpec = { fadeIn(motion.defaultEffectsSpec()).togetherWith(fadeOut(motion.fastEffectsSpec())) }) {
-                Loaded(items) { list ->
-                    if (list.isEmpty()) MessageState(Icons.Rounded.Movie, stringResource(R.string.library_empty_title), stringResource(R.string.library_empty_body))
+                Loaded(first) { page ->
+                    if (page.items.isEmpty()) MessageState(Icons.Rounded.Movie, stringResource(R.string.library_empty_title), stringResource(R.string.library_empty_body))
                     else {
-                        // Like the web sidebar: a mixed library lists its movies, its shows hang below it as chips.
-                        val mixed = lib.showCount > 0 && lib.showCount < lib.itemCount
-                        val shown = if (mixed) list.filter { it.kind != "show" } else list
-                        PullToRefreshBox(items.refreshing.value, items.reload) { PosterGrid(shown, wide = lib.kind == "other") }
+                        // Later pages are appended as the grid nears its end; a reload starts over from the first.
+                        var more by remember(page) { mutableStateOf(emptyList<ItemCard>()) }
+                        var next by remember(page) { mutableStateOf(page.next) }
+                        var busy by remember(page) { mutableStateOf(false) }
+                        val loadMore: () -> Unit = {
+                            val at = next
+                            if (at != null && !busy) {
+                                busy = true
+                                scope.launch {
+                                    repository.request { it.libraryPage(lib.id, if (mixed) "movie" else null, "title", at, LIBRARY_PAGE) }
+                                        .onSuccess { more = more + it.items; next = it.next }
+                                    busy = false
+                                }
+                            }
+                        }
+                        PullToRefreshBox(first.refreshing.value, first.reload) {
+                            PosterGrid(page.items + more, wide = lib.kind == "other", onEnd = if (next != null) loadMore else null)
+                        }
                     }
                 }
             }
@@ -480,12 +505,19 @@ private fun LibrarySheet(libs: List<Library>, shows: Map<Long, List<ItemCard>>, 
 }
 
 @Composable
-fun PosterGrid(items: List<ItemCard>, wide: Boolean = false, header: (@Composable () -> Unit)? = null) {
+fun PosterGrid(items: List<ItemCard>, wide: Boolean = false, header: (@Composable () -> Unit)? = null, onEnd: (() -> Unit)? = null) {
     val open = rememberOpen()
     val bottom = LocalBottomBarInset.current
+    val grid = rememberLazyGridState()
+    if (onEnd != null) {
+        // Asks for the next page a few rows before the last card; again after each page lands while still near it.
+        val nearEnd by remember { derivedStateOf { (grid.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) >= items.size - 18 } }
+        LaunchedEffect(nearEnd, items.size) { if (nearEnd) onEnd() }
+    }
     LazyVerticalGrid(
         GridCells.Adaptive(if (wide) 220.dp else 112.dp),
         Modifier.fillMaxSize(),
+        grid,
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = bottom + 32.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),

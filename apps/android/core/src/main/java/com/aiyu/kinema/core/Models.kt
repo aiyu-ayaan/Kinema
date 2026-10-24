@@ -123,6 +123,10 @@ data class Marker(
 @Serializable
 data class Features(@SerialName("scrub_thumbnails") val scrubThumbnails: Boolean = false)
 
+/** One page of a library; [next] is the offset to ask for after it, null at the end. */
+@Serializable
+data class LibraryPage(val items: List<ItemCard> = emptyList(), val total: Long? = null, val next: Long? = null)
+
 @Serializable
 data class CastMember(val id: Long, val name: String, val role: String = "", val image: String? = null)
 
