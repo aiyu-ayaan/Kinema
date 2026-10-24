@@ -204,7 +204,7 @@ export function UpNextList({ detail, scrollToCurrent }: { detail: ItemDetail; sc
     enabled: episode && season != null,
     select: (d) => d.children,
   })
-  const library = useQuery({ queryKey: ['library-items', item.library_id], queryFn: () => api.libraryItems(item.library_id), enabled: !episode })
+  const library = useQuery({ queryKey: ['library-items', item.library_id], queryFn: () => api.libraryPage(item.library_id, { type: item.kind === 'show' ? 'show' : 'movie', sort: 'rating', offset: 0, limit: 60 }).then((p) => p.items), enabled: !episode })
   const more = useMemo(
     () =>
       (library.data ?? [])

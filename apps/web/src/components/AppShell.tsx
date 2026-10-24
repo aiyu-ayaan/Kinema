@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowCircleUp, GearSix, HardDrives, House, List, ListBullets, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
@@ -54,15 +54,12 @@ function LibraryNav({ library: l, onNavigate }: { library: Library; onNavigate?:
   const I = libraryIcon[l.kind]
 
   const { data: items } = useQuery({
-    queryKey: ['library', l.id],
-    queryFn: () => api.libraryItems(l.id),
+    queryKey: ['library', l.id, 'shows'],
+    queryFn: () => api.libraryItems(l.id, 'show'),
     enabled: l.show_count > 0,
   })
 
-  const shows = useMemo(() => {
-    if (!items) return []
-    return items.filter((i) => i.kind === 'show')
-  }, [items])
+  const shows = items ?? []
 
   const isGenericShowLib =
     l.kind === 'show' &&

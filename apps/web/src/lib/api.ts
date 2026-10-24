@@ -12,6 +12,8 @@ import type {
   Home,
   ItemCard,
   ItemDetail,
+  LibraryPage,
+  LibrarySort,
   Library,
   LibraryKind,
   ManagedUser,
@@ -143,7 +145,13 @@ export const api = {
   createLibrary: (body: { name: string; kind: LibraryKind; paths: string[] }) => request<Library>('POST', '/libraries', body),
   deleteLibrary: (id: number) => request<void>('DELETE', `/libraries/${id}`),
   scanLibrary: (id: number) => request<void>('POST', `/libraries/${id}/scan`),
-  libraryItems: (id: number) => request<ItemCard[]>('GET', `/libraries/${id}/items`),
+  /** Every title of one kind, unpaged: for short lists such as a library's shows. */
+  libraryItems: (id: number, type?: 'movie' | 'show') => request<ItemCard[]>('GET', `/libraries/${id}/items${type ? `?type=${type}` : ''}`),
+  libraryPage: (id: number, p: { type?: 'movie' | 'show'; sort: LibrarySort; offset: number; limit: number }) => {
+    const q = new URLSearchParams({ sort: p.sort, offset: String(p.offset), limit: String(p.limit) })
+    if (p.type) q.set('type', p.type)
+    return request<LibraryPage>('GET', `/libraries/${id}/items?${q}`)
+  },
   browse: (path: string) => request<DirListing>('GET', `/fs?path=${encodeURIComponent(path)}`),
 
   home: () => request<Home>('GET', '/home'),

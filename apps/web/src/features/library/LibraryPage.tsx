@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { ArrowsClockwise, FolderOpen } from '@phosphor-icons/react'
 import { PosterGrid } from '@/components/media/PosterCard'
 import { Badge, EmptyState, PageHeader, Skeleton } from '@/components/ui/Card'
@@ -10,27 +10,18 @@ import { useIsAdmin } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { t } from '@/lib/i18n'
 import { useLibraries } from '@/lib/queries'
-import type { ItemCard } from '@/lib/types'
+import type { LibrarySort } from '@/lib/types'
 
-type Sort = 'title' | 'added' | 'year'
+type Sort = Exclude<LibrarySort, 'rating'>
 
-const sorters: Record<Sort, (a: ItemCard, b: ItemCard) => number> = {
-  // The server already orders by sort title (articles ignored).
-  title: () => 0,
-  added: (a, b) => b.added_at - a.added_at,
-  year: (a, b) => (b.year ?? 0) - (a.year ?? 0),
-}
+/** Titles per request: a few screens of posters. */
+const PAGE = 120
 
 export function LibraryPage() {
   const id = Number(useParams().id)
   const admin = useIsAdmin()
   const { data: libraries, refetch } = useLibraries()
   const library = libraries?.find((l) => l.id === id)
-  const { data: items, isLoading } = useQuery({
-    queryKey: ['library', id],
-    queryFn: () => api.libraryItems(id),
-    refetchInterval: library?.scanning ? 2500 : false,
-  })
   const [sort, setSort] = useState<Sort>('title')
   // ?type=movie|show: the sidebar's segregated entries of a library that holds both.
   const raw = useSearchParams()[0].get('type')
@@ -41,10 +32,29 @@ export function LibraryPage() {
       : mixed
         ? (library?.kind === 'show' ? 'show' : 'movie')
         : null
-  const sorted = useMemo(() => {
-    const shown = (items ?? []).filter((i) => !type || (type === 'show' ? i.kind === 'show' : i.kind !== 'show'))
-    return shown.sort(sorters[sort])
-  }, [items, sort, type])
+  // Sorting and the movie/show split happen on the server, so the grid only ever holds the pages scrolled to.
+  const pages = useInfiniteQuery({
+    queryKey: ['library', id, 'page', type, sort],
+    queryFn: ({ pageParam }) => api.libraryPage(id, { type: type ?? undefined, sort, offset: pageParam, limit: PAGE }),
+    initialPageParam: 0,
+    getNextPageParam: (last) => last.next ?? undefined,
+    enabled: library != null,
+    refetchInterval: library?.scanning ? 2500 : false,
+  })
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = pages
+  const isLoading = pages.isLoading || library == null
+  const sorted = useMemo(() => pages.data?.pages.flatMap((p) => p.items) ?? [], [pages.data])
+  const total = pages.data?.pages[0]?.total ?? sorted.length
+
+  // The next page loads when the end of the grid is a screenful away.
+  const end = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = end.current
+    if (!el || !hasNextPage) return
+    const watch = new IntersectionObserver((e) => e[0].isIntersecting && !isFetchingNextPage && fetchNextPage(), { rootMargin: '800px' })
+    watch.observe(el)
+    return () => watch.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, sorted.length])
 
   const title = useMemo(() => {
     if (!library) return ''
@@ -73,7 +83,7 @@ export function LibraryPage() {
         title={title}
         description={
           <span className="flex items-center gap-2">
-            {t(sorted.length === 1 ? 'library.count.one' : 'library.count', { n: sorted.length })}
+            {t(total === 1 ? 'library.count.one' : 'library.count', { n: total })}
             {library?.scanning && <Badge tone="primary">{t('library.scanning')}</Badge>}
           </span>
         }
@@ -117,7 +127,10 @@ export function LibraryPage() {
       ) : sorted.length === 0 ? (
         <EmptyState icon={<FolderOpen size={40} weight="duotone" />} title={t('library.empty.title')} message={t(library?.scanning ? 'library.empty.scanning' : 'library.empty.message')} />
       ) : (
-        <PosterGrid items={sorted} wide={library?.kind === 'other'} />
+        <>
+          <PosterGrid items={sorted} wide={library?.kind === 'other'} />
+          <div ref={end} aria-hidden />
+        </>
       )}
     </div>
   )

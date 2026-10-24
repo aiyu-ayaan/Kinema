@@ -200,6 +200,16 @@ export interface CastMember {
   image: string | null
 }
 
+export type LibrarySort = 'title' | 'added' | 'year' | 'rating'
+
+/** One page of a library; `next` is the offset to ask for after it, null at the end. */
+export interface LibraryPage {
+  items: ItemCard[]
+  /** null while a rating limit hides an unknown share of the titles. */
+  total: number | null
+  next: number | null
+}
+
 export interface ItemDetail {
   item: ItemCard
   genres: string[]
