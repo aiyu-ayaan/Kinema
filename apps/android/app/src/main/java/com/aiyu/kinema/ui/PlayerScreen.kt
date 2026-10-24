@@ -822,7 +822,9 @@ private fun TopBar(
     Row(
         Modifier
             .fillMaxWidth()
-            .displayCutoutPadding()
+            // Only full screen reaches the screen edges. Inline, the frame already sits below the status bar, and
+            // a phone with a notch or punch-hole reports a top cutout inset that would push the controls down again.
+            .then(if (isFullscreen) Modifier.displayCutoutPadding() else Modifier)
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
@@ -932,8 +934,9 @@ private fun BottomBar(
     Column(
         modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
-            .displayCutoutPadding()
+            // Same as the top bar: the system bar insets only apply when the frame reaches the screen edges. Inline,
+            // a gesture or button bar at the bottom of the screen would lift these controls off the video.
+            .then(if (fullscreen == true) Modifier.navigationBarsPadding().displayCutoutPadding() else Modifier)
             .padding(horizontal = 16.dp, vertical = 4.dp),
     ) {
         if (scrub != null && duration != null && duration > 0) {
