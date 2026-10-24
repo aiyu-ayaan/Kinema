@@ -132,7 +132,13 @@ class KinemaApi(val baseUrl: String, pin: String?, connectSeconds: Long = 6, pri
         runCatching {
             val req = Request.Builder().url(url("/items/$id/timeline.vtt")).get().build()
             client.newCall(req).execute().use { resp ->
-                if (resp.code == 200) resp.body?.string() else null
+                // 202 means the server is still making the sheets (""); anything else, such as 404 when the admin
+                // turned scrub thumbnails off, means there will be none (null).
+                when (resp.code) {
+                    200 -> resp.body?.string()
+                    202 -> ""
+                    else -> null
+                }
             }
         }.getOrNull()
     }

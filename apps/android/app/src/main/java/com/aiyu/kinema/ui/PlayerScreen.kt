@@ -360,7 +360,8 @@ private fun Player(
         var tries = 0
         while (vtt.isNullOrBlank() && tries < 30) {
             vtt = repository.request { it.timelineVtt(item.id) }.getOrNull()
-            if (!vtt.isNullOrBlank()) {
+            if (vtt == null) break
+            if (vtt.isNotBlank()) {
                 scrubTiles = parseTimelineVtt(vtt) { relative -> api.spriteUrl(item.id, relative) }
                 break
             }
