@@ -29,7 +29,6 @@
 - [x] Android: baseline + startup profile (generated, shipped, profileinstaller); `pnpm android:profile`
 - [x] Android: cold start measured on a phone: 1053 -> 976 ms median
 - [x] Android: profile recorded signed in (Home, Library, title page, Settings): cold start 605 -> 534 ms on a phone
-- [ ] Android: measure frame times (JankStats / FrameTimingMetric) for Library scroll and title open, with and without the profile
 - [x] HTTPS by default with a self-signed certificate; fingerprint on the dashboard, pinned by the app
 - [x] LAN discovery beacon (UDP 48555) and app-side scan, emulator / adb fallback
 - [x] Public address: server setting plus per-app override; automatic home/public switching on network change
@@ -163,3 +162,6 @@ Trigger: transcode-only viewing took every core while Plex stayed quiet on the s
 - [x] Page `GET /libraries/{id}/items`; web grid and Android library tab load pages (see api.md, performance.md).
 - [ ] Verify scrub `-hwaccel auto` on a machine with VA-API / NVDEC.
 - [ ] Lighthouse pass on the built web bundle.
+
+## Future scope
+- [ ] Android: measure frame times (`FrameTimingMetric`, JankStats) for Library scroll and title open, with and without the baseline profile; tune what shows up slow
