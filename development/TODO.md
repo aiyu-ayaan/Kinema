@@ -155,3 +155,4 @@ Trigger: transcode-only viewing took every core while Plex stayed quiet on the s
 - [ ] Global IPv6 on the home network is treated as remote; consider matching the server's own /64 prefixes
 - [ ] Re-match keeps the old certification when the new match has none
 - [ ] `/api/images/...` serves any cached artwork key to any signed-in profile (posters of titles above a limit)
+- [x] Scrub thumbnails: admin toggle `scrub_thumbnails` (Settings › Library), default off. E2E checked: 404 when off, 202 then 200 when on; API calls 0.3–1.5 ms.

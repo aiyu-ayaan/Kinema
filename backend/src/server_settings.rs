@@ -208,6 +208,11 @@ mod tests {
     use super::*;
 
     #[test]
+    fn expensive_previews_default_off() {
+        assert!(!ServerSettings::default().scrub_thumbnails);
+    }
+
+    #[test]
     fn sanitizes_bad_values() {
         let s = ServerSettings {
             server_name: "  ".into(),
