@@ -63,6 +63,87 @@ pub async fn library_items(
         .await?)
 }
 
+/// Which top-level titles of a library a page lists.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum KindFilter {
+    Any,
+    Movies,
+    Shows,
+}
+
+impl KindFilter {
+    fn sql(self) -> &'static str {
+        match self {
+            Self::Any => "1",
+            Self::Movies => "i.kind != 'show'",
+            Self::Shows => "i.kind = 'show'",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum LibrarySort {
+    Title,
+    Added,
+    Year,
+    Rating,
+}
+
+impl LibrarySort {
+    /// `i.id` last, so equal keys never swap places between pages.
+    fn sql(self) -> &'static str {
+        match self {
+            Self::Title => "i.sort_title, i.id",
+            Self::Added => "i.added_at DESC, i.id DESC",
+            Self::Year => "COALESCE(i.year, 0) DESC, i.sort_title, i.id",
+            Self::Rating => "COALESCE(i.rating, 0) DESC, i.sort_title, i.id",
+        }
+    }
+}
+
+/// One page of a library's top-level titles. The inner query orders and cuts the page by id, so the card joins and
+/// subqueries run for `limit` rows, not the whole library.
+pub async fn library_page(
+    pool: &SqlitePool,
+    user_id: i64,
+    library_id: i64,
+    kind: KindFilter,
+    sort: LibrarySort,
+    offset: i64,
+    limit: i64,
+) -> Result<Vec<ItemCard>, DbError> {
+    let (filter, order) = (kind.sql(), sort.sql());
+    let sql = format!(
+        "{CARD_SELECT} WHERE i.id IN (
+           SELECT i.id FROM items i WHERE i.library_id = ?2 AND i.parent_id IS NULL AND {filter}
+           ORDER BY {order} LIMIT ?3 OFFSET ?4)
+         ORDER BY {order}"
+    );
+    Ok(sqlx::query_as(&sql)
+        .bind(user_id)
+        .bind(library_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(pool)
+        .await?)
+}
+
+/// How many top-level titles `library_page` walks through.
+pub async fn library_count(
+    pool: &SqlitePool,
+    library_id: i64,
+    kind: KindFilter,
+) -> Result<i64, DbError> {
+    let sql = format!(
+        "SELECT COUNT(*) FROM items i WHERE i.library_id = ?1 AND i.parent_id IS NULL AND {}",
+        kind.sql()
+    );
+    Ok(sqlx::query_scalar(&sql)
+        .bind(library_id)
+        .fetch_one(pool)
+        .await?)
+}
+
 pub async fn children(
     pool: &SqlitePool,
     user_id: i64,

@@ -290,3 +290,37 @@ async fn collections_and_shelves() {
             .is_empty()
     );
 }
+
+#[tokio::test]
+async fn library_pages_cover_every_title_once() {
+    let db = db().await;
+    let u = user(&db.pool, "viewer").await;
+    let lib = library(&db.pool).await;
+    for n in 0..25 {
+        movie(&db.pool, lib, &format!("Film {n:02}")).await;
+    }
+    let (any, title) = (items::KindFilter::Any, items::LibrarySort::Title);
+    assert_eq!(
+        items::library_count(&db.pool, lib, any)
+            .await
+            .expect("count"),
+        25
+    );
+    let mut seen = Vec::new();
+    for offset in (0..25).step_by(10) {
+        let page = items::library_page(&db.pool, u, lib, any, title, offset, 10)
+            .await
+            .expect("page");
+        assert!(page.len() <= 10);
+        seen.extend(page.into_iter().map(|c| c.title));
+    }
+    let mut sorted = seen.clone();
+    sorted.sort();
+    sorted.dedup();
+    assert_eq!(seen.len(), 25);
+    assert_eq!(seen, sorted, "pages come back in title order, no repeats");
+    let shows = items::library_count(&db.pool, lib, items::KindFilter::Shows)
+        .await
+        .expect("shows");
+    assert_eq!(shows, 0);
+}

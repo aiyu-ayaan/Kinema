@@ -41,6 +41,11 @@ impl Policy {
         self.libraries.as_ref().map(|v| v.iter().copied().collect())
     }
 
+    /// True when some titles of a visible library are still hidden (a rating limit), so counts from SQL overstate.
+    pub fn limits_content(&self) -> bool {
+        self.max_rating.is_some()
+    }
+
     pub fn retain(&self, cards: &mut Vec<ItemCard>) {
         cards.retain(|c| self.allows(c));
     }

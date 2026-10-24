@@ -4,6 +4,7 @@ use crate::scan;
 use crate::state::AppState;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use kinema_db::items::{self, ItemCard};
@@ -168,18 +169,80 @@ async fn match_missing(
     Ok(StatusCode::ACCEPTED)
 }
 
+#[derive(Deserialize)]
+struct ItemsQuery {
+    /// `movie` (everything but shows) or `show`; absent lists both.
+    #[serde(rename = "type")]
+    kind: Option<String>,
+    /// `title` (default), `added`, `year` or `rating`.
+    sort: Option<String>,
+    offset: Option<i64>,
+    /// Present: answer one page as `{items, total, next}`. Absent: the whole list as an array, for older apps.
+    limit: Option<i64>,
+}
+
+#[derive(Serialize)]
+struct ItemsPage {
+    items: Vec<ItemCard>,
+    /// Titles in the library for this filter; None while a rating limit hides an unknown share of them.
+    total: Option<i64>,
+    /// Offset of the next page, None at the end. Not `offset + items.len()`: hidden titles are skipped.
+    next: Option<i64>,
+}
+
+const MAX_PAGE: i64 = 500;
+
 async fn library_items(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
     Path(id): Path<i64>,
-) -> ApiResult<Json<Vec<ItemCard>>> {
+    Query(q): Query<ItemsQuery>,
+) -> ApiResult<Response> {
     let policy = crate::access::policy(&state, &user).await?;
     if !policy.allows_library(id) {
         return Err(ApiError::not_found());
     }
-    let mut items = items::library_items(&state.db, user.id, id).await?;
-    policy.retain(&mut items);
-    Ok(Json(items))
+    let kind = match q.kind.as_deref() {
+        None | Some("") => items::KindFilter::Any,
+        Some("movie") => items::KindFilter::Movies,
+        Some("show") => items::KindFilter::Shows,
+        Some(_) => return Err(ApiError::bad_request("common.bad_request")),
+    };
+    let sort = match q.sort.as_deref() {
+        None | Some("title") => items::LibrarySort::Title,
+        Some("added") => items::LibrarySort::Added,
+        Some("year") => items::LibrarySort::Year,
+        Some("rating") => items::LibrarySort::Rating,
+        Some(_) => return Err(ApiError::bad_request("common.bad_request")),
+    };
+    let Some(limit) = q.limit else {
+        let mut all = items::library_page(&state.db, user.id, id, kind, sort, 0, i64::MAX).await?;
+        policy.retain(&mut all);
+        return Ok(Json(all).into_response());
+    };
+    let limit = limit.clamp(1, MAX_PAGE);
+    let mut offset = q.offset.unwrap_or(0).max(0);
+    let total = items::library_count(&state.db, id, kind).await?;
+    let mut page = Vec::new();
+    // A rating limit can hide part of a chunk: keep reading chunks until the page is full or the library ends.
+    while offset < total && (page.len() as i64) < limit {
+        let want = limit - page.len() as i64;
+        let mut chunk =
+            items::library_page(&state.db, user.id, id, kind, sort, offset, want).await?;
+        let read = chunk.len() as i64;
+        policy.retain(&mut chunk);
+        page.append(&mut chunk);
+        offset += read;
+        if read == 0 {
+            break;
+        }
+    }
+    Ok(Json(ItemsPage {
+        items: page,
+        total: (!policy.limits_content()).then_some(total),
+        next: (offset < total).then_some(offset),
+    })
+    .into_response())
 }
 
 #[derive(Deserialize)]
