@@ -27,7 +27,8 @@
 
 ## Android app (2026-10-19)
 - [x] Android: baseline + startup profile (generated, shipped, profileinstaller); `pnpm android:profile`
-- [ ] Android: measure cold start with and without the profile on a physical phone (`pnpm android:bench`; emulators are skipped)
+- [x] Android: cold start measured on a phone: 1053 -> 976 ms median
+- [ ] Android: record the profile signed in (library grid, title page) so it covers more than Connect
 - [x] HTTPS by default with a self-signed certificate; fingerprint on the dashboard, pinned by the app
 - [x] LAN discovery beacon (UDP 48555) and app-side scan, emulator / adb fallback
 - [x] Public address: server setting plus per-app override; automatic home/public switching on network change
