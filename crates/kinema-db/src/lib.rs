@@ -24,7 +24,12 @@ pub async fn init_pool(database_url: &str) -> Result<SqlitePool, DbError> {
         .create_if_missing(true)
         .foreign_keys(true)
         .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
-        .synchronous(sqlx::sqlite::SqliteSynchronous::Normal);
+        .synchronous(sqlx::sqlite::SqliteSynchronous::Normal)
+        // Reads are the hot path: a bigger page cache (8 MiB per connection, filled only as used), the file mapped
+        // into memory, and sort/temp tables kept off disk.
+        .pragma("cache_size", "-8000")
+        .pragma("mmap_size", "134217728")
+        .pragma("temp_store", "MEMORY");
 
     let pool = SqlitePoolOptions::new()
         .max_connections(10)

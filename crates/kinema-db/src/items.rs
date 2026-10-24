@@ -114,9 +114,12 @@ pub async fn recently_added(
         Shelf::Shows => "i.parent_id IS NULL AND i.kind = 'show'",
         Shelf::Episodes => "i.kind = 'episode'",
     };
+    // The inner query picks the ids, so the card joins and subqueries run for `limit` rows, not the whole library.
     let sql = format!(
-        "{CARD_SELECT} WHERE i.library_id = ?2 AND {filter}
-         ORDER BY i.added_at DESC, i.id DESC LIMIT ?3"
+        "{CARD_SELECT} WHERE i.id IN (
+           SELECT id FROM items i WHERE i.library_id = ?2 AND {filter}
+           ORDER BY i.added_at DESC, i.id DESC LIMIT ?3)
+         ORDER BY i.added_at DESC, i.id DESC"
     );
     Ok(sqlx::query_as(&sql)
         .bind(user_id)
@@ -149,9 +152,12 @@ pub async fn search(
     query: &str,
     limit: i64,
 ) -> Result<Vec<ItemCard>, DbError> {
+    // Ids first, then the card joins for the `limit` rows kept (a broad query matches most of the library).
     let sql = format!(
-        "{CARD_SELECT} WHERE i.kind IN ('movie','show','episode','video') AND i.title LIKE ?2 ESCAPE '\\'
-         ORDER BY i.kind = 'episode', i.sort_title LIMIT ?3"
+        "{CARD_SELECT} WHERE i.id IN (
+           SELECT id FROM items i WHERE i.kind IN ('movie','show','episode','video') AND i.title LIKE ?2 ESCAPE '\\'
+           ORDER BY i.kind = 'episode', i.sort_title LIMIT ?3)
+         ORDER BY i.kind = 'episode', i.sort_title"
     );
     let pattern = format!(
         "%{}%",
