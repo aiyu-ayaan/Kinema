@@ -20,9 +20,27 @@ Versions follow `../domus/apps/android` (AGP, Kotlin, Compose BOM, Material 3 `1
 
 `app/src/main/generated/baselineProfiles/` holds `baseline-prof.txt` and `startup-prof.txt`, committed. The release build packs them as `assets/dexopt/baseline.prof`, and `androidx.profileinstaller` installs them on first run, so the startup and scroll paths are compiled ahead of time instead of interpreted/JIT'd. Without a profile a fresh install (or update) starts slowest.
 
-- Regenerate after UI or navigation changes: `pnpm android:profile` (needs an emulator or phone with the dev or prod app's flavor; API 28+). The journey is `baselineprofile/.../BaselineProfileGenerator.kt`: cold start, then fling the first scrollable list. Signed out it only covers the Connect screen; sign in on the device first to cover the library grid.
+- Regenerate after UI or navigation changes: `pnpm android:profile` (needs an emulator or phone, API 28+). The journey is `baselineprofile/.../BaselineProfileGenerator.kt`: cold start, then each tab (Home, Library, Search, Settings) with a scroll, and on Home and Library one title opened and closed. Gradle uninstalls the app when it finishes, which signs it out, so that route only records the Connect screen.
+- Record signed in (what is committed): sign in on the phone, then run the generator without Gradle's uninstall, so the session stays. Build and install both nonMinified APKs with `install -r` (same debug key, data kept), then:
+
+```
+./gradlew :app:assembleProdNonMinifiedRelease :baselineprofile:assembleProdNonMinifiedRelease
+adb install -r app/build/outputs/apk/prod/nonMinifiedRelease/app-prod-nonMinifiedRelease.apk
+adb install -r baselineprofile/build/outputs/apk/prod/nonMinifiedRelease/baselineprofile-prod-nonMinifiedRelease.apk
+adb shell am instrument -w -e androidx.benchmark.enabledRules BaselineProfile \
+  -e class com.aiyu.kinema.baselineprofile.BaselineProfileGenerator \
+  com.aiyu.kinema.baselineprofile/androidx.test.runner.AndroidJUnitRunner
+adb pull /storage/emulated/0/Android/media/com.aiyu.kinema.baselineprofile/BaselineProfileGenerator_startupAndScroll-startup-prof.txt
+```
+
+  Copy the pulled file over `baseline-prof.txt` (it holds everything the journey ran). `startup-prof.txt` is kept from the Gradle run, which only covers startup. Check that `SettingsTabKt`, `ItemScreenKt` and `BrowseKt` appear in it; a missing one means the journey did not reach that screen.
 - Measure: `pnpm android:bench` runs `StartupBenchmark` (cold start with no compilation vs. with the profile). Macrobenchmark skips on emulators; use a phone. Run the `Dev` variant on a phone that has the real app installed (`connectedDevBenchmarkReleaseAndroidTest`): the prod one cannot replace a release-signed install.
-- Result (2026-10-24, XT2575-1, Android 16, signed-out profile): cold start to first frame, median 1053 ms with no compilation, 976 ms with the profile (-7%); worst run 1259 ms vs 988 ms. A profile recorded signed in should help more.
+- Results on a phone (XT2575-1, Android 16), cold start to first frame, before (no compilation) → after (baseline profile):
+  - Macrobenchmark, signed-out profile: median 1053 → 976 ms (-7%); worst run 1259 → 988 ms.
+  - `adb shell am start -W`, 10 runs, signed-out profile: median 587 → 536 ms (-9%).
+  - `adb shell am start -W`, 10 runs, signed-in profile: median 605 → 534 ms (-12%), range 561–646 → 501–549 ms.
+  - Emulator (x86_64): no gain beyond noise; use a phone.
+  - Not measured: scroll and navigation frame times, which the Library, title and Settings rules in the profile also target.
 - Flavors: the profile is generated against one flavor and merged into `src/main`, so dev and prod share it (class names are the same).
 
 ## Architecture
