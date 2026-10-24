@@ -26,6 +26,8 @@
 - [x] Sidecar subtitles picked up without a video change
 
 ## Android app (2026-10-19)
+- [x] Android: baseline + startup profile (generated, shipped, profileinstaller); `pnpm android:profile`
+- [ ] Android: measure cold start with and without the profile on a physical phone (`pnpm android:bench`; emulators are skipped)
 - [x] HTTPS by default with a self-signed certificate; fingerprint on the dashboard, pinned by the app
 - [x] LAN discovery beacon (UDP 48555) and app-side scan, emulator / adb fallback
 - [x] Public address: server setting plus per-app override; automatic home/public switching on network change

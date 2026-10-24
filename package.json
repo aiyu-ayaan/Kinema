@@ -20,6 +20,8 @@
     "android:dev": "bash scripts/android-dev.sh",
     "android:build:dev": "(cd apps/android && ./gradlew :app:assembleDevDebug)",
     "android:build:prod": "(cd apps/android && ./gradlew :app:assembleProdRelease)",
+    "android:profile": "(cd apps/android && ./gradlew :app:generateBaselineProfile)",
+    "android:bench": "(cd apps/android && ./gradlew :baselineprofile:connectedProdBenchmarkReleaseAndroidTest)",
     "android:test": "(cd apps/android && ./gradlew :core:testDebugUnitTest)",
     "dev:desktop": "pnpm --filter @kinema/desktop dev",
     "dev:desktop:prod": "pnpm --filter @kinema/desktop dev:prod",

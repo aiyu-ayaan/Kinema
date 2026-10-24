@@ -8,12 +8,21 @@ Run it: `pnpm android:dev` (builds the dev flavor, installs it on a phone or the
 
 ```
 apps/android
+├── baselineprofile  test module, not shipped: generates the baseline + startup profile, startup benchmark
 ├── core   no UI. KinemaApi (OkHttp), KinemaRepository (session, addresses), ServerDiscovery,
 │          Tls (pinned self-signed certificates), SecureStore (Keystore AES-GCM), Vtt parser
 └── app    Compose UI. Navigation 3 back stack, Material 3 Expressive theme, Media3 player, Coil artwork
 ```
 
 Versions follow `../domus/apps/android` (AGP, Kotlin, Compose BOM, Material 3 `1.5.0-alpha` for the expressive APIs). Flavors: `dev` (`com.aiyu.kinema.dev`, "Kinema Dev") and `prod`.
+
+## Performance: baseline profile
+
+`app/src/main/generated/baselineProfiles/` holds `baseline-prof.txt` and `startup-prof.txt`, committed. The release build packs them as `assets/dexopt/baseline.prof`, and `androidx.profileinstaller` installs them on first run, so the startup and scroll paths are compiled ahead of time instead of interpreted/JIT'd. Without a profile a fresh install (or update) starts slowest.
+
+- Regenerate after UI or navigation changes: `pnpm android:profile` (needs an emulator or phone with the dev or prod app's flavor; API 28+). The journey is `baselineprofile/.../BaselineProfileGenerator.kt`: cold start, then fling the first scrollable list. Signed out it only covers the Connect screen; sign in on the device first to cover the library grid.
+- Measure: `pnpm android:bench` runs `StartupBenchmark` (cold start with no compilation vs. with the profile). Macrobenchmark skips on emulators; use a phone.
+- Flavors: the profile is generated against one flavor and merged into `src/main`, so dev and prod share it (class names are the same).
 
 ## Architecture
 

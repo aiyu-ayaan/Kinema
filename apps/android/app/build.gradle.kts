@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization) // navigation keys are saved across process death
+    alias(libs.plugins.baselineprofile) // ahead-of-time compiles the startup and scroll paths
 }
 
 // Release signing from gitignored keystore.properties; without it the release build is unsigned.
@@ -71,6 +72,12 @@ android {
     }
 }
 
+baselineProfile {
+    // The profile lands in src/main so every flavor and the release build ship it.
+    mergeIntoMain = true
+    saveInSrc = true
+}
+
 kotlin {
     compilerOptions {
         optIn.addAll(
@@ -103,5 +110,7 @@ dependencies {
     implementation(libs.coil.network.okhttp)
     implementation(libs.markdown.m3) // release notes on the Updates screen: headings, lists, tables
     implementation(libs.markdown.coil3) // images in release notes
+    implementation(libs.profileinstaller) // installs the profile on first run, without waiting for the Play cloud profile
+    "baselineProfile"(project(":baselineprofile"))
     debugImplementation(libs.compose.ui.tooling)
 }
