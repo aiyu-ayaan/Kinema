@@ -321,6 +321,7 @@ export interface ServerOptions {
   transcode_hardware: boolean
   rescan_hours: number
   subtitle_ocr: boolean
+  scrub_thumbnails: boolean
 }
 
 export interface SettingsView {

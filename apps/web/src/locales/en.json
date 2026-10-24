@@ -240,6 +240,8 @@
   "settings.library.thumbnailsHint": "Titles without TMDB artwork show a frame from the video. Made in the background, one at a time, after each scan.",
   "settings.library.position": "Thumbnail position",
   "settings.library.positionHint": "How far into the video the frame is taken. Changing it makes new thumbnails for files that do not have one yet; use Regenerate thumbnails in Libraries to redo the rest.",
+  "settings.library.scrub": "Seek-bar preview thumbnails",
+  "settings.library.scrubHint": "Shows a frame under the seek bar while scrubbing. Made on first play of a title by decoding its keyframes, which uses noticeable CPU on large files. Off by default.",
   "settings.tmdb.title": "The Movie Database",
   "settings.metadata.title": "Metadata language",
   "settings.metadata.language": "Language",

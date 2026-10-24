@@ -33,6 +33,9 @@ fn root(state: &AppState) -> PathBuf {
 
 /// Where the sheets are, or a nudge to make them.
 pub async fn status(state: &AppState, file: &MediaFile) -> Status {
+    if !state.settings().scrub_thumbnails {
+        return Status::Unavailable;
+    }
     let dir = root(state).join(key(file));
     if tokio::fs::metadata(dir.join(INDEX)).await.is_ok() {
         return Status::Ready(dir);

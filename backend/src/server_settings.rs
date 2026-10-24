@@ -43,6 +43,9 @@ pub struct ServerSettings {
     /// Read picture subtitles (PGS, VobSub) into WebVTT with OCR after scans, when
     /// `tesseract` is installed. Off by default: it is slow on a large library.
     pub subtitle_ocr: bool,
+    /// Seek-bar preview tiles. Off by default: making the sheets decodes every keyframe of the file, which costs
+    /// real CPU on large direct-play titles.
+    pub scrub_thumbnails: bool,
 }
 
 impl Default for ServerSettings {
@@ -65,6 +68,7 @@ impl Default for ServerSettings {
             transcode_hardware: true,
             rescan_hours: 0,
             subtitle_ocr: false,
+            scrub_thumbnails: false,
         }
     }
 }

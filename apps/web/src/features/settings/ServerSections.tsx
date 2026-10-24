@@ -115,6 +115,9 @@ export function LibrarySection() {
               <span className="w-10 text-end text-label tabular text-muted">{s.thumbnail_position}%</span>
             </div>
           </SettingRow>
+          <SettingRow label={t('settings.library.scrub')} description={t('settings.library.scrubHint')}>
+            <Switch checked={s.scrub_thumbnails} onChange={(v) => set({ scrub_thumbnails: v })} label={t('settings.library.scrub')} />
+          </SettingRow>
         </>
       )}
     </ServerForm>
