@@ -44,3 +44,29 @@
 ## Measuring
 
 Benchmarks in `benches/` with `criterion`; load tests with `oha`; CPU profiling with `perf` and `cargo flamegraph`. Regressions against budgets fail CI.
+
+## Measured 2026-10-24 (8 cores, release build, Python client with keep-alive, server and client on one box)
+
+Library: 6000 hardlinked 2 s clips (one folder). Scrub clip: synthetic 4K HEVC, 240 s, keyframe every 2 s.
+
+| What | Before | After | Change |
+|---|---|---|---|
+| `/home`, 1 connection | 166 rps, 4.8 ms | 588 rps, 1.4 ms | library counts read a covering index; shelf cards joined for 24 rows, not 6000 (`20261024000001_home_indexes.sql`) |
+| `/home`, 64 connections | 463 rps, p99 255 ms | 1642 rps, p99 68 ms | same |
+| mixed `/home`, `/items/1`, `/search`, `/auth/me`, 100 connections | 837 rps, p99 336 ms | 1777 rps, p99 137 ms | same |
+| `/items/{id}`, 64 connections | 3940 rps | 3970 rps | already cheap |
+| `/search?q=Movie 0042` (few hits) | 1203 rps | 1376 rps | |
+| `/search?q=movie` (6000 hits) | 518 rps | 592 rps | still a LIKE scan plus sort of every hit; FTS5 only matters beyond tens of thousands of titles |
+| web `assets/index-*.js` | 439 KB, no cache header | 110 KB gzip, `immutable` for a year | `web::cache_assets`, `CompressionLayer` on static files only |
+
+- First scan and probe of 6000 files: about 35 s, 15 s of server CPU, 40 MB RSS (ffprobe children not counted, 2 at a time).
+- Idle server: no CPU time accrued over 30 s; about 17 MB RSS.
+- Scrub sheets, 4K HEVC (nice 19): 5.4 s CPU for 240 s of video with ffmpeg's default threads, 5.3 s with `-threads 1` (the keyframe-only decode barely uses more than one core anyway) but 305 MB RSS drops to 181 MB. That is about 2.2 s of CPU per minute of video with a 2 s GOP, so a 2 h file costs about 160 s of one core, once. A longer GOP costs proportionally less (cost follows keyframes, not the tile interval, so a wider interval does not help).
+- Two simultaneous 4K HEVC to 1080p software transcodes: each held to its 4 threads (about 250 % CPU each, nice 15 = server nice 5 + 10), 500 % of 800 %. The 30 s read-ahead throttle never engaged because the encode ran slower than real time.
+- `-hwaccel auto` could not be verified here: this ffmpeg build lists only `vdpau`, device creation fails and ffmpeg continues in software with exit 0.
+
+### Open findings
+
+- `GET /libraries/{id}/items` returns the whole library: 2 MB for 6000 titles, 20 rps at 64 connections. It needs paging (web library grid and Android library tab change with it).
+- `libraries::list` still counts per request; cache the counts per library and invalidate on scan if libraries grow past ~50k titles.
+- Not run: Lighthouse, `perf`/`strace` (not permitted here), a real 2 h file, GPU decode.

@@ -7,6 +7,20 @@ use axum::http::{StatusCode, header};
 use axum::response::{Html, IntoResponse, Response};
 use std::path::Path;
 
+/// Vite names everything in `/assets/` by content hash, so a browser can keep those files for good and ask again
+/// only for `index.html`.
+pub async fn cache_assets(req: axum::extract::Request, next: axum::middleware::Next) -> Response {
+    let hashed = req.uri().path().starts_with("/assets/");
+    let mut res = next.run(req).await;
+    if hashed && res.status() == StatusCode::OK {
+        res.headers_mut().insert(
+            header::CACHE_CONTROL,
+            header::HeaderValue::from_static("public, max-age=31536000, immutable"),
+        );
+    }
+    res
+}
+
 /// Kept in sync with `apps/web/index.html` and the dev plugin in `apps/web/vite.config.ts`.
 pub const NAME_PLACEHOLDER: &str = "__KINEMA_SERVER_NAME__";
 

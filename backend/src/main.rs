@@ -164,7 +164,13 @@ async fn main() -> anyhow::Result<()> {
         app = app
             .route("/", page.clone())
             .route("/index.html", page.clone())
-            .fallback_service(ServeDir::new(&dist).fallback(page));
+            .fallback_service(
+                tower::ServiceBuilder::new()
+                    .layer(axum::middleware::from_fn(web::cache_assets))
+                    // Static files only: media streams are never compressed.
+                    .layer(tower_http::compression::CompressionLayer::new())
+                    .service(ServeDir::new(&dist).fallback(page)),
+            );
     } else {
         warn!("No web UI build found (apps/web/dist). Web routes will return 404.");
     }
