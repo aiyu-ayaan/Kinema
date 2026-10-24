@@ -67,6 +67,19 @@ Library: 6000 hardlinked 2 s clips (one folder). Scrub clip: synthetic 4K HEVC, 
 
 ### Open findings
 
-- `GET /libraries/{id}/items` returns the whole library: 2 MB for 6000 titles, 20 rps at 64 connections. It needs paging (web library grid and Android library tab change with it).
 - `libraries::list` still counts per request; cache the counts per library and invalidate on scan if libraries grow past ~50k titles.
 - Not run: Lighthouse, `perf`/`strace` (not permitted here), a real 2 h file, GPU decode.
+
+### Library paging (2026-10-24)
+
+`GET /libraries/{id}/items?limit=120` replaces the whole-library read in the web grid (infinite scroll, `useInfiniteQuery`) and the Android library tab (next page when the grid is 18 cards from its end). Sorting and the movie/show split moved to the server (`sort=`, `type=`), so a client never holds more than the pages scrolled to.
+
+| 6000 titles, 64 connections | Before (whole list) | After (page of 120) |
+|---|---|---|
+| response | 1.98 MB | 40 KB |
+| throughput | 20 rps (p50 5.2 s) | about 500 rps (p50 130 ms) |
+| last page (`offset=5880`) | n/a | 299 rps before the `items_lib_top_title` index, 461 rps after |
+
+A library's shows (sidebar, Android chips) use `?type=show` and "more to watch" uses `sort=rating&limit=60`, so no screen reads the full list any more. Pages are walked in full in `sort=title|added|year|rating`: 50 pages, 6000 unique ids each.
+
+Scrub decode cost still follows the keyframe count (about 2.2 s of CPU per minute of video at a 2 s GOP, 4K HEVC); a longer GOP is proportionally cheaper. It runs once per file version, single-threaded at nice 19, behind an admin switch that is off by default, so it was left as is.

@@ -156,6 +156,6 @@ Trigger: transcode-only viewing took every core while Plex stayed quiet on the s
 - [ ] Re-match keeps the old certification when the new match has none
 - [ ] `/api/images/...` serves any cached artwork key to any signed-in profile (posters of titles above a limit)
 - [x] Scrub thumbnails: admin toggle `scrub_thumbnails` (Settings › Library), default off. E2E checked: 404 when off, 202 then 200 when on; API calls 0.3–1.5 ms.
-- [ ] Page `GET /libraries/{id}/items` (2 MB at 6000 titles); update web library grid and Android library tab.
+- [x] Page `GET /libraries/{id}/items`; web grid and Android library tab load pages (see api.md, performance.md).
 - [ ] Verify scrub `-hwaccel auto` on a machine with VA-API / NVDEC.
 - [ ] Lighthouse pass on the built web bundle.

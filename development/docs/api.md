@@ -30,7 +30,7 @@ This is Kinema's own API. It is not Plex-compatible.
 | GET/POST | `/libraries` | List / admin create `{name, kind: movie\|show\|other, paths}` |
 | DELETE | `/libraries/{id}` | Admin: remove (files on disk untouched) |
 | POST | `/libraries/{id}/scan` | Admin: rescan |
-| GET | `/libraries/{id}/items` | Top-level items with watch state |
+| GET | `/libraries/{id}/items?type=&sort=&offset=&limit=` | Top-level items with watch state. `type`: `movie` (everything but shows) or `show`; `sort`: `title` (default), `added`, `year`, `rating`. Without `limit`: the whole list as an array (older apps; use only for short lists such as `type=show`). With `limit` (1 to 500): one page `{items, total, next}`; `next` is the offset of the following page (null at the end), `total` is null while a rating limit hides an unknown share. Unknown `type`/`sort`: 400 |
 | GET | `/fs?path=` | Admin: folders on the server, for the folder picker |
 | GET | `/home` | `{continue_watching, shelves: [{library, kind: movies\|shows\|episodes, items}], playlists, collections, genre_shelves: [{id, title, genre, items}]}`; the last three follow library access, and genre shelves skip the ones this profile hid |
 | GET | `/search?q=` | Title search |
