@@ -178,7 +178,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   const [menu, setMenu] = useState(false)
   const [markerPanel, setMarkerPanel] = useState(false)
   const [hoverFrac, setHoverFrac] = useState<number | null>(null)
-  const tiles = useScrubTiles(item.id)
+  const tiles = useScrubTiles(item.id, detail.features.scrub_thumbnails)
   const isAdmin = useIsAdmin()
   const [chrome, setChrome] = useState(true)
   const [error, setError] = useState<string | null>(null)

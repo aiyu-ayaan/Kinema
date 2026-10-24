@@ -119,6 +119,10 @@ data class Marker(
     val source: String = "",
 )
 
+/** What the server serves right now; skip requests for a feature that is off. */
+@Serializable
+data class Features(@SerialName("scrub_thumbnails") val scrubThumbnails: Boolean = false)
+
 @Serializable
 data class CastMember(val id: Long, val name: String, val role: String = "", val image: String? = null)
 
@@ -127,6 +131,7 @@ data class ItemDetail(
     val item: ItemCard,
     val genres: List<String> = emptyList(),
     val files: List<MediaFile> = emptyList(),
+    val features: Features = Features(),
     val children: List<ItemCard> = emptyList(),
     val cast: List<CastMember> = emptyList(),
     @SerialName("prev_id") val prevId: Long? = null,

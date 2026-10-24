@@ -208,6 +208,8 @@ export interface ItemDetail {
   /** Franchise collections the title belongs to. */
   collections: { id: number; name: string; tmdb_id: number | null }[]
   files: MediaFile[]
+  /** What the server serves right now; skip requests for a feature that is off. */
+  features: { scrub_thumbnails: boolean }
   children: ItemCard[]
   cast: CastMember[]
   prev_id: number | null

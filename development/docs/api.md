@@ -34,7 +34,7 @@ This is Kinema's own API. It is not Plex-compatible.
 | GET | `/fs?path=` | Admin: folders on the server, for the folder picker |
 | GET | `/home` | `{continue_watching, shelves: [{library, kind: movies\|shows\|episodes, items}], playlists, collections, genre_shelves: [{id, title, genre, items}]}`; the last three follow library access, and genre shelves skip the ones this profile hid |
 | GET | `/search?q=` | Title search |
-| GET | `/items/{id}` | Item, genres, files with streams, children, prev/next sibling; show/season `next_up`; show `tracks: {audio, subtitle, streams}` (first episode's streams) |
+| GET | `/items/{id}` | Item, `features` (`{scrub_thumbnails}`: what the server serves now, see `boot-checks.md`), genres, files with streams, children, prev/next sibling; show/season `next_up`; show `tracks: {audio, subtitle, streams}` (first episode's streams) |
 | PUT | `/items/{id}/progress` | `{position_s, watched?}` |
 | PUT | `/items/{id}/watched` | `{watched}`, for the item and every episode under it |
 | PUT | `/items/{id}/track-choice` | `{audio, subtitle}` positions (subtitle `-1` off): this profile's pick, saved by every player and kept on the movie or the show; the plan prefers it over the show's admin choice and the Languages settings |

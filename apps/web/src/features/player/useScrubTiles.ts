@@ -7,12 +7,14 @@ const RETRY_MS = 15_000
 const MAX_TRIES = 40
 
 /**
- * The scrub tiles of a title. The first request makes the server start the sheets, so the preview appears some
+ * The scrub tiles of a title, or none without asking when the server has the feature off (`detail.features`).
+ * The first request makes the server start the sheets, so the preview appears some
  * time into playback; until then (or when the file has none) this stays empty and the bar shows the time only.
  */
-export function useScrubTiles(itemId: number): ScrubTile[] {
+export function useScrubTiles(itemId: number, enabled: boolean): ScrubTile[] {
   const [tiles, setTiles] = useState<ScrubTile[]>([])
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     let timer: number | undefined
     let tries = 0
@@ -37,6 +39,6 @@ export function useScrubTiles(itemId: number): ScrubTile[] {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [itemId])
+  }, [itemId, enabled])
   return tiles
 }

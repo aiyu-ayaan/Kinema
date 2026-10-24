@@ -14,6 +14,7 @@ mod access;
 #[cfg(test)]
 mod access_tests;
 mod auth;
+mod boot;
 mod discovery;
 mod error;
 mod hls;
@@ -74,36 +75,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Failed to run database migrations")?;
 
-    let bins = match kinema_media::MediaBinaries::resolve() {
-        Ok(b) => {
-            info!("ffmpeg: {}", b.ffmpeg.display());
-            if let Some(hw) = &b.hevc_drm {
-                info!(
-                    "HEVC hardware decode for transcodes: {} (drm)",
-                    hw.display()
-                );
-            }
-            match &b.hw_encoder {
-                Some(e) => info!("Hardware encoder for transcodes: {}", e.name()),
-                None => info!("No hardware encoder found; transcodes encode with libx264"),
-            }
-            Some(Arc::new(b))
-        }
-        Err(e) => {
-            warn!("{e} Files will be listed and direct-played only.");
-            None
-        }
-    };
-
-    let ocr = kinema_media::ocr::OcrTool::detect().map(Arc::new);
-    match &ocr {
-        Some(t) => info!(
-            "Subtitle OCR: {} ({})",
-            t.tesseract.display(),
-            t.languages.join(", ")
-        ),
-        None => info!("tesseract not found; picture subtitles (PGS, VobSub) cannot be read"),
-    }
+    let boot::Report { bins, ocr } = boot::run();
 
     let rustls = if config.tls.enabled {
         Some(tls::load(&config).await?)

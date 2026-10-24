@@ -125,6 +125,8 @@ struct Detail {
     /// Franchise collections the title belongs to.
     collections: Vec<kinema_db::collections::Collection>,
     files: Vec<FileView>,
+    /// What the server will serve right now, so clients skip requests it would refuse (see `boot.rs`).
+    features: crate::boot::Features,
     children: Vec<ItemCard>,
     cast: Vec<items::CastMember>,
     /// Previous and next sibling, for episode navigation and autoplay.
@@ -202,6 +204,7 @@ async fn detail(
         collections: kinema_db::collections::of_item(db, id).await?,
         children,
         files,
+        features: state.features(),
         item,
         cast,
         prev_id,

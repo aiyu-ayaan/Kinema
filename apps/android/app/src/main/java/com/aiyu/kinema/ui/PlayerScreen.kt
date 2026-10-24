@@ -356,6 +356,7 @@ private fun Player(
     var scrub by remember { mutableStateOf<Float?>(null) }
     var scrubTiles by remember { mutableStateOf<List<ScrubTile>>(emptyList()) }
     LaunchedEffect(item.id) {
+        if (!detail.features.scrubThumbnails) return@LaunchedEffect
         var vtt: String? = null
         var tries = 0
         while (vtt.isNullOrBlank() && tries < 30) {

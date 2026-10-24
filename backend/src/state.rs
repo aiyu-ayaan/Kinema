@@ -50,6 +50,11 @@ impl AppState {
         self.config.data_dir.join("cache").join(name)
     }
 
+    /// What clients may request now; see `boot.rs`.
+    pub fn features(&self) -> crate::boot::Features {
+        crate::boot::Features::new(self.bins.as_deref(), &self.settings())
+    }
+
     pub fn settings(&self) -> ServerSettings {
         self.settings.read().map(|s| s.clone()).unwrap_or_default()
     }
