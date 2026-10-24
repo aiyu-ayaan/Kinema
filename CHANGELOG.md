@@ -1,3 +1,23 @@
+## v0.0.1-alpha.9 (2026-10-24)
+
+- !alpha(all) : Release alpha build
+- docs(Todo) : Move Android frame time measurement to future scope
+- android(Perf) : Record the profile signed in across tabs and a title; docs(Android) : Signed-in recording steps and results
+- android(Perf) : Regenerate profile; docs(Android) : Record cold start result on a phone
+- android(Perf) : Baseline and startup profile with generator module and startup benchmark; docs(Android) : Document profile workflow
+- android(Fix) : Apply cutout and nav bar insets to player controls only in full screen
+- perf(Db) : Title index for library pages, rebuild on new migrations; docs(Api) : Document library paging
+- android(Library) : Page the library grid and use paged and show-only calls
+- web(Library) : Load library grid in server-sorted pages as the end comes into view
+- api(Library) : Page library items with type, sort, offset and limit; plain list kept for older apps
+- perf(Web) : Gzip and long cache for hashed assets; docs(Perf) : Record measured results and open findings
+- perf(Db) : Index library counts and recent order, limit card joins to result rows, bigger page cache
+- perf(Scrub) : Single-thread keyframe decode, GPU try for HEVC/4K, content-hash cache key
+- boot(Features) : Add startup check module and send server features to clients so they skip disabled requests
+- android(Fix) : Stop polling scrub timeline on 404, retry only on 202
+- test(Scrub) : Cover scrub thumbnails default and log e2e result in TODO
+- settings(Scrub) : Add admin toggle for seek-bar preview thumbnails, off by default
+
 ## v0.0.1-alpha.8 (2026-10-23)
 
 - !alpha(all) : Release alpha build
