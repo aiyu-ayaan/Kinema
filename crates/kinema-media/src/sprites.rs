@@ -91,11 +91,40 @@ pub fn vtt(plan: &Plan, sheet_url: impl Fn(usize) -> String) -> String {
 }
 
 /// Writes `sheet-0.jpg`, `sheet-1.jpg`, ... into `dir` (which must exist) and returns how many it wrote.
+/// With `hw`, the keyframe decode is tried on the GPU first and repeated in software if that fails, so a
+/// machine without a usable GPU only pays one quick failed start.
 pub async fn generate(
     bins: &MediaBinaries,
     input: &Path,
     dir: &Path,
     plan: &Plan,
+    hw: bool,
+) -> Result<usize, MediaError> {
+    if hw {
+        if let Ok(made) = run(bins, input, dir, plan, true).await {
+            return Ok(made);
+        }
+        clear(dir).await;
+    }
+    run(bins, input, dir, plan, false).await
+}
+
+async fn clear(dir: &Path) {
+    let mut n = 0;
+    while tokio::fs::remove_file(dir.join(format!("sheet-{n}.jpg")))
+        .await
+        .is_ok()
+    {
+        n += 1;
+    }
+}
+
+async fn run(
+    bins: &MediaBinaries,
+    input: &Path,
+    dir: &Path,
+    plan: &Plan,
+    hw: bool,
 ) -> Result<usize, MediaError> {
     let filter = format!(
         "fps=1/{},scale={TILE_W}:{TILE_H}:force_original_aspect_ratio=decrease,\
@@ -103,30 +132,28 @@ pub async fn generate(
         plan.interval_s
     );
     let mut cmd = std::process::Command::new(&bins.ffmpeg);
-    cmd.args([
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-nostdin",
-        "-y",
-        "-skip_frame",
-        "nokey",
-        "-i",
-    ])
-    .arg(input)
-    .args(["-map", "0:v:0", "-an", "-sn", "-vf"])
-    .arg(filter)
-    .args([
-        "-q:v",
-        "6",
-        "-start_number",
-        "0",
-        "-f",
-        "image2",
-        "-c:v",
-        "mjpeg",
-    ])
-    .arg(dir.join("sheet-%d.jpg"));
+    cmd.args(["-hide_banner", "-loglevel", "error", "-nostdin", "-y"]);
+    // One decoder and one filter thread: this is background work and must not take several cores, even at
+    // nice 19, from a stream that is playing.
+    cmd.args(["-threads", "1", "-filter_threads", "1"]);
+    if hw {
+        cmd.args(["-hwaccel", "auto"]);
+    }
+    cmd.args(["-skip_frame", "nokey", "-i"])
+        .arg(input)
+        .args(["-map", "0:v:0", "-an", "-sn", "-vf"])
+        .arg(filter)
+        .args([
+            "-q:v",
+            "6",
+            "-start_number",
+            "0",
+            "-f",
+            "image2",
+            "-c:v",
+            "mjpeg",
+        ])
+        .arg(dir.join("sheet-%d.jpg"));
     kinema_core::platform::configure_low_priority_process(&mut cmd);
     let out = tokio::process::Command::from(cmd)
         .kill_on_drop(true)

@@ -3,11 +3,13 @@
 //! one file is never made twice at once. A version of a file (id, mtime, size) is made once and cached.
 
 use crate::state::AppState;
-use kinema_db::items::MediaFile;
+use kinema_db::items::{self, MediaFile};
 use kinema_media::sprites::{self, Plan};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 use std::sync::{LazyLock, Mutex};
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tracing::warn;
 
 /// Files being made right now.
@@ -23,8 +25,63 @@ pub enum Status {
     Unavailable,
 }
 
-fn key(file: &MediaFile) -> String {
-    format!("{}-{}-{}", file.id, file.mtime, file.size)
+/// Bytes read from each end of the file for its content fingerprint.
+const FINGERPRINT_BYTES: usize = 64 * 1024;
+
+/// Content fingerprints by (file id, size, mtime), so the file is read once per version and not per request.
+type Version = (i64, i64, i64);
+static FINGERPRINTS: LazyLock<Mutex<HashMap<Version, String>>> = LazyLock::new(Mutex::default);
+
+/// FNV-1a over the size and the first and last 64 KiB. Not `DefaultHasher`: its output may change between Rust
+/// releases, which would silently throw the whole sheet cache away.
+async fn content_hash(path: &str, size: u64) -> std::io::Result<u64> {
+    let mut f = tokio::fs::File::open(path).await?;
+    let mut hash = 0xcbf2_9ce4_8422_2325_u64;
+    let mut feed = |bytes: &[u8]| {
+        for b in bytes {
+            hash = (hash ^ u64::from(*b)).wrapping_mul(0x0100_0000_01b3);
+        }
+    };
+    feed(&size.to_le_bytes());
+    let mut buf = vec![0; FINGERPRINT_BYTES];
+    let n = f.read(&mut buf).await?;
+    feed(&buf[..n]);
+    if size > FINGERPRINT_BYTES as u64 {
+        f.seek(SeekFrom::End(-(FINGERPRINT_BYTES as i64))).await?;
+        let n = f.read(&mut buf).await?;
+        feed(&buf[..n]);
+    }
+    Ok(hash)
+}
+
+/// Names a version of a file's sheets. Size plus a content hash, not mtime: a copy or `touch` that keeps the
+/// bytes keeps the sheets. If the file cannot be read the key falls back to mtime, so it still changes with edits.
+async fn key(file: &MediaFile) -> String {
+    let id = (file.id, file.size, file.mtime);
+    if let Some(known) = FINGERPRINTS.lock().ok().and_then(|m| m.get(&id).cloned()) {
+        return known;
+    }
+    let key = match content_hash(&file.path, file.size.max(0) as u64).await {
+        Ok(h) => format!("{}-{}-{h:016x}", file.id, file.size),
+        Err(_) => return format!("{}-{}-m{}", file.id, file.size, file.mtime),
+    };
+    if let Ok(mut m) = FINGERPRINTS.lock() {
+        // shortcut: entries are only dropped on restart; each is ~40 bytes, fine for a personal library.
+        m.insert(id, key.clone());
+    }
+    key
+}
+
+/// Sheets are worth a GPU decode for codecs and sizes that are slow in software.
+async fn wants_gpu(state: &AppState, file: &MediaFile) -> bool {
+    let Ok(streams) = items::streams(&state.db, file.id).await else {
+        return false;
+    };
+    streams.iter().any(|s| {
+        s.kind == "video"
+            && (matches!(s.codec.as_deref(), Some("hevc" | "av1" | "vp9"))
+                || s.height.is_some_and(|h| h >= 1440))
+    })
 }
 
 fn root(state: &AppState) -> PathBuf {
@@ -36,7 +93,7 @@ pub async fn status(state: &AppState, file: &MediaFile) -> Status {
     if !state.features().scrub_thumbnails {
         return Status::Unavailable;
     }
-    let dir = root(state).join(key(file));
+    let dir = root(state).join(key(file).await);
     if tokio::fs::metadata(dir.join(INDEX)).await.is_ok() {
         return Status::Ready(dir);
     }
@@ -59,7 +116,8 @@ pub async fn status(state: &AppState, file: &MediaFile) -> Status {
             if let Err(e) = make(&state, &file, plan).await {
                 warn!("scrub thumbnails for {}: {e}", file.path);
                 let _ =
-                    tokio::fs::write(root(&state).join(format!("{}.fail", key(&file))), b"").await;
+                    tokio::fs::write(root(&state).join(format!("{}.fail", key(&file).await)), b"")
+                        .await;
             }
             if let Ok(mut r) = RUNNING.lock() {
                 r.remove(&file.id);
@@ -74,15 +132,16 @@ async fn make(state: &AppState, file: &MediaFile, plan: Plan) -> anyhow::Result<
         return Ok(());
     };
     let root = root(state);
-    let name = key(file);
+    let name = key(file).await;
     let (dir, tmp) = (root.join(&name), root.join(format!("{name}.tmp")));
     tokio::fs::create_dir_all(&root).await?;
     drop_other_versions(&root, file.id, &name).await;
     let _ = tokio::fs::remove_dir_all(&tmp).await;
     tokio::fs::create_dir(&tmp).await?;
 
+    let hw = wants_gpu(state, file).await;
     let _permit = state.thumb_slots.acquire().await?;
-    let made = match sprites::generate(&bins, Path::new(&file.path), &tmp, &plan).await {
+    let made = match sprites::generate(&bins, Path::new(&file.path), &tmp, &plan, hw).await {
         Ok(n) => n,
         Err(e) => {
             let _ = tokio::fs::remove_dir_all(&tmp).await;
@@ -114,5 +173,32 @@ async fn drop_other_versions(root: &Path, file_id: i64, keep: &str) {
                 tokio::fs::remove_file(path).await
             };
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn hash_follows_content_not_mtime() {
+        let dir = std::env::temp_dir().join(format!("kinema-sprites-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        let (a, b, c) = (dir.join("a"), dir.join("b"), dir.join("c"));
+        let big = vec![7u8; FINGERPRINT_BYTES * 3];
+        std::fs::write(&a, &big).expect("a");
+        std::fs::write(&b, &big).expect("b");
+        let mut other = big.clone();
+        *other.last_mut().expect("byte") = 8;
+        std::fs::write(&c, &other).expect("c");
+        let size = big.len() as u64;
+        let (ha, hb, hc) = (
+            content_hash(a.to_str().unwrap_or_default(), size).await,
+            content_hash(b.to_str().unwrap_or_default(), size).await,
+            content_hash(c.to_str().unwrap_or_default(), size).await,
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(ha.as_ref().ok(), hb.as_ref().ok());
+        assert_ne!(ha.ok(), hc.ok());
     }
 }
