@@ -273,6 +273,13 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     [audio, duration, load],
   )
 
+  // Only a drag or key that moved the bar seeks: a press without movement or a stray key must not restart a stream.
+  const commitScrub = () => {
+    if (scrub == null) return
+    seek(scrub)
+    setScrub(null)
+  }
+
   const togglePlay = useCallback(() => {
     const v = videoRef.current
     if (!v) return
@@ -673,16 +680,10 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
                       style={{ ['--fill' as string]: fill }}
                       aria-label={t('player.seek')}
                       onChange={(e) => setScrub(Number(e.target.value))}
-                      onPointerUp={(e) => {
-                        const target = Number(e.currentTarget.value)
-                        seek(target)
-                        setScrub(null)
-                      }}
-                      onKeyUp={(e) => {
-                        const target = Number(e.currentTarget.value)
-                        seek(target)
-                        setScrub(null)
-                      }}
+                      // Captured, so a release off the bar (or a cancelled touch) still lands the drag instead of losing it.
+                      onPointerDown={(e) => e.currentTarget.setPointerCapture(e.pointerId)}
+                      onLostPointerCapture={commitScrub}
+                      onKeyUp={commitScrub}
                     />
                     {previewFrac != null && <ScrubPreview tiles={tiles} time={previewFrac * duration} frac={previewFrac} />}
                   </div>
