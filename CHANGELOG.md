@@ -1,3 +1,9 @@
+## v0.0.1-alpha.10 (2026-10-26)
+
+- !alpha(all) : Release alpha build
+- android(Player) : Rapid taps keep skipping after a double tap; docs(Android) : Tap gestures on the video
+- web(Player) : Seek bar lands every drag, also when released off the bar
+
 ## v0.0.1-alpha.9 (2026-10-24)
 
 - !alpha(all) : Release alpha build
