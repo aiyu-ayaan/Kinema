@@ -23,7 +23,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -96,6 +98,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -686,11 +689,13 @@ private fun Player(
             dockProgress = dockProgress,
             videoGestures = videoGestures,
             onTap = { chrome = !chrome; poke++ },
-            onDoubleTap = { forward ->
+            onDoubleTap = { forward, streak ->
                 if (forward == null) { if (player.isPlaying) player.pause() else player.play() }
                 else {
                     seek(now() + if (forward) 10 else -10)
-                    seekHint = forward to ((seekHint?.second ?: 0) + 1)
+                    // The count restarts on a new double tap or a change of side, so the bubble shows this run's total.
+                    val last = seekHint
+                    seekHint = forward to (if (streak && last?.first == forward) last.second + 1 else 1)
                 }
                 poke++
             },
@@ -737,15 +742,39 @@ private fun Player(
     }
 }
 
-/** Tap toggles the controls; a double tap on the outer thirds skips 10s back or forward, in the middle it pauses. */
-private fun Modifier.pointerTaps(onTap: () -> Unit, onDoubleTap: (Boolean?) -> Unit) = pointerInput(Unit) {
-    detectTapGestures(
-        onTap = { onTap() },
-        onDoubleTap = { p ->
-            val third = size.width / 3f
-            onDoubleTap(if (p.x < third) false else if (p.x > 2 * third) true else null)
-        },
-    )
+/** After a skip, further single taps on a side within this window skip again (YouTube's rapid taps); it matches [SeekHint]. */
+private const val SEEK_STREAK_MS = 700L
+
+/**
+ * Tap toggles the controls; a double tap on the outer thirds skips 10s back or forward, in the middle it pauses.
+ * [onDoubleTap] gets the side and whether the tap continues a skip streak. Without the streak, a triple tap was a skip
+ * plus a late controls toggle, and a fourth tap paired with the third, so rapid taps seemed to get lost.
+ */
+private fun Modifier.pointerTaps(onTap: () -> Unit, onDoubleTap: (Boolean?, Boolean) -> Unit) = pointerInput(Unit) {
+    fun side(x: Float) = if (x < size.width / 3f) false else if (x > 2 * size.width / 3f) true else null
+    var streakUntil = 0L
+    awaitEachGesture {
+        awaitFirstDown()
+        val up = waitForUpOrCancellation() ?: return@awaitEachGesture
+        val first = side(up.position.x)
+        if (first != null && up.uptimeMillis < streakUntil) {
+            up.consume()
+            onDoubleTap(first, true)
+            streakUntil = up.uptimeMillis + SEEK_STREAK_MS
+            return@awaitEachGesture
+        }
+        up.consume()
+        if (withTimeoutOrNull(viewConfiguration.doubleTapTimeoutMillis) { awaitFirstDown() } == null) {
+            streakUntil = 0L
+            onTap()
+            return@awaitEachGesture
+        }
+        val second = waitForUpOrCancellation() ?: return@awaitEachGesture
+        second.consume()
+        val s = side(second.position.x)
+        onDoubleTap(s, false)
+        streakUntil = if (s != null) second.uptimeMillis + SEEK_STREAK_MS else 0L
+    }
 }
 
 /** "-10s" / "+10s" bubble on the side that was double tapped; repeated taps count up. */
@@ -1068,7 +1097,7 @@ private fun VideoContainer(
     dockProgress: Float,
     videoGestures: Modifier,
     onTap: () -> Unit,
-    onDoubleTap: (Boolean?) -> Unit,
+    onDoubleTap: (Boolean?, Boolean) -> Unit,
     onBack: () -> Unit,
     onTracks: (() -> Unit)?,
     onFill: () -> Unit,
@@ -1089,6 +1118,9 @@ private fun VideoContainer(
     nav: Navigator,
 ) {
     val file = detail.files.first()
+    // The tap detector lives across recompositions; it must call the latest callbacks, not the first ones.
+    val tap by rememberUpdatedState(onTap)
+    val doubleTap by rememberUpdatedState(onDoubleTap)
     val progress = if (inPip) 0f else dockProgress.coerceIn(0f, 1f)
     val isMini = !inPip && progress >= 0.95f
     val fullAlpha = if (inPip) 0f else (1f - progress * 2.5f).coerceIn(0f, 1f)
@@ -1111,7 +1143,7 @@ private fun VideoContainer(
                 } else {
                     Modifier
                         .then(videoGestures)
-                        .then(if (progress < 0.05f) Modifier.pointerTaps(onTap = onTap, onDoubleTap = onDoubleTap) else Modifier)
+                        .then(if (progress < 0.05f) Modifier.pointerTaps(onTap = { tap() }, onDoubleTap = { side, streak -> doubleTap(side, streak) }) else Modifier)
                 }
             )
     ) {
