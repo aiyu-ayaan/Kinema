@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import java.net.URI
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -78,6 +79,16 @@ class KinemaRepository(context: Context) {
         store.put(PIP, on.toString())
         _pictureInPicture.value = on
     }
+
+    /** The player's last volume (0..2, above 1 is boost), shared by every title; the phone keeps the media volume itself. */
+    var playerVolume: Float = store.get(VOLUME)?.toFloatOrNull() ?: -1f
+        set(value) {
+            // Whole percents: a swipe writes once per step, not on every touch event.
+            val v = (value * 100).roundToInt() / 100f
+            if (field == v) return
+            field = v
+            store.put(VOLUME, v.toString())
+        }
 
     private val _changes = MutableSharedFlow<Unit>(extraBufferCapacity = 4)
     /** Watch state changed (played, marked watched): screens that show it reload. */
@@ -337,5 +348,6 @@ class KinemaRepository(context: Context) {
         const val THEME = "theme"
         const val DYNAMIC = "dynamic_color"
         const val PIP = "picture_in_picture"
+        const val VOLUME = "player_volume"
     }
 }

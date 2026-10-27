@@ -4,6 +4,7 @@ export const storageKeys = {
   token: isDev ? 'kinema.dev.token' : 'kinema.token',
   theme: isDev ? 'kinema.dev.theme' : 'kinema.theme',
   theater: isDev ? 'kinema.dev.theater' : 'kinema.theater',
+  volume: isDev ? 'kinema.dev.volume' : 'kinema.volume',
   playlist: isDev ? 'kinema.dev.playlist' : 'kinema.playlist',
   playlistQueue: isDev ? 'kinema.dev.playlistQueue' : 'kinema.playlistQueue',
 }

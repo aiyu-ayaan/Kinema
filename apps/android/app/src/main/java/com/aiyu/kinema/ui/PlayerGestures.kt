@@ -59,13 +59,18 @@ private const val BOOST_MB = 1200
  * Screen brightness (0..1, for this window only) and media volume (0..[MAX_VOLUME]). Up to 1 the phone's own media
  * volume moves; above it a [LoudnessEnhancer] on the player's audio session boosts quiet files.
  */
-class SwipeLevels(private val activity: Activity, private val player: ExoPlayer) {
+class SwipeLevels(private val activity: Activity, private val player: ExoPlayer, private val saved: Float, private val save: (Float) -> Unit) {
     private val audio = activity.getSystemService(AudioManager::class.java)
     private val steps = audio?.getStreamMaxVolume(AudioManager.STREAM_MUSIC)?.coerceAtLeast(1) ?: 1
     private var enhancer: LoudnessEnhancer? = null
 
     var volume by mutableFloatStateOf(streamLevel())
         private set
+
+    init {
+        // The boost carries over to the next title and across full screen; it holds only while the media volume is at the top.
+        if (saved > 1f && streamLevel() >= 1f) changeVolume(saved)
+    }
     var brightness by mutableFloatStateOf(initialBrightness())
         private set
 
@@ -83,6 +88,7 @@ class SwipeLevels(private val activity: Activity, private val player: ExoPlayer)
         if (volume <= 1f || stream < 1f) {
             volume = stream
             boost(0)
+            save(volume)
         }
     }
 
@@ -91,6 +97,7 @@ class SwipeLevels(private val activity: Activity, private val player: ExoPlayer)
         volume = level
         runCatching { audio?.setStreamVolume(AudioManager.STREAM_MUSIC, (level.coerceAtMost(1f) * steps).roundToInt(), 0) }
         boost(((level - 1f).coerceAtLeast(0f) * BOOST_MB).roundToInt())
+        save(level)
     }
 
     fun changeBrightness(to: Float) {
@@ -119,7 +126,8 @@ class SwipeLevels(private val activity: Activity, private val player: ExoPlayer)
 @Composable
 fun rememberSwipeLevels(player: ExoPlayer): SwipeLevels? {
     val activity = LocalContext.current.findActivity() ?: return null
-    val levels = remember(player) { SwipeLevels(activity, player) }
+    val repository = LocalRepository.current
+    val levels = remember(player) { SwipeLevels(activity, player, repository.playerVolume) { repository.playerVolume = it } }
     DisposableEffect(levels) { onDispose { levels.release() } }
     return levels
 }

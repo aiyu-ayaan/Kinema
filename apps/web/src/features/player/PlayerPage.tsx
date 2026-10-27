@@ -377,7 +377,26 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
       graph.ctx.resume().catch(() => {})
     }
     setBoost(gain)
+    try {
+      localStorage.setItem(storageKeys.volume, String(l))
+    } catch {
+      // Private windows may refuse storage; the level still applies to this title.
+    }
   }, [])
+
+  // One level for every title on this browser: the next episode starts as loud as the last one ended.
+  useEffect(() => {
+    let saved = NaN
+    try {
+      saved = Number(localStorage.getItem(storageKeys.volume) ?? NaN)
+    } catch {
+      return
+    }
+    if (!Number.isFinite(saved)) return
+    // Boost needs Web Audio, which stays silent until the page has had a click; a reload opened straight here gets 100 %.
+    const active = navigator.userActivation?.hasBeenActive ?? true
+    setLevel(active ? saved : Math.min(1, saved))
+  }, [setLevel])
   useEffect(() => () => void audioGraph.current?.ctx.close().catch(() => {}), [])
 
   const toggleFullscreen = useCallback(() => {
