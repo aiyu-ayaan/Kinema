@@ -1,3 +1,10 @@
+## v0.0.1-alpha.11 (2026-10-27)
+
+- !alpha(all) : Release alpha build
+- docs(Claude) : Note HLS playback, network retries and saved volume
+- player(Volume) : Keep one volume level for every title on web, desktop and Android; docs(Player) : Saved volume
+- web(Player) : Play H.264 remux through HLS segments, retry dropped plan and stream requests; docs(Media) : HLS in the web player
+
 ## v0.0.1-alpha.10 (2026-10-26)
 
 - !alpha(all) : Release alpha build
