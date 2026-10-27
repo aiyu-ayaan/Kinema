@@ -16,6 +16,8 @@ MVP built: admin setup and sign-in, libraries with folder picker, scanner + watc
 
 Playback cost (2026-10-21): live re-encodes are throttled to 30 s ahead of real time, limited to a share of the cores (`transcode_threads`, Auto = cores / `max_transcodes`) and run at `nice 10`; background ffmpeg at `nice 19`. Re-encodes use a GPU encoder (NVENC, Quick Sync or VA-API, `MediaBinaries::hw_encoder`) when a test encode at startup succeeds, libx264 otherwise. On a Raspberry Pi 5 HEVC re-encodes decode on the GPU through the distribution's ffmpeg (`MediaBinaries::hevc_drm`). Players that claim HEVC/AV1 but fail to decode it retry as a transcode. The desktop app can play titles in a local mpv (`raw=true`, loopback proxy). Details: `development/docs/media-pipeline.md` § 3–4.
 
+Network playback (2026-10-27): the web player plays an H.264 remux through hls.js on the server's copied HLS segments (`/api/hls`), not the progressive pipe: 60 s buffered ahead, cached segments, per-segment retries. The pipe ignores `Range`, so a browser reconnect restarted it at the last seek point. Fallback to the pipe on a fatal hls.js error. Plan requests and dropped streams retry three times. The volume level is kept per device (web `kinema.volume`, Android `KinemaRepository.playerVolume`). Details: `media-pipeline.md` § HLS sessions.
+
 ## Stack
 
 - Language: Rust (stable, edition 2024).
@@ -103,7 +105,7 @@ scripts/update-ffmpeg.sh      # bump pinned ffmpeg in scripts/ffmpeg.lock
 
 Dev needs `ffmpeg` and `ffprobe` on PATH. Optional: `mpv` on PATH (or `KINEMA_MPV`) for the desktop app's Play in mpv. Resolution order: `KINEMA_FFMPEG`, bundled `$APPDIR/usr/bin`, then PATH. Never hard-code `ffmpeg`: always go through the resolver in `kinema-media`.
 
-Dev and prod flavors, as in Domus: dev isolates localStorage keys (`kinema.dev.token`, `kinema.dev.theme`), uses `/favicon-dev.svg` and shows a `DEV` pill. Prod uses `kinema.token`, `kinema.theme`.
+Dev and prod flavors, as in Domus: dev isolates localStorage keys (`kinema.dev.token`, `kinema.dev.theme`, `kinema.dev.volume`, ...), uses `/favicon-dev.svg` and shows a `DEV` pill. Prod uses `kinema.token`, `kinema.theme`.
 
 
 ## AI Agents
