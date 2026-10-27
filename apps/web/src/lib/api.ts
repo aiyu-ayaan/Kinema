@@ -176,6 +176,8 @@ export const api = {
   rawPlan: (fileId: number) => request<PlaybackPlan>('GET', `/files/${fileId}/plan?raw=true`),
   streamUrl: (fileId: number, audio: number | null, caps: PlayCaps, start: number) =>
     `/api/stream/${fileId}?${playQuery(audio, caps, start)}`,
+  /** VOD playlist of copied segments: a seek reuses what is already cut and a dropped request retries one segment. */
+  hlsUrl: (fileId: number, audio: number | null, caps: PlayCaps) => `/api/hls/${fileId}/index.m3u8?${playQuery(audio, caps)}`,
   subtitleText: async (streamId: number) => {
     const res = await fetch(`/api/subtitles/${streamId}`)
     if (!res.ok) throw new ApiError(res.status, 'subtitle', res.statusText)

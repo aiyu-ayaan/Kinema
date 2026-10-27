@@ -142,7 +142,7 @@ flowchart LR
 
 | Shortcut | Limit | Upgrade |
 |---|---|---|
-| Progressive fMP4 instead of HLS | Safari does not play non-ranged fMP4; each far seek restarts ffmpeg | HLS with keyframe index (M4) |
+| Progressive fMP4 instead of HLS | Safari does not play non-ranged fMP4; each far seek restarts ffmpeg | HLS with keyframe index (M4). Web remux of H.264 uses HLS since 2026-10-27 (media-pipeline.md § HLS sessions) |
 | Fingerprint = size + mtime | A renamed file is re-added and re-probed | head/tail hash (M1 spec) |
 | LIKE search | Slow beyond tens of thousands of items | FTS5 `items_fts` |
 | Session cookie name is not flavor-specific | Dev and prod on the same host share the media cookie | per-flavor cookie name |

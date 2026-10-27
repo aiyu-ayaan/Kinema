@@ -143,6 +143,8 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   const shellRef = useRef<HTMLDivElement>(null)
   const [plan, setPlan] = useState<PlaybackPlan | null>(null)
   const [src, setSrc] = useState<string | null>(null)
+  // A remux served as HLS segments instead of `src`: hls.js feeds the element through Media Source.
+  const [hls, setHls] = useState<{ url: string; at: number; audio: number | null } | null>(null)
   // null until the first plan: the server picks the track from the language settings.
   const [audio, setAudio] = useState<number | null>(null)
   const [subId, setSubId] = useState<number | null>(null)
@@ -187,11 +189,17 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   const offset = useRef(0)
   const pendingSeek = useRef<number | null>(null)
   const mode = useRef<PlaybackPlan['mode']>('direct')
+  /** The element holds the whole title (direct play or HLS): seeks are plain currentTime seeks, no offset. */
+  const whole = useRef(true)
+  // Copied H.264 only: TS cannot carry VP9, and HEVC in TS is untested. A failed HLS start falls back to the pipe.
+  const hlsOk = useRef(file.streams.find((s) => s.type === 'video')?.codec === 'h264' && typeof MediaSource !== 'undefined')
   const watchedSent = useRef(false)
   const planned = useRef(false)
   /** Absolute time being sought to; timeupdates are ignored until it lands. */
   const seekTarget = useRef<number | null>(null)
   const loadSeq = useRef(0)
+  /** Stream drops in a row; reset once a frame plays. */
+  const netRetries = useRef(0)
 
   const absTime = useCallback(() => {
     const v = videoRef.current
@@ -212,7 +220,16 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
       seekTarget.current = at
       const seq = ++loadSeq.current
       try {
-        const p = await api.plan(file.id, audioIdx, caps.current, at)
+        // A dropped request on Wi-Fi ("Failed to fetch") is retried before playback gives up.
+        let p: PlaybackPlan | undefined
+        for (let attempt = 0; !p; attempt++) {
+          try {
+            p = await api.plan(file.id, audioIdx, caps.current, at)
+          } catch (e) {
+            if (!(e instanceof TypeError) || attempt >= 3 || seq !== loadSeq.current) throw e
+            await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)))
+          }
+        }
         // A newer seek or track change started meanwhile: its answer wins.
         if (seq !== loadSeq.current) return
         // Language settings pick the starting subtitle; later choices are the viewer's.
@@ -222,10 +239,20 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
         setPlan(p)
         mode.current = p.mode
         if (p.mode === 'direct') {
+          whole.current = true
           offset.current = 0
           pendingSeek.current = at
+          setHls(null)
           setSrc(api.streamUrl(file.id, audioIdx, caps.current, 0))
+        } else if (p.mode === 'remux' && hlsOk.current) {
+          whole.current = true
+          offset.current = 0
+          pendingSeek.current = at
+          setSrc(null)
+          setHls({ url: api.hlsUrl(file.id, audioIdx, caps.current), at, audio: audioIdx })
         } else {
+          whole.current = false
+          setHls(null)
           holdFrame(videoRef.current)
           // ffmpeg gets the requested time; p.start is where its output really begins.
           offset.current = p.start
@@ -242,6 +269,37 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   )
 
   useEffect(() => {
+    const v = videoRef.current
+    if (!hls || !v) return
+    let player: import('hls.js').default | null = null
+    let gone = false
+    import('hls.js').then(({ default: Hls }) => {
+      if (gone) return
+      player = new Hls({
+        startPosition: hls.at,
+        // A minute ahead rides out Wi-Fi dips; the server keeps 10 min of cut segments for seeks back.
+        maxBufferLength: 60,
+        maxMaxBufferLength: 120,
+        backBufferLength: 60,
+      })
+      player.on(Hls.Events.ERROR, (_e, data) => {
+        if (!data.fatal) return
+        // No keyframe index yet (409) or a stream hls.js cannot read: the progressive pipe still plays it.
+        player?.destroy()
+        player = null
+        hlsOk.current = false
+        load(hls.audio, seekTarget.current ?? offset.current + v.currentTime)
+      })
+      player.loadSource(hls.url)
+      player.attachMedia(v)
+    })
+    return () => {
+      gone = true
+      player?.destroy()
+    }
+  }, [hls, load])
+
+  useEffect(() => {
     load(audio, startAt)
     // Only on mount; track changes call load themselves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -252,7 +310,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
       const v = videoRef.current
       if (!v) return
       const target = Math.max(0, duration ? Math.min(to, duration - 1) : to)
-      if (mode.current === 'direct') {
+      if (whole.current) {
         seekTarget.current = target
         setTime(target)
         v.currentTime = target
@@ -529,7 +587,10 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
               onWaiting={() => setWaiting(true)}
-              onPlaying={() => setWaiting(false)}
+              onPlaying={() => {
+                netRetries.current = 0
+                setWaiting(false)
+              }}
               onCanPlay={() => setWaiting(false)}
               onVolumeChange={(e) => {
                 setMuted(e.currentTarget.muted)
@@ -547,6 +608,12 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
                 const decodeFailed = code === MediaError.MEDIA_ERR_DECODE || code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
                 if (decodeFailed && mode.current !== 'transcode' && (caps.current.hevc || caps.current.av1)) {
                   caps.current = { hevc: false, av1: false }
+                  load(audio, playhead())
+                  return
+                }
+                // A dropped connection: pick the stream up again where it was, a few times before giving up.
+                if (code === MediaError.MEDIA_ERR_NETWORK && netRetries.current < 3) {
+                  netRetries.current++
                   load(audio, playhead())
                   return
                 }
