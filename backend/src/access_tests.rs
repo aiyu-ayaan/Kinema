@@ -84,6 +84,8 @@ pub(crate) async fn state() -> AppState {
         active_transcodes: Arc::default(),
         started: std::time::Instant::now(),
         login_failures: Arc::default(),
+        share_hits: Arc::default(),
+        share_transcodes: Arc::default(),
         now_playing: Arc::default(),
         http: reqwest::Client::new(),
         tls_fingerprint: None,
@@ -806,6 +808,65 @@ async fn share_link_expires() {
         !shares::is_active(&w.state.db, created["share"]["id"].as_i64().unwrap())
             .await
             .unwrap()
+    );
+}
+
+#[tokio::test]
+async fn share_link_admits_a_limited_number_of_viewers() {
+    let w = world().await;
+    let make = |body: Value| {
+        call(
+            &w.app,
+            Method::POST,
+            "/shares",
+            Some(&w.admin),
+            LAN,
+            Some(body),
+        )
+    };
+    let (s, created) =
+        make(json!({"item_id": w.pg_movie, "expires_in_hours": 1, "max_uses": 1})).await;
+    assert_eq!(s, StatusCode::CREATED);
+    assert_eq!(created["share"]["max_uses"], 1);
+    let uri = format!("/share/{}", created["token"].as_str().unwrap());
+    let open = |peer: &'static str| call(&w.app, Method::GET, &uri, None, peer, None);
+    assert_eq!(open(WAN).await.0, StatusCode::OK);
+    // The same viewer reloading costs nothing; a second address finds nothing.
+    assert_eq!(open(WAN).await.0, StatusCode::OK);
+    assert_eq!(open("198.51.100.9:1").await.0, StatusCode::NOT_FOUND);
+    let (_, list) = call(&w.app, Method::GET, "/shares", Some(&w.admin), LAN, None).await;
+    assert_eq!(list[0]["viewers"], 1);
+
+    for bad in [0, 101, -3] {
+        let (s, _) =
+            make(json!({"item_id": w.pg_movie, "expires_in_hours": 1, "max_uses": bad})).await;
+        assert_eq!(s, StatusCode::BAD_REQUEST, "{bad}");
+    }
+    // No limit by default.
+    let (_, open_link) = share(&w, w.pg_movie, 1).await;
+    assert_eq!(open_link["share"]["max_uses"], Value::Null);
+}
+
+#[tokio::test]
+async fn share_links_rate_limit_each_address() {
+    let w = world().await;
+    let (_, created) = share(&w, w.pg_movie, 1).await;
+    let uri = format!("/share/{}", created["token"].as_str().unwrap());
+    let peer = "198.51.100.20:1";
+    for _ in 0..300 {
+        assert_eq!(
+            call(&w.app, Method::GET, &uri, None, peer, None).await.0,
+            StatusCode::OK
+        );
+    }
+    assert_eq!(
+        call(&w.app, Method::GET, &uri, None, peer, None).await.0,
+        StatusCode::TOO_MANY_REQUESTS
+    );
+    // Another address is unaffected.
+    assert_eq!(
+        call(&w.app, Method::GET, &uri, None, WAN, None).await.0,
+        StatusCode::OK
     );
 }
 

@@ -129,6 +129,24 @@ pub fn origin(parts: &Parts, state: &AppState) -> ClientOrigin {
     }
 }
 
+/// The client's address under the same trust rules as [`ClientOrigin`]; None when it cannot be trusted.
+#[derive(Debug, Clone, Copy)]
+pub struct ClientAddr(pub Option<IpAddr>);
+
+#[async_trait]
+impl FromRequestParts<AppState> for ClientAddr {
+    type Rejection = Infallible;
+
+    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Infallible> {
+        let peer = parts
+            .extensions
+            .get::<ConnectInfo<SocketAddr>>()
+            .map(|c| c.0.ip());
+        let trusted = parse_proxies(&state.config.network.trusted_proxies);
+        Ok(Self(client_ip(peer, &parts.headers, &trusted)))
+    }
+}
+
 #[async_trait]
 impl FromRequestParts<AppState> for ClientOrigin {
     type Rejection = Infallible;

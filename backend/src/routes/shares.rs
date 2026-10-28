@@ -9,6 +9,7 @@
 use crate::access::{self, Policy};
 use crate::auth::{AdminUser, ct_eq, random_hex, token_hash};
 use crate::error::{ApiError, ApiResult};
+use crate::net::ClientAddr;
 use crate::routes::media::{self, Langs, PlayQuery};
 use crate::state::AppState;
 use axum::body::Body;
@@ -22,6 +23,9 @@ use kinema_db::items::{self, ItemCard, Stream};
 use kinema_db::shares::{self, NewShare, Share};
 use kinema_db::users;
 use serde::{Deserialize, Serialize};
+use std::net::{IpAddr, Ipv4Addr};
+use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
 use std::time::{Duration, Instant};
 
 /// Public selector: 64 bits, finds the row. Secret verifier: 256 bits, only its hash is stored.
@@ -31,6 +35,12 @@ const TOKEN_LEN: usize = (SELECTOR_BYTES + VERIFIER_BYTES) * 2;
 const MAX_HOURS: i64 = 90 * 24;
 /// How often a running share stream checks that its link still works.
 const RECHECK: Duration = Duration::from_secs(10);
+/// Requests one address may make to share links per minute. A player's ranged reads and subtitle
+/// fetches stay far below it; a script hammering a link does not.
+const RATE_PER_MINUTE: u32 = 300;
+const RATE_WINDOW: Duration = Duration::from_secs(60);
+/// Most viewers a link may be limited to.
+const MAX_VIEWERS: i64 = 100;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -51,6 +61,9 @@ struct NewShareBody {
     expires_in_hours: i64,
     #[serde(default)]
     label: Option<String>,
+    /// Most distinct viewers (by address) the link admits, 1 to 100; absent = no limit.
+    #[serde(default)]
+    max_uses: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -69,6 +82,9 @@ async fn create(
 ) -> ApiResult<(StatusCode, Json<Created>)> {
     if !(1..=MAX_HOURS).contains(&b.expires_in_hours) {
         return Err(ApiError::bad_request("shares.expiry_invalid"));
+    }
+    if b.max_uses.is_some_and(|n| !(1..=MAX_VIEWERS).contains(&n)) {
+        return Err(ApiError::bad_request("shares.uses_invalid"));
     }
     let label = b
         .label
@@ -94,6 +110,7 @@ async fn create(
             item_id: target.id,
             label: label.as_deref(),
             expires_at: kinema_db::now() + b.expires_in_hours * 3600,
+            max_uses: b.max_uses,
         },
     )
     .await?;
@@ -152,14 +169,58 @@ fn split_token(token: &str) -> Option<(&str, &str)> {
     ok.then(|| token.split_at(SELECTOR_BYTES * 2))
 }
 
+/// Counts this request against the address's current minute; true once it is over the limit.
+/// Unknown addresses (an untrusted proxy chain) share one bucket.
+fn rate_limited(state: &AppState, addr: Option<IpAddr>) -> bool {
+    let key = addr.unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED));
+    let Ok(mut hits) = state.share_hits.lock() else {
+        return false;
+    };
+    if hits.len() > 4096 {
+        hits.retain(|_, (_, at)| at.elapsed() < RATE_WINDOW);
+    }
+    let entry = hits.entry(key).or_insert((0, Instant::now()));
+    if entry.1.elapsed() >= RATE_WINDOW {
+        *entry = (0, Instant::now());
+    }
+    entry.0 += 1;
+    entry.0 > RATE_PER_MINUTE
+}
+
+/// The running re-encode count of one link.
+fn link_transcodes(state: &AppState, share_id: i64) -> Arc<AtomicUsize> {
+    state
+        .share_transcodes
+        .lock()
+        .map(|mut m| m.entry(share_id).or_default().clone())
+        .unwrap_or_default()
+}
+
 /// Every failure is the same 404, so a probe learns nothing about which part was wrong.
-async fn resolve(state: &AppState, token: &str) -> ApiResult<Scope> {
+async fn resolve(state: &AppState, token: &str, addr: Option<IpAddr>) -> ApiResult<Scope> {
+    if rate_limited(state, addr) {
+        return Err(ApiError::new(
+            StatusCode::TOO_MANY_REQUESTS,
+            "shares.rate_limited",
+        ));
+    }
     let (selector, verifier) = split_token(token).ok_or_else(ApiError::not_found)?;
     let share = shares::active_by_selector(&state.db, selector)
         .await?
         .ok_or_else(ApiError::not_found)?;
     if !ct_eq(token_hash(verifier).as_bytes(), share.token_hash.as_bytes()) {
         return Err(ApiError::not_found());
+    }
+    if let Some(max) = share.max_uses {
+        // The address is hashed with the link id: the database never holds a viewer's address.
+        let viewer = token_hash(&format!(
+            "{}:{}",
+            share.id,
+            addr.map_or_else(String::new, |a| a.to_string())
+        ));
+        if !shares::admit(&state.db, share.id, &viewer, max).await? {
+            return Err(ApiError::not_found());
+        }
     }
     let creator = users::get(&state.db, share.created_by)
         .await?
@@ -242,28 +303,31 @@ async fn view(state: &AppState, scope: &Scope, card: ItemCard) -> ApiResult<Shar
 
 async fn landing(
     State(state): State<AppState>,
+    ClientAddr(addr): ClientAddr,
     Path(token): Path<String>,
 ) -> ApiResult<Json<ShareView>> {
-    let scope = resolve(&state, &token).await?;
+    let scope = resolve(&state, &token, addr).await?;
     let card = scope.target.clone();
     Ok(Json(view(&state, &scope, card).await?))
 }
 
 async fn item(
     State(state): State<AppState>,
+    ClientAddr(addr): ClientAddr,
     Path((token, id)): Path<(String, i64)>,
 ) -> ApiResult<Json<ShareView>> {
-    let scope = resolve(&state, &token).await?;
+    let scope = resolve(&state, &token, addr).await?;
     let card = scoped_item(&state, &scope, id).await?;
     Ok(Json(view(&state, &scope, card).await?))
 }
 
 async fn plan(
     State(state): State<AppState>,
+    ClientAddr(addr): ClientAddr,
     Path((token, id)): Path<(String, i64)>,
     Query(q): Query<PlayQuery>,
 ) -> ApiResult<Json<media::PlanResponse>> {
-    let scope = resolve(&state, &token).await?;
+    let scope = resolve(&state, &token, addr).await?;
     scoped_file(&state, &scope, id).await?;
     // No profile: the server's languages, no per-title choices.
     media::plan_for(&state, 0, &Langs::server(&state), id, &q)
@@ -273,13 +337,24 @@ async fn plan(
 
 async fn stream(
     State(state): State<AppState>,
+    ClientAddr(addr): ClientAddr,
     Path((token, id)): Path<(String, i64)>,
     Query(q): Query<PlayQuery>,
     req: Request,
 ) -> ApiResult<Response> {
-    let scope = resolve(&state, &token).await?;
+    let scope = resolve(&state, &token, addr).await?;
     scoped_file(&state, &scope, id).await?;
-    let res = media::stream_for(&state, 0, &Langs::server(&state), id, &q, req).await?;
+    let transcodes = link_transcodes(&state, scope.share.id);
+    let res = media::stream_for(
+        &state,
+        0,
+        &Langs::server(&state),
+        id,
+        &q,
+        req,
+        Some(&transcodes),
+    )
+    .await?;
     Ok(stop_when_revoked(&state, scope.share.id, res))
 }
 
@@ -302,9 +377,10 @@ fn stop_when_revoked(state: &AppState, share_id: i64, res: Response) -> Response
 
 async fn subtitle(
     State(state): State<AppState>,
+    ClientAddr(addr): ClientAddr,
     Path((token, stream_id)): Path<(String, i64)>,
 ) -> ApiResult<Response> {
-    let scope = resolve(&state, &token).await?;
+    let scope = resolve(&state, &token, addr).await?;
     let s = items::stream(&state.db, stream_id)
         .await?
         .filter(|s| s.kind == "subtitle")
@@ -316,10 +392,11 @@ async fn subtitle(
 /// Artwork of the shared title and what is under it; any other image key is 404.
 async fn image(
     State(state): State<AppState>,
+    ClientAddr(addr): ClientAddr,
     Path((token, size, name)): Path<(String, String, String)>,
     req: Request,
 ) -> ApiResult<Response> {
-    let scope = resolve(&state, &token).await?;
+    let scope = resolve(&state, &token, addr).await?;
     let key = format!("{size}/{name}");
     if !shares::image_in_scope(&state.db, scope.target.id, &key).await? {
         return Err(ApiError::not_found());

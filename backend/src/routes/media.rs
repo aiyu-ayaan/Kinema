@@ -18,7 +18,8 @@ use kinema_media::playback::{self, ClientCaps, Plan, Track};
 use kinema_media::subtitles;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio_util::io::ReaderStream;
 use tower::ServiceExt;
 use tower_http::services::ServeFile;
@@ -285,10 +286,14 @@ async fn stream(
 ) -> ApiResult<Response> {
     access::check_file(&state, &user, id).await?;
     let langs = Langs::for_user(&state, user.id).await?;
-    stream_for(&state, user.id, &langs, id, &q, req).await
+    stream_for(&state, user.id, &langs, id, &q, req, None).await
 }
 
-/// The stream for a file the caller already checked access to.
+/// Re-encodes one share link may run at once.
+pub(crate) const SHARE_TRANSCODES_PER_LINK: usize = 1;
+
+/// The stream for a file the caller already checked access to. `link_transcodes` is the running re-encode
+/// count of the share link asking, if any.
 pub(crate) async fn stream_for(
     state: &AppState,
     user_id: i64,
@@ -296,6 +301,7 @@ pub(crate) async fn stream_for(
     id: i64,
     q: &PlayQuery,
     req: Request,
+    link_transcodes: Option<&Arc<AtomicUsize>>,
 ) -> ApiResult<Response> {
     let c = choose(state, user_id, langs, id, q).await?;
     let path = PathBuf::from(&c.file.path);
@@ -327,6 +333,19 @@ pub(crate) async fn stream_for(
             ));
         }
         Some(Counted::new(&state.active_transcodes))
+    };
+    // A share link gets its own small share of the re-encodes (see `shares.rs`).
+    let link_slot = match link_transcodes {
+        Some(count) if !copy_video => {
+            if count.load(Ordering::SeqCst) >= SHARE_TRANSCODES_PER_LINK {
+                return Err(ApiError::new(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "shares.transcode_busy",
+                ));
+            }
+            Some(Counted::new(count))
+        }
+        _ => None,
     };
     let stream_slot = Counted::new(&state.active_streams);
     let mut child = playback::stream_command(
@@ -366,7 +385,7 @@ pub(crate) async fn stream_for(
             }
         })
         .map(move |chunk| {
-            let _owner = (&child, &stream_slot, &transcode_slot);
+            let _owner = (&child, &stream_slot, &transcode_slot, &link_slot);
             chunk
         });
     Ok((

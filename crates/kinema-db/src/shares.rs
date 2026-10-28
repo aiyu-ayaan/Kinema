@@ -20,11 +20,16 @@ pub struct Share {
     pub created_at: i64,
     pub expires_at: i64,
     pub revoked_at: Option<i64>,
+    /// Most distinct viewers the link admits; None = no limit.
+    pub max_uses: Option<i64>,
+    /// Viewers admitted so far (only tracked while `max_uses` is set).
+    pub viewers: i64,
 }
 
 const SELECT: &str = "SELECT s.id, s.token_hash, s.created_by, u.name AS creator_name,
   s.target_id AS item_id, i.title AS item_title, i.kind AS item_kind, s.label, s.created_at,
-  COALESCE(s.expires_at, 0) AS expires_at, s.revoked_at
+  COALESCE(s.expires_at, 0) AS expires_at, s.revoked_at, s.max_uses,
+  (SELECT COUNT(*) FROM share_viewers v WHERE v.share_id = s.id) AS viewers
 FROM share_links s
 LEFT JOIN users u ON u.id = s.created_by
 LEFT JOIN items i ON i.id = s.target_id";
@@ -36,13 +41,14 @@ pub struct NewShare<'a> {
     pub item_id: i64,
     pub label: Option<&'a str>,
     pub expires_at: i64,
+    pub max_uses: Option<i64>,
 }
 
 pub async fn create(pool: &SqlitePool, s: &NewShare<'_>) -> Result<i64, DbError> {
     Ok(sqlx::query(
         "INSERT INTO share_links (selector, token_hash, created_by, target_kind, target_id,
-                                  expires_at, label, created_at)
-         VALUES (?1, ?2, ?3, 'item', ?4, ?5, ?6, ?7)",
+                                  expires_at, label, created_at, max_uses)
+         VALUES (?1, ?2, ?3, 'item', ?4, ?5, ?6, ?7, ?8)",
     )
     .bind(s.selector)
     .bind(s.token_hash)
@@ -51,6 +57,7 @@ pub async fn create(pool: &SqlitePool, s: &NewShare<'_>) -> Result<i64, DbError>
     .bind(s.expires_at)
     .bind(s.label)
     .bind(now())
+    .bind(s.max_uses)
     .execute(pool)
     .await?
     .last_insert_rowid())
@@ -99,6 +106,40 @@ pub async fn is_active(pool: &SqlitePool, id: i64) -> Result<bool, DbError> {
     .bind(now())
     .fetch_one(pool)
     .await?)
+}
+
+/// Whether this viewer may open a link that admits `max_uses` viewers: one already admitted always may,
+/// a new one only while there is room.
+pub async fn admit(
+    pool: &SqlitePool,
+    id: i64,
+    viewer: &str,
+    max_uses: i64,
+) -> Result<bool, DbError> {
+    let known = "SELECT EXISTS(SELECT 1 FROM share_viewers WHERE share_id = ?1 AND viewer = ?2)";
+    if sqlx::query_scalar(known)
+        .bind(id)
+        .bind(viewer)
+        .fetch_one(pool)
+        .await?
+    {
+        return Ok(true);
+    }
+    sqlx::query(
+        "INSERT OR IGNORE INTO share_viewers (share_id, viewer, first_seen)
+         SELECT ?1, ?2, ?3 WHERE (SELECT COUNT(*) FROM share_viewers WHERE share_id = ?1) < ?4",
+    )
+    .bind(id)
+    .bind(viewer)
+    .bind(now())
+    .bind(max_uses)
+    .execute(pool)
+    .await?;
+    Ok(sqlx::query_scalar(known)
+        .bind(id)
+        .bind(viewer)
+        .fetch_one(pool)
+        .await?)
 }
 
 /// Whether an image key ("w500/abc.jpg") is the art of the target, of a season or episode

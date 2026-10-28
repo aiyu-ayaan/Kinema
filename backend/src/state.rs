@@ -40,6 +40,10 @@ pub struct AppState {
     pub started: Instant,
     /// Failed sign-ins per profile: (count, last failure), for PIN lockout.
     pub login_failures: Arc<Mutex<HashMap<i64, (u32, Instant)>>>,
+    /// Share-link requests per client address in the current minute: (count, window start).
+    pub share_hits: Arc<Mutex<HashMap<std::net::IpAddr, (u32, Instant)>>>,
+    /// Re-encodes running per share link, so one link cannot take every transcode slot.
+    pub share_transcodes: Arc<Mutex<HashMap<i64, Arc<AtomicUsize>>>>,
     /// Who is playing what right now, from progress reports; see `routes/activity.rs`.
     pub now_playing: crate::routes::activity::NowPlayingMap,
     pub http: reqwest::Client,

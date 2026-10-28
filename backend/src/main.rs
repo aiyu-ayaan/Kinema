@@ -111,6 +111,8 @@ async fn main() -> anyhow::Result<()> {
         active_transcodes: Arc::default(),
         started: std::time::Instant::now(),
         login_failures: Arc::default(),
+        share_hits: Arc::default(),
+        share_transcodes: Arc::default(),
         now_playing: Arc::default(),
         http: reqwest::Client::new(),
         tls_fingerprint: rustls
