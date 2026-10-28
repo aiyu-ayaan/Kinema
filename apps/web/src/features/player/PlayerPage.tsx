@@ -34,6 +34,7 @@ import { MarkerEditor } from './MarkerEditor'
 import { MpvPlayer } from './MpvPlayer'
 import { ScrubPreview } from './ScrubPreview'
 import { useScrubTiles } from './useScrubTiles'
+import { useKeptScroll } from './useKeptScroll'
 import { SkipPill, UP_NEXT_S, UpNextCard, UpNextList, WatchDetails } from './WatchPanels'
 
 
@@ -554,8 +555,9 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
       }
     />
   )
+  const keptScroll = useKeptScroll(item.kind === 'episode' ? item.show_id : null)
   const upNext = (
-    <aside className="shrink-0 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-48px)] lg:w-[402px] lg:overflow-y-auto">
+    <aside {...keptScroll} className="shrink-0 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-48px)] lg:w-[402px] lg:overflow-y-auto">
       <UpNextList detail={detail} scrollToCurrent={wide && !theater} />
     </aside>
   )
