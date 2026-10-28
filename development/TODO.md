@@ -153,7 +153,8 @@ Trigger: transcode-only viewing took every core while Plex stayed quiet on the s
 - [x] Share links: selector + hashed verifier, constant-time check, expiry, revoke, scoped `/api/share/{token}/...` routes; admin UI and `/s/{token}` page
 - [x] Profile export / import (watch history, preferences; lock hashes only on explicit admin request)
 - [x] Access-control tests over the router (`backend/src/access_tests.rs`)
-- [ ] Share links: per-IP rate limit, max uses, per-link transcode cap
+- [x] Share links: per-address rate limit (300/min), viewer limit (`max_uses`, distinct addresses), one re-encode per link. Not run against a real re-encode (no ffmpeg in the tests) or a reverse proxy
+- [ ] Share links: allow download is not built; viewer limit is by address, so two people behind one NAT count once
 - [ ] Non-admin users creating share links for titles they can see (admin only for now)
 - [ ] Content limits in SQL instead of after the query, so limited profiles get full search / shelf pages
 - [ ] Android app: show `home_only` profiles and handle `auth.lan_session` (picker and re-sign-in)
