@@ -1,4 +1,6 @@
+pub mod activity;
 pub mod collections;
+pub mod devices;
 pub mod error;
 pub mod items;
 pub mod keyframes;
@@ -6,6 +8,7 @@ pub mod libraries;
 pub mod markers;
 pub mod playlists;
 pub mod profiles;
+pub mod requests;
 pub mod settings;
 pub mod shares;
 pub mod shelves;

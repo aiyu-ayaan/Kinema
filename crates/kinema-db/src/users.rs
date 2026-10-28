@@ -228,16 +228,29 @@ pub async fn create_session_scoped(
     ttl_s: i64,
     lan_only: bool,
 ) -> Result<(), DbError> {
+    create_device_session(pool, token_hash, user_id, ttl_s, lan_only, None).await
+}
+
+/// A session tied to a device: removing the device ends it.
+pub async fn create_device_session(
+    pool: &SqlitePool,
+    token_hash: &str,
+    user_id: i64,
+    ttl_s: i64,
+    lan_only: bool,
+    device_id: Option<i64>,
+) -> Result<(), DbError> {
     let t = now();
     sqlx::query(
-        "INSERT INTO sessions (id, user_id, created_at, expires_at, lan_only)
-         VALUES (?1, ?2, ?3, ?4, ?5)",
+        "INSERT INTO sessions (id, user_id, created_at, expires_at, lan_only, device_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
     )
     .bind(token_hash)
     .bind(user_id)
     .bind(t)
     .bind(t + ttl_s)
     .bind(lan_only)
+    .bind(device_id)
     .execute(pool)
     .await?;
     Ok(())
