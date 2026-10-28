@@ -9,7 +9,7 @@
     "build:prod": "tsc -b && vite build --mode production",
     "build:dev": "tsc -b && vite build --mode development",
     "lint": "eslint .",
-    "test": "echo \"Web tests passed\" && exit 0",
+    "test": "node --test \"src/**/*.test.ts\"",
     "preview": "vite preview"
   },
   "dependencies": {

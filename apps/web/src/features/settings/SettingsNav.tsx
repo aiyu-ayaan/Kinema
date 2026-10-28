@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { ArrowLeft } from '@phosphor-icons/react'
+import { usePendingDevices } from '@/features/devices/usePendingDevices'
 import { cn } from '@/lib/cn'
 import { t } from '@/lib/i18n'
 import { settingsGroups } from './sections'
@@ -10,8 +11,17 @@ const itemCls = (active: boolean) =>
     active ? 'bg-primary-container text-on-primary-container' : 'text-muted hover:bg-raised hover:text-fg',
   )
 
+export function CountBadge({ n }: { n: number }) {
+  return (
+    <span className="ms-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-caption font-semibold tabular text-on-primary" aria-label={t('devices.pendingCount', { n })}>
+      {n}
+    </span>
+  )
+}
+
 /** Replaces the library list in the app sidebar while Settings is open. */
 export function SettingsNav({ onNavigate }: { onNavigate?: () => void }) {
+  const pendingDevices = usePendingDevices()
   return (
     <nav aria-label={t('settings.title')} className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3">
       <NavLink to="/" end onClick={onNavigate} className={itemCls(false)}>
@@ -30,6 +40,7 @@ export function SettingsNav({ onNavigate }: { onNavigate?: () => void }) {
                     <>
                       <I size={18} weight={isActive ? 'fill' : 'regular'} aria-hidden />
                       <span className="truncate">{t(s.label)}</span>
+                      {s.path === 'devices' && pendingDevices > 0 && <CountBadge n={pendingDevices} />}
                     </>
                   )}
                 </NavLink>

@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowCircleUp, GearSix, HardDrives, House, List, ListBullets, MagnifyingGlass, Moon, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
+import { ArrowCircleUp, GearSix, HardDrives, House, List, ListBullets, MagnifyingGlass, Moon, PaperPlaneTilt, Sun, UserSwitch, X, type Icon } from '@phosphor-icons/react'
 import { Avatar } from './ui/Avatar'
-import { SettingsNav } from '@/features/settings/SettingsNav'
+import { usePendingDevices } from '@/features/devices/usePendingDevices'
+import { CountBadge, SettingsNav } from '@/features/settings/SettingsNav'
 import { UpdatePrompt } from './UpdatePrompt'
 import { libraryIcon } from './media/libraryIcon'
 import { Button } from './ui/Button'
@@ -18,7 +19,7 @@ import { useServerUpdate } from '@/lib/releases'
 import { setTheme, useTheme } from '@/lib/theme'
 import type { Library } from '@/lib/types'
 
-function NavItem({ to, icon: I, label, end, onClick }: { to: string; icon: Icon; label: string; end?: boolean; onClick?: () => void }) {
+function NavItem({ to, icon: I, label, end, onClick, badge }: { to: string; icon: Icon; label: string; end?: boolean; onClick?: () => void; badge?: number }) {
   return (
     <NavLink
       to={to}
@@ -35,6 +36,7 @@ function NavItem({ to, icon: I, label, end, onClick }: { to: string; icon: Icon;
         <>
           <I size={18} weight={isActive ? 'fill' : 'regular'} aria-hidden />
           <span className="truncate">{label}</span>
+          {badge ? <CountBadge n={badge} /> : null}
         </>
       )}
     </NavLink>
@@ -113,10 +115,12 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
   const { data: libraries } = useLibraries()
   const admin = useIsAdmin()
   const update = useServerUpdate(admin).data
+  const pendingDevices = usePendingDevices(admin)
   return (
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3">
       <NavItem to="/" end icon={House} label={t('nav.home')} onClick={onNavigate} />
       <NavItem to="/playlists" icon={ListBullets} label={t('nav.playlists')} onClick={onNavigate} />
+      <NavItem to="/requests" icon={PaperPlaneTilt} label={t('nav.requests')} onClick={onNavigate} />
       {libraries && libraries.length > 0 && (
         <p className="mt-4 px-3 pb-1 text-caption font-semibold uppercase tracking-wider text-subtle">{t('nav.libraries')}</p>
       )}
@@ -130,7 +134,7 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
             <span className="truncate">{t('nav.updateAvailable', { version: update.version })}</span>
           </Link>
         )}
-        {admin && <NavItem to="/settings" icon={GearSix} label={t('nav.settings')} onClick={onNavigate} />}
+        {admin && <NavItem to="/settings" icon={GearSix} label={t('nav.settings')} onClick={onNavigate} badge={pendingDevices} />}
       </div>
     </nav>
   )

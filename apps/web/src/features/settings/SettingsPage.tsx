@@ -6,12 +6,17 @@ import { LibrariesSection } from './LibrariesSection'
 import { GeneralSection, LanguagesSection, LibrarySection, MetadataSection, ScheduledSection, TranscoderSection } from './ServerSections'
 import { settingsGroups, type SectionPath } from './sections'
 import { DashboardSection, NetworkSection, TroubleshootingSection } from './StatusSections'
+import { NotificationsSection } from './NotificationsSection'
 import { ShelvesSection } from './ShelvesSection'
 import { UsersSection } from './UsersSection'
+import { ActivitySection } from '@/features/activity/ActivitySection'
+import { DevicesSection } from '@/features/devices/DevicesSection'
+import { RequestsSection } from '@/features/requests/RequestsSection'
 import { SharesSection } from '@/features/shares/SharesSection'
 
 const elements: Record<SectionPath, JSX.Element> = {
   dashboard: <DashboardSection />,
+  activity: <ActivitySection />,
   general: <GeneralSection />,
   library: <LibrarySection />,
   metadata: <MetadataSection />,
@@ -19,10 +24,13 @@ const elements: Record<SectionPath, JSX.Element> = {
   transcoder: <TranscoderSection />,
   network: <NetworkSection />,
   scheduled: <ScheduledSection />,
+  notifications: <NotificationsSection />,
   libraries: <LibrariesSection />,
   shelves: <ShelvesSection />,
   users: <UsersSection />,
   shares: <SharesSection />,
+  devices: <DevicesSection />,
+  requests: <RequestsSection />,
   troubleshooting: <TroubleshootingSection />,
   updates: <UpdatesSection />,
   about: <AboutSection />,

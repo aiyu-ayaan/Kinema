@@ -1,6 +1,19 @@
 import { storageKeys } from './flavor'
 import type {
+  ApprovalRequired,
   CollectionDetail,
+  Device,
+  DeviceInfo,
+  MediaRequest,
+  NewRequest,
+  NotifySettings,
+  NowPlaying,
+  RequestKind,
+  RequestSearch,
+  RequestStatus,
+  Session,
+  UserActivity,
+  WatchStats,
   CollectionSummary,
   DirListing,
   LockableField,
@@ -95,11 +108,6 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return res.json()
 }
 
-interface SessionResponse {
-  token: string
-  user: User
-}
-
 export interface PlayCaps {
   hevc: boolean
   av1: boolean
@@ -117,7 +125,7 @@ function playQuery(audio: number | null, caps: PlayCaps, start?: number) {
 export const api = {
   serverInfo: () => request<ServerInfo>('GET', '/server/info'),
   authStatus: () => request<{ needs_setup: boolean }>('GET', '/auth/status'),
-  setup: (name: string, password: string) => request<SessionResponse>('POST', '/auth/setup', { name, password }),
+  setup: (name: string, password: string, device: DeviceInfo) => request<Session>('POST', '/auth/setup', { name, password, device }),
   profiles: () => request<ProfileCard[]>('GET', '/auth/profiles'),
   myProfile: () => request<MyProfile>('GET', '/profile'),
   setLanguages: (l: Languages) => request<Prefs>('PUT', '/profile/preferences', l),
@@ -133,7 +141,11 @@ export const api = {
   createShare: (body: { item_id: number; expires_in_hours: number; label?: string }) =>
     request<CreatedShare>('POST', '/shares', body),
   revokeShare: (id: number) => request<void>('DELETE', `/shares/${id}`),
-  login: (body: { user_id: number; password?: string; pin?: string }) => request<SessionResponse>('POST', '/auth/login', body),
+  /** Signs in, or says the administrator must approve this device first. */
+  login: (body: { user_id: number; password?: string; pin?: string; device: DeviceInfo }) =>
+    request<Session | ApprovalRequired>('POST', '/auth/login', body),
+  /** Asked every few seconds by a device waiting for approval; a 404 `auth.device_denied` means it was declined. */
+  devicePoll: (poll_token: string) => request<Session | { pending: true }>('POST', '/auth/device/poll', { poll_token }),
   users: () => request<ManagedUser[]>('GET', '/users'),
   createUser: (p: ProfileInput) => request<ManagedUser>('POST', '/users', p),
   updateUser: (id: number, p: ProfileInput) => request<ManagedUser>('PATCH', `/users/${id}`, p),
@@ -238,6 +250,28 @@ export const api = {
   /** Hides or shows a shelf for this profile only. */
   hideShelf: (id: number, hidden: boolean) => request<void>('PUT', `/shelves/${id}/hidden`, { hidden }),
   genres: () => request<string[]>('GET', '/genres'),
+
+  /** Admin: devices profiles signed in from, pending ones first asking to be let in. */
+  devices: () => request<Device[]>('GET', '/devices'),
+  approveDevice: (id: number) => request<Device>('POST', `/devices/${id}/approve`),
+  /** Declines a pending device, or removes an approved one and signs it out. */
+  removeDevice: (id: number) => request<void>('DELETE', `/devices/${id}`),
+
+  activityNow: () => request<NowPlaying[]>('GET', '/activity/now'),
+  activityUsers: () => request<UserActivity[]>('GET', '/activity/users'),
+  activityUser: (id: number) => request<WatchStats>('GET', `/activity/users/${id}`),
+  myStats: () => request<WatchStats>('GET', '/profile/stats'),
+
+  /** Admin: every request. Anyone else: their own. */
+  requests: () => request<MediaRequest[]>('GET', '/requests'),
+  requestSearch: (q: string, kind: RequestKind) => request<RequestSearch>('GET', `/requests/search?q=${encodeURIComponent(q)}&kind=${kind}`),
+  createRequest: (body: NewRequest) => request<MediaRequest>('POST', '/requests', body),
+  answerRequest: (id: number, status: RequestStatus, admin_note?: string) => request<MediaRequest>('PATCH', `/requests/${id}`, { status, admin_note }),
+  deleteRequest: (id: number) => request<void>('DELETE', `/requests/${id}`),
+
+  notifications: () => request<NotifySettings>('GET', '/settings/notifications'),
+  saveNotifications: (n: NotifySettings) => request<NotifySettings>('PUT', '/settings/notifications', n),
+  testNotification: (index: number) => request<void>('POST', `/settings/notifications/test/${index}`),
 }
 
 /**

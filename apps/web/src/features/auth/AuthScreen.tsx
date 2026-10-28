@@ -1,19 +1,76 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Backspace, HouseLine, LockSimple } from '@phosphor-icons/react'
+import { ArrowLeft, Backspace, CircleNotch, HouseLine, LockSimple, ShieldWarning } from '@phosphor-icons/react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { ErrorText, Skeleton } from '@/components/ui/Card'
 import { Field } from '@/components/ui/Field'
-import { api } from '@/lib/api'
+import { api, ApiError } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
+import { clientDevice } from '@/lib/device'
 import { isDev } from '@/lib/flavor'
 import { t } from '@/lib/i18n'
 import { useServerInfo } from '@/lib/queries'
-import type { ProfileCard, User } from '@/lib/types'
+import type { ApprovalRequired, ProfileCard, User } from '@/lib/types'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
+
+type Waiting = ApprovalRequired['approval_required']
+
+/** Signs a profile in, or hands over the request the administrator has to approve first. */
+function useLogin(onWaiting: (w: Waiting) => void) {
+  const { signIn } = useAuth()
+  return async (body: { user_id: number; password?: string; pin?: string }) => {
+    const res = await api.login({ ...body, device: clientDevice() })
+    if ('approval_required' in res) onWaiting(res.approval_required)
+    else signIn(res.token, res.user)
+  }
+}
+
+const POLL_MS = 5000
+
+/** A new device on a profile with no free slot: waits until the administrator answers. */
+function WaitingForApproval({ waiting, onBack }: { waiting: Waiting; onBack: () => void }) {
+  const { signIn } = useAuth()
+  const [denied, setDenied] = useState(false)
+
+  useEffect(() => {
+    if (denied) return
+    let stopped = false
+    const timer = setInterval(async () => {
+      try {
+        const res = await api.devicePoll(waiting.poll_token)
+        if (stopped || 'pending' in res) return
+        stopped = true
+        signIn(res.token, res.user)
+      } catch (err) {
+        // The server drops a declined request, so its poll secret no longer exists.
+        if (err instanceof ApiError && err.code === 'auth.device_denied') setDenied(true)
+        // Anything else (network, restart) is retried on the next tick.
+      }
+    }, POLL_MS)
+    return () => {
+      stopped = true
+      clearInterval(timer)
+    }
+  }, [waiting.poll_token, denied, signIn])
+
+  return (
+    <div className="flex flex-col items-center text-center">
+      <span className="flex h-16 w-16 items-center justify-center rounded-full border border-border bg-panel text-primary">
+        {denied ? <ShieldWarning size={30} aria-hidden /> : <CircleNotch size={30} className="animate-spin" aria-hidden />}
+      </span>
+      <h1 className="mt-5 text-page font-semibold">{t(denied ? 'auth.approval.deniedTitle' : 'auth.approval.title')}</h1>
+      <p className="mt-2 text-body text-muted" role="status">
+        {t(denied ? 'auth.approval.denied' : 'auth.approval.description', { device: waiting.device_name })}
+      </p>
+      <Button variant="ghost" icon={<ArrowLeft size={16} />} onClick={onBack} className="mt-6">
+        {t(denied ? 'auth.profiles.back' : 'common.cancel')}
+      </Button>
+    </div>
+  )
+}
 
 function Backdrop({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return (
@@ -46,7 +103,7 @@ function Setup() {
     setError(null)
     setLoading(true)
     try {
-      const res = await api.setup(name.trim(), password)
+      const res = await api.setup(name.trim(), password, clientDevice())
       signIn(res.token, res.user)
     } catch (err) {
       setError(errorText(err))
@@ -86,8 +143,8 @@ function Setup() {
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'back'] as const
 
 /** PIN entry that works with the on-screen pad, a keyboard, or a TV remote's number keys. */
-function PinPad({ profile, onBack }: { profile: User; onBack: () => void }) {
-  const { signIn } = useAuth()
+function PinPad({ profile, onBack, onWaiting }: { profile: User; onBack: () => void; onWaiting: (w: Waiting) => void }) {
+  const login = useLogin(onWaiting)
   const [pin, setPin] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -97,8 +154,7 @@ function PinPad({ profile, onBack }: { profile: User; onBack: () => void }) {
     setLoading(true)
     setError(null)
     try {
-      const res = await api.login({ user_id: profile.id, pin: value })
-      signIn(res.token, res.user)
+      await login({ user_id: profile.id, pin: value })
     } catch (err) {
       setError(errorText(err))
       setPin('')
@@ -163,8 +219,8 @@ function PinPad({ profile, onBack }: { profile: User; onBack: () => void }) {
   )
 }
 
-function PasswordForm({ profile, onBack }: { profile: User; onBack: () => void }) {
-  const { signIn } = useAuth()
+function PasswordForm({ profile, onBack, onWaiting }: { profile: User; onBack: () => void; onWaiting: (w: Waiting) => void }) {
+  const login = useLogin(onWaiting)
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -174,8 +230,7 @@ function PasswordForm({ profile, onBack }: { profile: User; onBack: () => void }
     setLoading(true)
     setError(null)
     try {
-      const res = await api.login({ user_id: profile.id, password })
-      signIn(res.token, res.user)
+      await login({ user_id: profile.id, password })
     } catch (err) {
       setError(errorText(err))
     } finally {
@@ -205,11 +260,12 @@ function PasswordForm({ profile, onBack }: { profile: User; onBack: () => void }
 
 /** "Who's watching?" Profiles without a lock open with one tap. */
 function ProfilePicker() {
-  const { signIn } = useAuth()
   const { data: info } = useServerInfo()
   const { data: profiles, isLoading } = useQuery({ queryKey: ['profiles'], queryFn: api.profiles })
   const [chosen, setChosen] = useState<User | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [waiting, setWaiting] = useState<Waiting | null>(null)
+  const login = useLogin(setWaiting)
 
   async function pick(p: ProfileCard) {
     setError(null)
@@ -223,15 +279,36 @@ function ProfilePicker() {
       return
     }
     try {
-      const res = await api.login({ user_id: p.id })
-      signIn(res.token, res.user)
+      await login({ user_id: p.id })
     } catch (err) {
       setError(errorText(err))
     }
   }
 
+  if (waiting) {
+    return (
+      <Backdrop>
+        <WaitingForApproval
+          waiting={waiting}
+          onBack={() => {
+            setWaiting(null)
+            setChosen(null)
+          }}
+        />
+      </Backdrop>
+    )
+  }
+
   if (chosen) {
-    return <Backdrop>{chosen.has_pin && !chosen.has_password ? <PinPad profile={chosen} onBack={() => setChosen(null)} /> : <PasswordForm profile={chosen} onBack={() => setChosen(null)} />}</Backdrop>
+    return (
+      <Backdrop>
+        {chosen.has_pin && !chosen.has_password ? (
+          <PinPad profile={chosen} onBack={() => setChosen(null)} onWaiting={setWaiting} />
+        ) : (
+          <PasswordForm profile={chosen} onBack={() => setChosen(null)} onWaiting={setWaiting} />
+        )}
+      </Backdrop>
+    )
   }
 
   return (

@@ -9,6 +9,9 @@ export function runtime(seconds: number | null | undefined): string | null {
   return h > 0 ? t('format.hoursMinutes', { h, m: m % 60 }) : t('format.minutes', { m })
 }
 
+/** Watch time: like `runtime`, but 0 reads "0m". */
+export const watchTime = (seconds: number) => runtime(seconds) ?? t('format.minutes', { m: 0 })
+
 /** 3725 -> "1:02:05"; 65 -> "1:05". */
 export function clock(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds))

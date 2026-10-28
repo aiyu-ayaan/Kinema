@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowsLeftRight } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/Button'
+import { StatsView } from '@/features/activity/StatsView'
 import { Card, CardHeader, ErrorText, PageHeader, Skeleton } from '@/components/ui/Card'
 import { api } from '@/lib/api'
 import { t } from '@/lib/i18n'
@@ -13,6 +14,7 @@ import { ratingLabel } from './rating'
 export function ProfilePage() {
   const qc = useQueryClient()
   const { data, isLoading } = useQuery({ queryKey: ['my-profile'], queryFn: api.myProfile })
+  const stats = useQuery({ queryKey: ['my-stats'], queryFn: api.myStats })
   const [langs, setLangs] = useState<Languages | null>(null)
   const [transfer, setTransfer] = useState(false)
   useEffect(() => {
@@ -59,6 +61,13 @@ export function ProfilePage() {
           {!data.user.is_admin && limit != null && <p className="text-caption text-muted">{t('profile.limitNote', { limit: ratingLabel(limit) })}</p>}
         </form>
       </Card>
+      <section aria-labelledby="watch-activity" className="space-y-3">
+        <h2 id="watch-activity" className="text-title font-semibold">
+          {t('profile.activity')}
+        </h2>
+        <ErrorText>{stats.error?.message}</ErrorText>
+        {stats.data ? <StatsView stats={stats.data} /> : !stats.error && <Skeleton className="h-48" />}
+      </section>
       {transfer && (
         <TransferModal
           open

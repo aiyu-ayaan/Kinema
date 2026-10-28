@@ -10,6 +10,7 @@ import { LibraryPage } from './features/library/LibraryPage'
 import { CollectionPage } from './features/playlists/CollectionPage'
 import { PlaylistPage } from './features/playlists/PlaylistPage'
 import { PlaylistsPage } from './features/playlists/PlaylistsPage'
+import { RequestsPage } from './features/requests/RequestsPage'
 import { SearchPage } from './features/search/SearchPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { useAuth } from './lib/auth'
@@ -64,6 +65,7 @@ export function App() {
               <Route path="/playlists" element={<PlaylistsPage />} />
               <Route path="/playlists/:id" element={<PlaylistPage />} />
               <Route path="/collections/:id" element={<CollectionPage />} />
+              <Route path="/requests" element={<RequestsPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               {user.is_admin && <Route path="/settings/*" element={<SettingsPage />} />}
               <Route path="*" element={<Navigate to="/" replace />} />

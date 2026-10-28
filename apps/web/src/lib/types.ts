@@ -380,3 +380,130 @@ export interface ServerStatus {
   active_transcodes: number
   caches: { thumbnails: number; subtitles: number; images: number }
 }
+
+/** What a client tells the server about itself at sign-in; `id` is random and stays on the device. */
+export interface DeviceInfo {
+  id: string
+  kind: 'web' | 'desktop'
+  name: string
+}
+
+export interface Session {
+  token: string
+  user: User
+}
+
+/** Sign-in on a device the administrator has not approved yet. */
+export interface ApprovalRequired {
+  approval_required: { poll_token: string; device_name: string }
+}
+
+export interface Device {
+  id: number
+  user_id: number
+  user_name: string
+  kind: 'web' | 'desktop' | 'mobile'
+  name: string
+  status: 'approved' | 'pending'
+  created_at: number
+  last_seen: number
+}
+
+export interface NowPlaying {
+  user_id: number
+  user_name: string
+  item: ItemCard
+  position_s: number
+  device_kind: string | null
+  device_name: string | null
+  started_at: number
+  /** Seconds since the player last reported. */
+  idle_s: number
+}
+
+export interface WatchTotals {
+  total_s: number
+  last_7d_s: number
+  last_30d_s: number
+  titles: number
+  completed: number
+  last_played_at: number | null
+}
+
+export interface UserActivity {
+  user: User
+  totals: WatchTotals
+}
+
+export interface WatchStats {
+  totals: WatchTotals
+  /** Last 30 days; days without play are left out. */
+  daily: { day: number; seconds: number }[]
+  top_titles: { item_id: number; title: string; kind: string; poster: string | null; seconds: number }[]
+  top_genres: { genre: string; seconds: number }[]
+  history: { item: ItemCard; last_played_at: number }[]
+}
+
+export type RequestKind = 'movie' | 'show'
+export type RequestStatus = 'pending' | 'approved' | 'declined' | 'available'
+
+export interface MediaRequest {
+  id: number
+  user_id: number
+  user_name: string
+  kind: RequestKind
+  title: string
+  year: number | null
+  tmdb_id: number | null
+  /** Image key ("w500/abc.jpg"). */
+  poster: string | null
+  overview: string | null
+  note: string | null
+  status: RequestStatus
+  admin_note: string | null
+  created_at: number
+  updated_at: number
+}
+
+export interface NewRequest {
+  kind: RequestKind
+  title: string
+  year?: number | null
+  tmdb_id?: number | null
+  /** TMDB path from the search ("/abc.jpg"). */
+  poster?: string | null
+  overview?: string | null
+  note?: string | null
+}
+
+export interface RequestSearch {
+  /** False without a TMDB key: the typed title is requested as it is. */
+  tmdb: boolean
+  results: MatchCandidate[]
+}
+
+export type ChannelKind = 'ntfy' | 'gotify' | 'discord' | 'slack' | 'telegram' | 'webhook' | 'smtp'
+
+export interface NotifyChannel {
+  kind: ChannelKind
+  label: string
+  enabled: boolean
+  url: string
+  topic: string
+  /** Secret: comes back masked; send it back unchanged to keep the stored one. */
+  token: string
+  to: string
+  smtp_host: string
+  smtp_port: number
+  smtp_security: 'tls' | 'starttls' | 'none'
+  smtp_username: string
+  /** Secret, as `token`. */
+  smtp_password: string
+  from: string
+}
+
+export interface NotifySettings {
+  channels: NotifyChannel[]
+  on_device_request: boolean
+  on_media_request: boolean
+}
