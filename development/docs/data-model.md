@@ -13,6 +13,8 @@ CREATE TABLE users (
   is_admin INTEGER NOT NULL DEFAULT 0,
   avatar TEXT,
   created_at INTEGER NOT NULL
+  -- 20261028000002: is_owner INTEGER NOT NULL DEFAULT 0. Set for the setup admin, or on
+  -- upgrade the earliest admin. Triggers refuse demoting or deleting the owner.
 );
 
 CREATE TABLE libraries (

@@ -88,9 +88,12 @@ Watch progress, watched flags, "Continue Watching", playlists, language and subt
 
 | Role | Can |
 |---|---|
+| Site owner | The first administrator (`users.is_owner`, 2026-10-28). Everything an admin can, and it can never lose the admin role or be deleted. Only the owner can edit the owner's profile and lock or remove the owner's devices, so another admin cannot reset its password and take over. Enforced by the API (`users.owner_stays_admin`, `users.owner_delete`, `users.owner_only`) and by SQLite triggers. Upgrades mark the earliest existing admin as owner and leave every other `is_admin` as it was |
 | Admin | Everything: libraries, users, server settings, shares for any content |
 | User | Browse allowed libraries, play, own playlists, create share links for items they can access |
 | Restricted | Like User but with a max content rating and no sharing |
+
+Badges: the web Profiles page shows Site owner, Administrator or Member; the Android Settings tab shows the signed-in profile's role.
 
 Library access is a whitelist in `user_library_access`. Content rating limits filter queries server side.
 
