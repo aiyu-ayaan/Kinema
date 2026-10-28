@@ -104,7 +104,8 @@ async fn main() -> anyhow::Result<()> {
         hls: hls::HlsSessions::default(),
         watchers: Arc::new(Mutex::new(HashMap::new())),
         changes,
-        probe_slots: Arc::new(Semaphore::new(2)),
+        // Server-wide cap across libraries; each scan also keeps to its disk's share (scan.rs).
+        probe_slots: Arc::new(Semaphore::new(4)),
         thumb_slots: Arc::new(Semaphore::new(1)),
         active_streams: Arc::default(),
         active_transcodes: Arc::default(),

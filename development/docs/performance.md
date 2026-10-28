@@ -25,7 +25,7 @@
 - JSON via `serde_json` with pre-sized buffers; compression only for responses over 1 KiB.
 - Images: serve WebP with `ETag` and `Cache-Control: immutable`; resizing happens once.
 - Streaming: `tokio::fs::File` + `ReaderStream` with a 256 KiB buffer; `Range` parsed once; `sendfile` through hyper when available.
-- ffprobe: one process per file, bounded parallelism of 2 on HDD, 4 on SSD (autodetected via `/sys/block/*/queue/rotational`).
+- ffprobe: one process per file, at most 2 at once per scan on an HDD and 4 on an SSD, judged by the first file's disk (`platform::is_rotational`, `/sys/dev/block/<major>:<minor>/queue/rotational`). Disks the kernel does not describe (NFS/SMB, btrfs, Windows) count as HDD. All scans together stay under 4.
 - Thumbnail: input seeking and keyframe-only decode.
 - Scrub sprites: off by default (admin setting `scrub_thumbnails`); keyframe-only decode of the whole file once, on first scrub, at `nice 19`. Measured on a synthetic 20 min 1080p H.264 file (GOP 240, 1.9 GB, 4-core VM): 3.3 s wall, 1.9 s CPU for 2 sheets. Real footage with HEVC 4K decodes slower per keyframe; not measured.
 - Allocator: `mimalloc` as the global allocator in the binary (musl's own malloc is slow under many threads; same on glibc and MSVC builds for one behaviour everywhere).

@@ -99,6 +99,33 @@ pub fn load_per_core() -> Option<f64> {
     }
 }
 
+/// Whether `path` lives on a spinning disk. None when the kernel does not say: network mounts,
+/// btrfs (anonymous device numbers), Windows.
+pub fn is_rotational(path: &Path) -> Option<bool> {
+    #[cfg(target_os = "linux")]
+    {
+        use std::os::unix::fs::MetadataExt;
+        let dev = std::fs::metadata(path).ok()?.dev();
+        // glibc's major()/minor() split of a 64-bit dev_t.
+        let major = ((dev >> 32) & 0xffff_f000) | ((dev >> 8) & 0x0000_0fff);
+        let minor = ((dev >> 12) & 0xffff_ff00) | (dev & 0x0000_00ff);
+        let dir = std::fs::canonicalize(format!("/sys/dev/block/{major}:{minor}")).ok()?;
+        // A partition has no queue/ of its own; its parent disk has.
+        let flag = [
+            dir.join("queue/rotational"),
+            dir.parent()?.join("queue/rotational"),
+        ]
+        .iter()
+        .find_map(|p| std::fs::read_to_string(p).ok())?;
+        Some(flag.trim() == "1")
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = path;
+        None
+    }
+}
+
 /// GPU render nodes (`/dev/dri/renderD128`, ...), the devices VA-API encodes on. Linux only:
 /// Windows reaches the GPU through NVENC and Quick Sync without a device path.
 pub fn render_nodes() -> Vec<PathBuf> {
@@ -169,5 +196,12 @@ mod tests {
         assert!(!is_allowed_library_root(Path::new("/proc/tty")));
         assert!(is_allowed_library_root(Path::new("/mnt/Void/Movies")));
         assert!(is_allowed_library_root(Path::new("/home/a/proc")));
+    }
+
+    #[test]
+    fn rotational_unknown_without_a_disk() {
+        assert_eq!(is_rotational(Path::new("/no/such/file")), None);
+        // A partition resolves through its parent disk; the answer depends on the machine.
+        println!("/ rotational: {:?}", is_rotational(Path::new("/")));
     }
 }

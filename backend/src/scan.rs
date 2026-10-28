@@ -9,7 +9,9 @@ use kinema_meta::tvmaze::{self, TvmazeClient};
 use kinema_scanner::{FoundFile, MediaWalk, Sidecar, parse};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Semaphore;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::task::JoinSet;
 use tracing::{info, warn};
@@ -495,15 +497,34 @@ fn sidecar_streams(sidecars: Vec<Sidecar>) -> Vec<NewStream> {
         .collect()
 }
 
+/// ffprobe runs at once on one library: parallel reads seek a spinning disk to death, so
+/// HDDs (and disks the kernel does not describe) get fewer than SSDs.
+const HDD_PROBES: usize = 2;
+const SSD_PROBES: usize = 4;
+
 async fn probe_all(state: &AppState, files: Vec<(i64, PathBuf, Vec<Sidecar>)>) {
     let Some(bins) = state.bins.clone() else {
         return;
     };
+    // shortcut: the disk is judged by the first file, so a library spanning an HDD and an SSD
+    // probes at the first one's pace; split such a library if it matters.
+    let per_disk = match files
+        .first()
+        .and_then(|(_, p, _)| kinema_core::platform::is_rotational(p))
+    {
+        Some(false) => SSD_PROBES,
+        _ => HDD_PROBES,
+    };
+    let disk_slots = Arc::new(Semaphore::new(per_disk));
     let mut set = JoinSet::new();
     for (id, path, sidecars) in files {
         let state = state.clone();
         let bins = bins.clone();
+        let disk_slots = disk_slots.clone();
         set.spawn(async move {
+            let Ok(_disk) = disk_slots.acquire().await else {
+                return;
+            };
             let Ok(_permit) = state.background_slot(&state.probe_slots).await else {
                 return;
             };
