@@ -38,8 +38,3 @@ pub fn suspend_process(pid: u32, suspend: bool) -> Result<(), std::io::Error> {
         Err(std::io::Error::last_os_error())
     }
 }
-
-/// Terminate child process cleanly on Unix
-pub fn kill_child_process_group(_pid: u32) -> Result<(), std::io::Error> {
-    Ok(())
-}
