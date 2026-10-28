@@ -1406,6 +1406,32 @@ pub async fn set_content_rating(
     Ok(())
 }
 
+/// Certification of a new match (Fix match): replaces the old match's rating even when the new one has
+/// none, since the old rating belongs to a different title. A manual rating stays.
+pub async fn replace_content_rating(
+    pool: &SqlitePool,
+    item_id: i64,
+    certification: Option<&str>,
+) -> Result<(), DbError> {
+    sqlx::query("UPDATE items SET content_rating = ?2 WHERE id = ?1 AND content_rating_manual = 0")
+        .bind(item_id)
+        .bind(certification.map(str::trim).unwrap_or_default())
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Items whose poster or backdrop is this image file, at any size ("w300/x.jpg" is "w1280/x.jpg" bigger),
+/// to decide who may fetch it. The file name is validated to letters, digits and `._-` by the caller.
+pub async fn ids_with_image(pool: &SqlitePool, name: &str) -> Result<Vec<i64>, DbError> {
+    Ok(sqlx::query_scalar(
+        "SELECT id FROM items WHERE poster LIKE '%/' || ?1 OR backdrop LIKE '%/' || ?1 LIMIT 50",
+    )
+    .bind(name)
+    .fetch_all(pool)
+    .await?)
+}
+
 /// Matched movies and shows never checked for a certification (matched before ratings
 /// were stored): (id, kind, tmdb_id).
 pub async fn needing_content_rating(
@@ -1466,6 +1492,43 @@ mod tests {
             external_fingerprint: Some(fp.into()),
             ..Default::default()
         }
+    }
+
+    #[tokio::test]
+    async fn a_new_match_replaces_the_old_rating_but_not_a_manual_one() {
+        let db = pool().await;
+        let lib = crate::libraries::create(&db, "Movies", "movie", &[])
+            .await
+            .unwrap();
+        let movie = |title| NewItem::Movie { title, year: None };
+        let rating = |id| {
+            let db = db.clone();
+            async move {
+                sqlx::query_scalar::<_, Option<String>>(
+                    "SELECT content_rating FROM items WHERE id = ?1",
+                )
+                .bind(id)
+                .fetch_one(&db)
+                .await
+                .unwrap()
+            }
+        };
+        let matched = find_or_create(&db, lib, movie("Wrong")).await.unwrap();
+        set_content_rating(&db, matched, Some("R")).await.unwrap();
+        // A lookup without a certification keeps what was known; a re-match must not.
+        set_content_rating(&db, matched, None).await.unwrap();
+        assert_eq!(rating(matched).await.as_deref(), Some("R"));
+        replace_content_rating(&db, matched, None).await.unwrap();
+        assert_eq!(rating(matched).await.as_deref(), Some(""));
+
+        let manual = find_or_create(&db, lib, movie("Mine")).await.unwrap();
+        set_manual_content_rating(&db, manual, Some("PG"))
+            .await
+            .unwrap();
+        replace_content_rating(&db, manual, Some("R"))
+            .await
+            .unwrap();
+        assert_eq!(rating(manual).await.as_deref(), Some("PG"));
     }
 
     #[tokio::test]
