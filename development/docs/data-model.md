@@ -195,8 +195,44 @@ CREATE TABLE sessions (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL,
-  lan_only INTEGER NOT NULL DEFAULT 0  -- opened without a lock at home: LAN only
+  lan_only INTEGER NOT NULL DEFAULT 0, -- opened without a lock at home: LAN only
+  device_id INTEGER REFERENCES devices(id) ON DELETE CASCADE  -- migration 20261028000001: removing the device ends the session
 );
+
+-- Device approval, watch time and title requests (migration 20261028000001).
+CREATE TABLE devices (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  client_id TEXT NOT NULL,         -- random, kept by the client
+  kind TEXT NOT NULL CHECK (kind IN ('web','desktop','mobile')),
+  name TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('approved','pending')),
+  poll_hash TEXT,                  -- sha256 of the poll secret of a waiting client; NULL once spent
+  created_at INTEGER NOT NULL,
+  last_seen INTEGER NOT NULL,
+  UNIQUE (user_id, client_id)
+);
+
+CREATE TABLE watch_time (          -- seconds actually played, per profile, title and UTC day
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  day INTEGER NOT NULL,            -- unix seconds / 86400
+  seconds INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, item_id, day)
+);                                 -- index watch_time_day(day)
+
+CREATE TABLE media_requests (      -- titles a profile asked the admin to add
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('movie','show')),
+  title TEXT NOT NULL, year INTEGER, tmdb_id INTEGER,
+  poster TEXT,                     -- image key "w500/abc.jpg"
+  overview TEXT, note TEXT,        -- note: from the requester
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending','approved','declined','available')),
+  admin_note TEXT,
+  created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+);                                 -- index media_requests_status(status, created_at DESC)
 
 -- Per-profile languages, content limit and LAN unlock (migration 20261022300001).
 CREATE TABLE profile_prefs (
@@ -220,6 +256,8 @@ CREATE TABLE jobs (
 
 CREATE VIRTUAL TABLE items_fts USING fts5(title, summary, content='items', content_rowid='id');
 ```
+
+Notification channels are not a table: one JSON value under the `notifications` key of `settings` (secrets stored as typed, masked on read). Live "now playing" is in memory only.
 
 ## Notes
 

@@ -41,6 +41,7 @@ export const credits: { group: string; items: Credit[] }[] = [
       { name: 'rustls', url: 'https://github.com/rustls/rustls', license: 'Apache-2.0 / ISC / MIT' },
       { name: 'rcgen', url: 'https://github.com/rustls/rcgen', license: 'MIT / Apache-2.0' },
       { name: 'reqwest', url: 'https://github.com/seanmonstar/reqwest', license: 'MIT / Apache-2.0' },
+      { name: 'lettre', url: 'https://github.com/lettre/lettre', license: 'MIT / Apache-2.0' },
       { name: 'notify', url: 'https://github.com/notify-rs/notify', license: 'CC0-1.0' },
       { name: 'walkdir', url: 'https://github.com/BurntSushi/walkdir', license: 'MIT / Unlicense' },
       { name: 'argon2 and sha2 (RustCrypto)', url: 'https://github.com/RustCrypto', license: 'MIT / Apache-2.0' },

@@ -163,5 +163,18 @@ Trigger: transcode-only viewing took every core while Plex stayed quiet on the s
 - [ ] Verify scrub `-hwaccel auto` on a machine with VA-API / NVDEC.
 - [ ] Lighthouse pass on the built web bundle.
 
+## Accounts: devices, activity, requests, notifications (2026-10-28)
+- [x] Backend: device approval at sign-in (`admit`, `/auth/device/poll`, `/devices`), one web/desktop + one mobile free per non-admin profile, LAN-only exemption, pending cap 5
+- [x] Backend: watch time from progress reports, `/activity/now`, `/activity/users`, `/profile/stats`
+- [x] Backend: title requests (`/requests`, TMDB search, duplicate / in-library checks)
+- [x] Backend: admin notifications (ntfy, Gotify, Discord, Slack, Telegram, webhook, SMTP via `lettre`) with masked secrets
+- [x] Backend integration tests (`backend/src/accounts_tests.rs`) and kinema-db unit tests; docs updated
+- [x] `lettre` added to the web credits list
+- [ ] Web: send `device`, handle `approval_required` + polling, admin devices / activity / requests / notifications screens (pending verification)
+- [ ] Android: same sign-in flow, requests and stats screens (pending verification)
+- [ ] Desktop: send `kind: desktop` device info (pending verification)
+- [ ] Notifications: live-test every channel kind and SMTP security mode against real servers
+- [ ] Device approval: push the result to the waiting client (SSE) instead of polling
+
 ## Future scope
 - [ ] Android: measure frame times (`FrameTimingMetric`, JankStats) for Library scroll and title open, with and without the baseline profile; tune what shows up slow

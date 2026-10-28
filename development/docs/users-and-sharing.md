@@ -114,6 +114,63 @@ Share link rules:
 - Revocation takes effect immediately and kills active sessions from that link.
 - Rate limited per IP.
 
+## Device approval (2026-10-28)
+
+A non-admin profile signs in freely from two devices: one **web or desktop** device and one **mobile** device (web and desktop share a slot, mobile has its own). Any further device waits for the administrator.
+
+- Clients send `device: {id, kind, name}` with `/auth/login` (and `/auth/setup`). `id` is a random string the client keeps (web `localStorage`, Android preferences); `kind` is `web`, `desktop` or `mobile`. A missing or malformed id gets a random one on the server, so an old client counts as a new device each time and never borrows another's approval.
+- Admins are never limited. They still get a `devices` row so the list shows where they are signed in.
+- Exemption: a LAN-only one-tap session (profile without lock opened from the LAN, or `lan_unlock`) is not tied to a device and uses no slot. It cannot leave the LAN anyway.
+- Known and approved device: signs in again at any time, same `client_id`.
+- Free slot: the device is approved on the spot.
+- Otherwise the response is `200 {approval_required: {poll_token, device_name}}` with no session. The admin is notified once per device (see Notifications). At most 5 requests wait per profile; a sixth new device gets `429 auth.device_requests_full`. A waiting device that retries only gets a fresh poll token.
+- The client polls `POST /auth/device/poll {poll_token}`: `{pending:true}` while waiting; the session (same body as login) once approved; `404` when the request was denied or the token was already used. The poll token is exchanged exactly once.
+- Admin: Settings lists devices (waiting first), approves, or removes. Removing an approved device deletes its sessions (`sessions.device_id ON DELETE CASCADE`) and frees the slot; removing a waiting one denies it. An admin cannot remove their own last approved device (400 `devices.self_last`).
+- `last_seen` is refreshed by progress reports.
+
+```mermaid
+sequenceDiagram
+  participant C as Client (second web device)
+  participant S as Server
+  participant N as notify (ntfy, Gotify, Discord, Slack, Telegram, webhook, SMTP)
+  participant A as Admin (Settings > Devices)
+  C->>S: POST /auth/login {user_id, password, device{id,kind,name}}
+  S->>S: password ok; admin? lan_only? known approved device? free slot?
+  S->>S: all no: devices row status=pending, poll_hash = sha256(poll_token)
+  S-->>N: DeviceRequest (once per device)
+  S-->>C: 200 {approval_required: {poll_token, device_name}}
+  loop every few seconds
+    C->>S: POST /auth/device/poll {poll_token}
+    S-->>C: {pending: true}
+  end
+  A->>S: POST /devices/{id}/approve
+  C->>S: POST /auth/device/poll {poll_token}
+  S->>S: status approved: clear poll_hash, create session with device_id
+  S-->>C: {token, user} + kinema_session cookie
+  Note over C,S: a second poll with the same token: 404
+  A->>S: DELETE /devices/{id}
+  Note over S: device and its sessions are gone, next call: 401
+```
+
+## Title requests (2026-10-28)
+
+Any signed-in profile can ask for a movie or show to be added.
+
+- `GET /requests/search?q&kind` searches TMDB when a key is set (`tmdb:true`); without a key `tmdb:false` and the client sends the typed title.
+- `POST /requests {kind: movie|show, title, year?, tmdb_id?, poster?, overview?, note?}`. With a `tmdb_id`: `409 requests.in_library` if a library item already has it, `409 requests.duplicate` if another pending or approved request has it. The poster is kept only as a plain TMDB file name (`w500/<file>`). The admin is notified (event `MediaRequest`).
+- Statuses: `pending`, `approved`, `declined`, `available`. Only the admin changes them (`PATCH`, with an optional note). Nothing is downloaded or added automatically.
+- A profile sees its own requests, the admin sees all. The owner may withdraw a pending request; only the admin deletes others.
+
+## Activity and watch time (2026-10-28)
+
+- **Now playing** (admin): the web, Android and desktop players already send `PUT /items/{id}/progress` every few seconds. The server keeps the last report per (profile, title) in memory (`AppState.now_playing`, nothing persisted). A player counts as playing for 45 s after its last report; `idle_s` above ~15 means likely paused. Device kind and name come from the report's session.
+- **Watch time** is stored per profile, title and UTC day (`watch_time`). Each report adds the forward position change since the previous report, capped by the wall time between the two reports plus 2 s. A pause adds nothing, a seek back adds nothing, a seek forward adds no more than the time that passed. A gap longer than 120 s starts a new viewing and the gap is not counted. A report with `watched: true` ends the live entry.
+- Summaries: totals (all time, 7 d, 30 d, titles, completed), daily seconds for 30 days, top titles (episodes count towards their show), top genres, recent history. `GET /profile/stats` is the own view; the admin reads any profile through `/activity/users` and `/activity/users/{id}`.
+
+## Notifications (2026-10-28)
+
+The admin can send two events to any number of channels: a device waiting for approval and a new title request. Channel kinds: ntfy, Gotify, Discord, Slack, Telegram, generic JSON webhook, SMTP e-mail (`lettre`). Config is one JSON row in `settings` (`notifications`). Secrets (tokens, SMTP password, Discord / Slack / webhook addresses) are never returned: reads show `••••••••` and a save that sends the mask back keeps the stored value (matched by position and kind). Sending runs in the background, a failure is logged and never blocks sign-in. `POST /settings/notifications/test/{index}` sends a test message and returns 502 on failure.
+
 ## Remote access
 
 Recommended: reverse proxy (Caddy) with TLS. Built-in option: ACME via `rustls-acme`. UPnP port mapping is off by default.

@@ -42,7 +42,12 @@ See `playlists.md`.
 
 ## Users
 
-See `users-and-sharing.md`.
+See `users-and-sharing.md`. Also there:
+
+- Device approval: a non-admin profile signs in on one web/desktop and one mobile device freely; more devices wait for the admin.
+- Title requests: profiles ask for a movie or show, the admin answers.
+- Activity: live now playing, watch time per profile (totals, daily, top titles and genres, history).
+- Admin notifications to ntfy, Gotify, Discord, Slack, Telegram, a webhook or e-mail.
 
 ## Network
 

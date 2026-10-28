@@ -18,6 +18,8 @@ Playback cost (2026-10-21): live re-encodes are throttled to 30 s ahead of real 
 
 Network playback (2026-10-27): the web player plays an H.264 remux through hls.js on the server's copied HLS segments (`/api/hls`), not the progressive pipe: 60 s buffered ahead, cached segments, per-segment retries. The pipe ignores `Range`, so a browser reconnect restarted it at the last seek point. Fallback to the pipe on a fatal hls.js error. Plan requests and dropped streams retry three times. The volume level is kept per device (web `kinema.volume`, Android `KinemaRepository.playerVolume`). Details: `media-pipeline.md` § HLS sessions.
 
+Accounts (2026-10-28): a non-admin profile signs in on one web/desktop and one mobile device for free; further devices wait for the admin (`/auth/device/poll`, `/devices`). LAN-only one-tap sessions and admins are exempt. Progress reports now feed per-profile watch time and the admin's live now-playing list. Profiles can request titles (`/requests`). The admin gets ntfy / Gotify / Discord / Slack / Telegram / webhook / SMTP (`lettre`) messages for new device and title requests; secrets are masked on read. Details: `development/docs/users-and-sharing.md`, `security.md`.
+
 ## Stack
 
 - Language: Rust (stable, edition 2024).

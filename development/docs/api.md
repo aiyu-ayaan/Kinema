@@ -90,6 +90,31 @@ The tables below are the full target API.
 | DELETE | `/users/{id}` | Admin |
 | PUT | `/users/{id}/libraries` | Admin: set library access |
 
+### Devices, activity, requests, notifications (2026-10-28)
+
+`POST /auth/login` and `/auth/setup` accept `device: {id, kind: web|desktop|mobile, name}`. The response is either `{token, user}` or `{approval_required: {poll_token, device_name}}` (see users-and-sharing.md). Errors: `429 auth.device_requests_full`.
+
+| Method | Path | Who | Purpose |
+|---|---|---|---|
+| POST | `/auth/device/poll` | public | `{poll_token}`: `{pending:true}`, or the session once approved, or 404 (denied / used) |
+| GET | `/devices` | admin | Devices, waiting first: `{id, user_id, user_name, kind, name, status, created_at, last_seen}` |
+| POST | `/devices/{id}/approve` | admin | Approve a waiting device; returns it |
+| DELETE | `/devices/{id}` | admin | Deny or remove; ends its sessions. 400 `devices.self_last` for the admin's own last device |
+| GET | `/activity/now` | admin | Live playback: user, item card, `position_s`, `device_kind`, `device_name`, `started_at`, `idle_s` |
+| GET | `/activity/users` | admin | Every profile with its totals |
+| GET | `/activity/users/{id}` | admin | Stats of one profile |
+| GET | `/profile/stats` | any | Own stats: `totals{total_s,last_7d_s,last_30d_s,titles,completed,last_played_at}`, `daily[{day,seconds}]`, `top_titles`, `top_genres`, `history` |
+| GET | `/requests` | any | Own requests; all for the admin |
+| GET | `/requests/search?q&kind` | any | `{tmdb, results[]}`; `tmdb:false` without a TMDB key |
+| POST | `/requests` | any | Create (201). 400 `requests.kind_invalid` / `requests.title_required`; 409 `requests.in_library` / `requests.duplicate` |
+| PATCH | `/requests/{id}` | admin | `{status: pending|approved|declined|available, admin_note?}` |
+| DELETE | `/requests/{id}` | owner (pending) / admin | Withdraw or delete; 403 `requests.not_yours` |
+| GET | `/settings/notifications` | admin | Channels with secrets masked, plus `on_device_request`, `on_media_request` |
+| PUT | `/settings/notifications` | admin | Replace; `••••••••` keeps the stored secret; unknown kinds are dropped; max 20 channels |
+| POST | `/settings/notifications/test/{index}` | admin | Test one saved channel: 204, 400 `notify.channel_missing`, 502 `notify.send_failed` |
+
+`PUT /items/{id}/progress` now also feeds watch time and now playing, and refreshes the device's `last_seen`.
+
 ## Libraries and browsing
 
 | Method | Path | Purpose |

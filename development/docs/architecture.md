@@ -19,6 +19,46 @@ clients (web SPA, Android app, desktop app; desktop may hand a title to a local 
             (walk + watch)
 ```
 
+## Accounts, activity and notifications (2026-10-28)
+
+```mermaid
+flowchart LR
+  subgraph clients
+    Web["web SPA"]
+    And["Android app"]
+    Desk["desktop app"]
+  end
+  subgraph backend["backend (axum)"]
+    Auth["routes/auth.rs<br/>login, admit, device/poll"]
+    Dev["routes/devices.rs"]
+    Act["routes/activity.rs<br/>NowPlayingMap (memory)"]
+    Items["routes/items.rs<br/>PUT progress"]
+    Req["routes/requests.rs"]
+    Set["routes/settings.rs<br/>/settings/notifications"]
+    Notify["notify.rs<br/>spawn, send, masked / merged"]
+  end
+  DB[("SQLite<br/>devices, sessions, watch_time,<br/>media_requests, settings")]
+  Web & And & Desk -->|HTTPS| Auth & Items & Req
+  Auth --> DB
+  Dev --> DB
+  Items -->|"forward delta"| Act
+  Act -->|"add_watch_time"| DB
+  Req --> DB
+  Set --> DB
+  Auth -->|DeviceRequest| Notify
+  Req -->|MediaRequest| Notify
+  Notify -->|load channels| DB
+  Notify -->|HTTPS via reqwest| Ntfy["ntfy"]
+  Notify --> Gotify["Gotify"]
+  Notify --> Discord["Discord webhook"]
+  Notify --> Slack["Slack webhook"]
+  Notify --> Telegram["Telegram bot"]
+  Notify --> Hook["generic JSON webhook"]
+  Notify -->|"SMTP via lettre"| Mail["mail server"]
+```
+
+The device approval sequence is in `users-and-sharing.md`. Notifications run in a spawned task: an unreachable channel is logged and never delays a request.
+
 ## Change detection
 
 ```mermaid
