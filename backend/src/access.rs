@@ -90,6 +90,27 @@ pub async fn visible_item(state: &AppState, user: &User, item_id: i64) -> ApiRes
     }
 }
 
+/// Artwork is cached by file, not by title, so the file is checked against the titles that use it: allowed when
+/// one of them is visible to this profile, or when none uses it (cast photos, request and match candidates).
+pub async fn check_image(state: &AppState, user: &User, name: &str) -> ApiResult<()> {
+    let policy = policy(state, user).await?;
+    if policy.library_scope().is_none() && !policy.limits_content() {
+        return Ok(());
+    }
+    let ids = items::ids_with_image(&state.db, name).await?;
+    if ids.is_empty() {
+        return Ok(());
+    }
+    for id in ids {
+        if let Some(card) = items::card(&state.db, user.id, id).await?
+            && policy.allows(&card)
+        {
+            return Ok(());
+        }
+    }
+    Err(ApiError::not_found())
+}
+
 pub async fn check_item(state: &AppState, user: &User, item_id: i64) -> ApiResult<()> {
     visible_item(state, user, item_id).await.map(|_| ())
 }

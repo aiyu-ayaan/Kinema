@@ -604,10 +604,11 @@ fn valid_image_name(name: &str) -> bool {
 /// TMDB or TVmaze artwork, fetched on first view and kept on disk afterwards.
 async fn image(
     State(state): State<AppState>,
-    _: AuthUser,
+    AuthUser(user): AuthUser,
     Path((size, name)): Path<(String, String)>,
     req: Request,
 ) -> ApiResult<Response> {
+    access::check_image(&state, &user, &name).await?;
     image_for(&state, &size, &name, req).await
 }
 

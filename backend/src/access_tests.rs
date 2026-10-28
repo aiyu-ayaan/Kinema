@@ -428,6 +428,41 @@ async fn content_limit_blocks_direct_paths() {
 }
 
 #[tokio::test]
+async fn content_limit_covers_cached_artwork() {
+    let w = world().await;
+    for (item, name) in [(w.pg_movie, "ok.jpg"), (w.r_movie, "restricted.jpg")] {
+        sqlx::query("UPDATE items SET poster = ?2 WHERE id = ?1")
+            .bind(item)
+            .bind(format!("w300/{name}"))
+            .execute(&w.state.db)
+            .await
+            .unwrap();
+    }
+    // Cached already, so an allowed request never reaches TMDB.
+    for size in ["w300", "w1280"] {
+        let dir = w.state.cache_dir("images").join(size);
+        std::fs::create_dir_all(&dir).unwrap();
+        for name in ["ok.jpg", "restricted.jpg", "cast.jpg"] {
+            std::fs::write(dir.join(name), b"jpg").unwrap();
+        }
+    }
+    for (uri, kid) in [
+        ("/images/w300/ok.jpg", StatusCode::OK),
+        // The same art at another size is the same title's art.
+        ("/images/w1280/restricted.jpg", StatusCode::NOT_FOUND),
+        ("/images/w300/restricted.jpg", StatusCode::NOT_FOUND),
+        // Used by no title (cast photo, request poster): not tied to a limit.
+        ("/images/w300/cast.jpg", StatusCode::OK),
+    ] {
+        assert_eq!(get(&w, uri, &w.kid).await.0, kid, "kid {uri}");
+    }
+    assert_eq!(
+        get(&w, "/images/w300/restricted.jpg", &w.admin).await.0,
+        StatusCode::OK
+    );
+}
+
+#[tokio::test]
 async fn unrated_follows_the_profile_setting() {
     let w = world().await;
     let uri = format!("/items/{}", w.unrated_movie);

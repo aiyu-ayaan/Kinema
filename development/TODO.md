@@ -158,8 +158,8 @@ Trigger: transcode-only viewing took every core while Plex stayed quiet on the s
 - [ ] Content limits in SQL instead of after the query, so limited profiles get full search / shelf pages
 - [ ] Android app: show `home_only` profiles and handle `auth.lan_session` (picker and re-sign-in)
 - [ ] Global IPv6 on the home network is treated as remote; consider matching the server's own /64 prefixes
-- [ ] Re-match keeps the old certification when the new match has none
-- [ ] `/api/images/...` serves any cached artwork key to any signed-in profile (posters of titles above a limit)
+- [x] Re-match keeps the old certification: Fix match now replaces the rating (`items::replace_content_rating`); a manual rating stays
+- [x] `/api/images/...` checks the file against the titles using it (`access::check_image`); unlimited profiles skip it. Cast photos and art no title uses stay open to any profile
 - [x] Scrub thumbnails: admin toggle `scrub_thumbnails` (Settings › Library), default off. E2E checked: 404 when off, 202 then 200 when on; API calls 0.3–1.5 ms.
 - [x] Page `GET /libraries/{id}/items`; web grid and Android library tab load pages (see api.md, performance.md).
 - [ ] Verify scrub `-hwaccel auto` on a machine with VA-API / NVDEC.
