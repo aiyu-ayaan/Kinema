@@ -31,7 +31,9 @@ Kinema.AppDir/
   usr/share/kinema/licenses/  Kinema, ffmpeg, third-party notices
 ```
 
-Windows: `Kinema.exe`, `ffmpeg.exe`, `ffprobe.exe`, `web\`, `licenses\` in one folder. Installer adds Start menu entry, optional "start at login" and an optional Windows service.
+Windows server zip (`scripts/package-windows.ps1` -> `kinema-server-<ver>-windows-x64.zip`): `kinema.exe`, `ffmpeg.exe`, `ffprobe.exe`, `web\`, `licenses\` in one folder, ffmpeg checked against BtbN's published `checksums.sha256`. Not yet run on a Windows machine and not in `release.yml`. An Inno Setup installer (Start menu entry, start at login, service) is still to do; the desktop app has its own installer.
+
+What ships today differs from the plan above: the Linux server is `kinema-server-<ver>-linux-<arch>.tar.gz` and the Docker image is Alpine-based (`Dockerfile`), not debian-slim; the desktop app is the AppImage / .deb / Windows `-Setup.exe` built by electron-builder.
 
 ## ffmpeg bundling and resolution
 
@@ -61,7 +63,8 @@ Host GPU drivers cannot be bundled. Software x264 is always the fallback. Detect
 | Concern | Linux | Windows |
 |---|---|---|
 | Low priority ffmpeg | `nice 19` (background), `nice 10` (live streams) | `BELOW_NORMAL_PRIORITY_CLASS` / `IDLE_PRIORITY_CLASS` via creation flags |
-| Kill child tree | process group + `SIGTERM` | Job Object with kill-on-close |
+| Kill child tree | `kill_on_drop` (SIGKILL) | `kill_on_drop` (TerminateProcess) |
+| Pause an HLS run | `SIGSTOP` / `SIGCONT` | `NtSuspendProcess` / `NtResumeProcess` (ntdll) |
 | FS watching | inotify via `notify` | ReadDirectoryChangesW via `notify` |
 | Paths | bytes allowed, store as `OsString`, display lossy | UTF-16; long paths with `\\?\` prefix; case-insensitive compare |
 | Data dir | `$XDG_DATA_HOME/kinema` | `%APPDATA%\Kinema` |

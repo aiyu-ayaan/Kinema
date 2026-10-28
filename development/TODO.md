@@ -59,20 +59,22 @@
 - [ ] Prune subtitle cache entries of old file versions (they stay until the cache is cleared)
 - [ ] OCR: check accuracy on real Blu-ray PGS and DVD VobSub (only a generated PGS sample was tested)
 - [x] HLS seek reuses existing segments; keep idle session 60 s (M4): server side, `/api/hls/{id}/index.m3u8` + `{n}.ts`
-- [ ] Pause HLS runs on Windows (`platform::suspend_process`, e.g. NtSuspendProcess); unthrottled there for now
+- [x] Pause HLS runs on Windows (`platform::suspend_process` via NtSuspendProcess); compiles for `x86_64-pc-windows-gnu`, not run on a Windows machine
 - [ ] fMP4 HLS segments (HEVC copy for players without HEVC-in-TS)
 
 ## Packaging (end goal)
 - [x] Decisions: GPL ffmpeg as separate process; static musl (Linux) + MSVC (Windows); aarch64 in first release
-- [ ] `kinema-core::platform` (priority, child kill, paths, data dirs)
+- [x] `kinema-core::platform` (priority, child kill via `kill_on_drop`, paths, data dirs)
 - [ ] Spike: static ffmpeg loads host VAAPI libs
-- [ ] `scripts/package-windows.ps1` (zip + Inno Setup)
-- [ ] Dockerfile + docker-compose.yml (debian-slim, PUID/PGID, tini)
-- [ ] GitHub Actions matrix + smoke tests
+- [x] `scripts/package-windows.ps1`: server zip (kinema.exe + web + ffmpeg, checksum-verified); not run on Windows yet. Inno Setup installer for the server: not done (the desktop app has its own `-Setup.exe`)
+- [x] Dockerfile + docker-compose.yml (Alpine, static musl backend, non-root 1000:1000; no PUID/PGID or tini)
+- [x] GitHub Actions matrix (`release.yml`: server x86_64/aarch64, image, Linux and Windows desktop, Android)
+- [ ] Release smoke tests (start the binary, hit `/api/server/info`, probe a sample with the bundled ffprobe)
+- [ ] Windows server zip job in `release.yml`
 - [ ] Release signing key, Windows Authenticode
-- [ ] `scripts/ffmpeg.lock` + `scripts/update-ffmpeg.sh`
+- [x] `scripts/ffmpeg.lock` + `scripts/update-ffmpeg.sh` (checks BtbN publishes the version for all three platforms; hashes come from the published `checksums.sha256` at package time)
 - [x] ffmpeg/ffprobe resolver in `kinema-media`
-- [ ] `scripts/package-appimage.sh`
+- [x] ~~`scripts/package-appimage.sh`~~ replaced: the server ships as `kinema-server-*.tar.gz` (`package-server.sh`), the desktop app as AppImage / .deb through electron-builder
 - [ ] In-app ffmpeg update with hash + signature check
 - [ ] AppImage self-update (zsync)
 
