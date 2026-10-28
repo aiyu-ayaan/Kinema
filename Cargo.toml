@@ -64,6 +64,9 @@ base64 = "0.22"
 # Notifications by e-mail (other channels are plain HTTPS through reqwest)
 lettre = { version = "0.11", default-features = false, features = ["smtp-transport", "tokio1", "tokio1-rustls", "rustls-native-certs", "ring", "builder", "hostname"] }
 
+# Allocator: musl's own malloc is slow under many threads (static Linux build)
+mimalloc = { version = "0.1", default-features = false }
+
 [profile.release]
 strip = true
 lto = "thin"

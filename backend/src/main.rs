@@ -38,6 +38,9 @@ mod web;
 
 use state::AppState;
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Initialize tracing
