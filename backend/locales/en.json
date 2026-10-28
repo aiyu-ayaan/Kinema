@@ -50,5 +50,22 @@
   "profile.import_invalid": "This is not a Kinema profile export, or it is damaged.",
   "profile.lock_invalid": "The PIN or password in this file cannot be used for this profile.",
   "shares.expiry_invalid": "A link lasts from 1 hour to 90 days.",
-  "shares.target_invalid": "Only a movie, show, season, episode or video can be shared."
+  "shares.target_invalid": "Only a movie, show, season, episode or video can be shared.",
+  "auth.device_denied": "The administrator declined this device, or the request expired. Sign in again to ask again.",
+  "auth.device_requests_full": "This profile already has several devices waiting for approval. Ask the administrator to answer them first.",
+  "devices.self_last": "This is your only device. Sign in elsewhere before removing it.",
+  "requests.kind_invalid": "A request is for a movie or a show.",
+  "requests.title_required": "Enter a title.",
+  "requests.in_library": "This title is already in the library.",
+  "requests.duplicate": "Someone has already requested this title.",
+  "requests.status_invalid": "Unknown request status.",
+  "requests.not_yours": "You can only withdraw your own pending requests.",
+  "notify.device.title": "Kinema: device waiting for approval",
+  "notify.device.body": "{user} wants to sign in on a new {kind} device \"{device}\". Approve or decline it in Settings > Devices.",
+  "notify.request.title": "Kinema: new title request",
+  "notify.request.body": "{user} requested the {kind} \"{title}\". See Settings > Requests.",
+  "notify.test.title": "Kinema test notification",
+  "notify.test.body": "Notifications from Kinema reach this channel.",
+  "notify.channel_missing": "There is no channel at this position. Save the settings first.",
+  "notify.send_failed": "Sending failed. Check the channel's address, token and credentials."
 }

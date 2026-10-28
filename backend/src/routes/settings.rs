@@ -1,10 +1,13 @@
 use crate::auth::AdminUser;
 use crate::error::{ApiError, ApiResult};
+use crate::notify::{self, Notifications};
 use crate::server_settings::{self, ServerSettings};
 use crate::state::AppState;
 use crate::{scan, subtitles, thumbs};
+use axum::extract::Path;
 use axum::extract::State;
-use axum::routing::{get, put};
+use axum::http::StatusCode;
+use axum::routing::{get, post, put};
 use axum::{Json, Router};
 use kinema_db::{items, libraries, settings};
 use serde::{Deserialize, Serialize};
@@ -14,6 +17,14 @@ pub fn router() -> Router<AppState> {
         .route("/settings", get(read))
         .route("/settings/server", put(write_server))
         .route("/settings/tmdb", put(write_tmdb))
+        .route(
+            "/settings/notifications",
+            get(read_notifications).put(write_notifications),
+        )
+        .route(
+            "/settings/notifications/test/:index",
+            post(test_notification),
+        )
 }
 
 /// The allowed values, so the UI never offers a choice the server would reject.
@@ -122,4 +133,46 @@ async fn write_tmdb(
         }
     }
     Ok(view(&state).await)
+}
+
+async fn read_notifications(
+    State(state): State<AppState>,
+    _: AdminUser,
+) -> ApiResult<Json<Notifications>> {
+    Ok(Json(notify::load(&state.db).await?.masked()))
+}
+
+async fn write_notifications(
+    State(state): State<AppState>,
+    _: AdminUser,
+    Json(new): Json<Notifications>,
+) -> ApiResult<Json<Notifications>> {
+    let old = notify::load(&state.db).await?;
+    let new = new.merged(&old);
+    notify::save(&state.db, &new).await?;
+    Ok(Json(new.masked()))
+}
+
+/// Sends a test message on one saved channel and reports whether it went through.
+async fn test_notification(
+    State(state): State<AppState>,
+    _: AdminUser,
+    Path(index): Path<usize>,
+) -> ApiResult<StatusCode> {
+    let n = notify::load(&state.db).await?;
+    let channel = n
+        .channels
+        .get(index)
+        .ok_or_else(|| ApiError::bad_request("notify.channel_missing"))?;
+    let msg = notify::Message {
+        title: crate::i18n::t("notify.test.title"),
+        body: crate::i18n::t("notify.test.body"),
+    };
+    notify::send(&state.http, channel, &msg)
+        .await
+        .map_err(|e| {
+            tracing::warn!("test notification via {}: {e}", channel.kind);
+            ApiError::new(StatusCode::BAD_GATEWAY, "notify.send_failed")
+        })?;
+    Ok(StatusCode::NO_CONTENT)
 }

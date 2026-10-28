@@ -40,6 +40,8 @@ pub struct AppState {
     pub started: Instant,
     /// Failed sign-ins per profile: (count, last failure), for PIN lockout.
     pub login_failures: Arc<Mutex<HashMap<i64, (u32, Instant)>>>,
+    /// Who is playing what right now, from progress reports; see `routes/activity.rs`.
+    pub now_playing: crate::routes::activity::NowPlayingMap,
     pub http: reqwest::Client,
     /// SHA-256 of the TLS certificate; apps show it so the owner can compare. None without TLS.
     pub tls_fingerprint: Option<Arc<str>>,

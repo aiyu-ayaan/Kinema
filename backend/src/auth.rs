@@ -149,6 +149,23 @@ impl FromRequestParts<AppState> for AdminUser {
     }
 }
 
+/// The device behind the request's session, if the session has one.
+pub struct CurrentDevice(pub Option<kinema_db::devices::Device>);
+
+#[async_trait]
+impl FromRequestParts<AppState> for CurrentDevice {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, ApiError> {
+        let Some(token) = token_from(parts) else {
+            return Ok(Self(None));
+        };
+        Ok(Self(
+            kinema_db::devices::for_session(&state.db, &token_hash(&token)).await?,
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

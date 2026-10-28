@@ -1,5 +1,5 @@
 use crate::access;
-use crate::auth::{AdminUser, AuthUser};
+use crate::auth::{AdminUser, AuthUser, CurrentDevice};
 use crate::error::{ApiError, ApiResult};
 use crate::routes::collections::{self, CollectionSummary, GenreShelf};
 use crate::routes::libraries::{LibraryView, view};
@@ -224,11 +224,26 @@ struct Progress {
 async fn progress(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    CurrentDevice(device): CurrentDevice,
     Path(id): Path<i64>,
     Json(p): Json<Progress>,
 ) -> ApiResult<StatusCode> {
     access::check_item(&state, &user, id).await?;
-    items::set_progress(&state.db, user.id, id, p.position_s.max(0.0), p.watched).await?;
+    let position = p.position_s.max(0.0);
+    items::set_progress(&state.db, user.id, id, position, p.watched).await?;
+    if let Some(d) = &device {
+        kinema_db::devices::touch(&state.db, d.id).await?;
+    }
+    let device = device.map(|d| (d.kind, d.name));
+    let seconds = crate::routes::activity::report(
+        &state.now_playing,
+        user.id,
+        id,
+        position,
+        p.watched,
+        device,
+    );
+    kinema_db::activity::add_watch_time(&state.db, user.id, id, seconds).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

@@ -11,6 +11,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use kinema_db::devices::{self, NewDevice};
 use kinema_db::profiles;
 use kinema_db::users::{self, User};
 use serde::{Deserialize, Serialize};
@@ -22,6 +23,7 @@ pub fn router() -> Router<AppState> {
         .route("/setup", post(setup))
         .route("/login", post(login))
         .route("/profiles", get(profiles))
+        .route("/device/poll", post(device_poll))
         .route("/logout", post(logout))
         .route("/me", get(me))
 }
@@ -41,6 +43,157 @@ async fn status(State(state): State<AppState>) -> ApiResult<Json<Status>> {
 struct Credentials {
     name: String,
     password: String,
+    device: Option<DeviceInfo>,
+}
+
+/// What a client says about itself at sign-in. `id` is random and kept by the client.
+#[derive(Deserialize, Default)]
+pub struct DeviceInfo {
+    #[serde(default)]
+    id: String,
+    #[serde(default)]
+    kind: String,
+    #[serde(default)]
+    name: String,
+}
+
+/// A usable (client id, kind, name). A missing or odd id gets a random one, so an old
+/// client counts as a new device each time rather than borrowing another's approval.
+fn clean_device(d: Option<DeviceInfo>) -> (String, &'static str, String) {
+    let d = d.unwrap_or_default();
+    let id = d.id.trim();
+    let id = if (8..=128).contains(&id.len())
+        && id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        id.to_string()
+    } else {
+        crate::auth::random_hex(16)
+    };
+    let kind = match d.kind.as_str() {
+        "desktop" => "desktop",
+        "mobile" => "mobile",
+        _ => "web",
+    };
+    let name: String = d.name.trim().chars().take(60).collect();
+    let name = if name.is_empty() {
+        kind.to_string()
+    } else {
+        name
+    };
+    (id, kind, name)
+}
+
+/// More waiting requests than this per profile are refused, so one password cannot fill
+/// the administrator's list.
+const MAX_PENDING_DEVICES: i64 = 5;
+
+#[derive(Serialize)]
+struct ApprovalRequired {
+    approval_required: Pending,
+}
+
+#[derive(Serialize)]
+struct Pending {
+    /// Secret the client polls `/auth/device/poll` with until the administrator decides.
+    poll_token: String,
+    device_name: String,
+}
+
+/// The lock was right; now the device. Admins and LAN-only sessions always get in. Anyone
+/// else gets in on an approved device or a free slot (one web/desktop, one mobile);
+/// otherwise the device waits for the administrator.
+async fn admit(
+    state: &AppState,
+    user: User,
+    device: Option<DeviceInfo>,
+    lan_only: bool,
+) -> ApiResult<Response> {
+    // Opened without a lock at home: the session cannot leave the LAN, so it needs no slot.
+    if lan_only {
+        return start_scoped_session(state, user, true, None).await;
+    }
+    let (client_id, kind, name) = clean_device(device);
+    let known = devices::find(&state.db, user.id, &client_id).await?;
+    let approved = user.is_admin
+        || known.as_ref().is_some_and(|d| d.status == "approved")
+        || devices::approved_in_slot(&state.db, user.id, kind).await? == 0;
+    if approved {
+        let id = devices::upsert(
+            &state.db,
+            &NewDevice {
+                user_id: user.id,
+                client_id: &client_id,
+                kind,
+                name: &name,
+                approved: true,
+                poll_hash: None,
+            },
+        )
+        .await?;
+        return start_scoped_session(state, user, false, Some(id)).await;
+    }
+    if known.is_none() && devices::pending_count(&state.db, user.id).await? >= MAX_PENDING_DEVICES {
+        return Err(ApiError::new(
+            StatusCode::TOO_MANY_REQUESTS,
+            "auth.device_requests_full",
+        ));
+    }
+    // Tell the admin once per device, not on every retry.
+    if known.is_none() {
+        crate::notify::spawn(
+            state,
+            crate::notify::Event::DeviceRequest,
+            crate::notify::device_request(&user.name, &name, kind),
+        );
+    }
+    let (poll_token, poll_hash) = new_token();
+    devices::upsert(
+        &state.db,
+        &NewDevice {
+            user_id: user.id,
+            client_id: &client_id,
+            kind,
+            name: &name,
+            approved: false,
+            poll_hash: Some(&poll_hash),
+        },
+    )
+    .await?;
+    Ok(Json(ApprovalRequired {
+        approval_required: Pending {
+            poll_token,
+            device_name: name,
+        },
+    })
+    .into_response())
+}
+
+#[derive(Deserialize)]
+struct Poll {
+    poll_token: String,
+}
+
+#[derive(Serialize)]
+struct StillPending {
+    pending: bool,
+}
+
+/// A waiting device asks whether it was approved. Approved: the poll secret is spent on a
+/// session. Denied: the request is gone (404).
+async fn device_poll(State(state): State<AppState>, Json(p): Json<Poll>) -> ApiResult<Response> {
+    let device = devices::by_poll_hash(&state.db, &token_hash(p.poll_token.trim()))
+        .await?
+        .ok_or_else(|| ApiError::new(StatusCode::NOT_FOUND, "auth.device_denied"))?;
+    if device.status != "approved" {
+        return Ok(Json(StillPending { pending: true }).into_response());
+    }
+    devices::clear_poll(&state.db, device.id).await?;
+    let user = users::get(&state.db, device.user_id)
+        .await?
+        .ok_or_else(ApiError::not_found)?;
+    start_scoped_session(&state, user, false, Some(device.id)).await
 }
 
 #[derive(Serialize)]
@@ -57,14 +210,23 @@ fn signed_in(token: String, user: User, secure: bool) -> Response {
     (headers, Json(SessionResponse { token, user })).into_response()
 }
 
-async fn start_session(state: &AppState, user: User) -> ApiResult<Response> {
-    start_scoped_session(state, user, false).await
-}
-
 /// `lan_only`: opened without a lock, so the session only works from the LAN.
-async fn start_scoped_session(state: &AppState, user: User, lan_only: bool) -> ApiResult<Response> {
+async fn start_scoped_session(
+    state: &AppState,
+    user: User,
+    lan_only: bool,
+    device_id: Option<i64>,
+) -> ApiResult<Response> {
     let (token, hash) = new_token();
-    users::create_session_scoped(&state.db, &hash, user.id, SESSION_TTL_S, lan_only).await?;
+    users::create_device_session(
+        &state.db,
+        &hash,
+        user.id,
+        SESSION_TTL_S,
+        lan_only,
+        device_id,
+    )
+    .await?;
     Ok(signed_in(token, user, state.config.tls.enabled))
 }
 
@@ -107,7 +269,7 @@ async fn setup(State(state): State<AppState>, Json(c): Json<Credentials>) -> Api
     let user = users::get(&state.db, id)
         .await?
         .ok_or_else(ApiError::not_found)?;
-    start_session(&state, user).await
+    admit(&state, user, c.device, false).await
 }
 
 /// The profile picker. Public, like a TV's "who's watching" screen: names and
@@ -147,6 +309,7 @@ struct Login {
     name: Option<String>,
     password: Option<String>,
     pin: Option<String>,
+    device: Option<DeviceInfo>,
 }
 
 const MAX_FAILURES: u32 = 5;
@@ -199,7 +362,7 @@ async fn login(
             if let Ok(mut f) = state.login_failures.lock() {
                 f.remove(&user.id);
             }
-            return start_scoped_session(&state, user, true).await;
+            return admit(&state, user, c.device, true).await;
         }
         _ => {}
     }
@@ -227,7 +390,7 @@ async fn login(
     if let Ok(mut f) = state.login_failures.lock() {
         f.remove(&user.id);
     }
-    start_session(&state, user).await
+    admit(&state, user, c.device, false).await
 }
 
 async fn logout(State(state): State<AppState>, req: Request) -> ApiResult<Response> {
