@@ -324,3 +324,190 @@ async fn library_pages_cover_every_title_once() {
         .expect("shows");
     assert_eq!(shows, 0);
 }
+
+#[tokio::test]
+async fn web_and_desktop_share_a_device_slot_mobile_has_its_own() {
+    use crate::devices::{self, NewDevice};
+    let db = db().await;
+    let u = user(&db.pool, "Mia").await;
+    let add = |client_id: &'static str, kind: &'static str, approved: bool| {
+        let pool = db.pool.clone();
+        async move {
+            devices::upsert(
+                &pool,
+                &NewDevice {
+                    user_id: u,
+                    client_id,
+                    kind,
+                    name: kind,
+                    approved,
+                    poll_hash: None,
+                },
+            )
+            .await
+            .expect("device")
+        }
+    };
+    assert_eq!(
+        devices::approved_in_slot(&db.pool, u, "web").await.unwrap(),
+        0
+    );
+    add("web-client-1", "web", true).await;
+    assert_eq!(
+        devices::approved_in_slot(&db.pool, u, "web").await.unwrap(),
+        1
+    );
+    assert_eq!(
+        devices::approved_in_slot(&db.pool, u, "desktop")
+            .await
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        devices::approved_in_slot(&db.pool, u, "mobile")
+            .await
+            .unwrap(),
+        0
+    );
+    // A pending device uses no slot; an approved mobile one fills only the mobile slot.
+    add("desk-client-1", "desktop", false).await;
+    assert_eq!(
+        devices::approved_in_slot(&db.pool, u, "web").await.unwrap(),
+        1
+    );
+    add("phone-client-1", "mobile", true).await;
+    assert_eq!(
+        devices::approved_in_slot(&db.pool, u, "mobile")
+            .await
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        devices::approved_in_slot(&db.pool, u, "desktop")
+            .await
+            .unwrap(),
+        1
+    );
+    // The same client stays approved when it signs in again as pending.
+    let id = add("web-client-1", "web", false).await;
+    assert_eq!(
+        devices::get(&db.pool, id).await.unwrap().unwrap().status,
+        "approved"
+    );
+}
+
+#[tokio::test]
+async fn top_titles_roll_episodes_up_to_their_show() {
+    use crate::{activity, items::NewItem};
+    let db = db().await;
+    let u = user(&db.pool, "Mia").await;
+    let lib = library(&db.pool).await;
+    let show = items::find_or_create(
+        &db.pool,
+        lib,
+        NewItem::Show {
+            title: "Bluey",
+            year: None,
+        },
+    )
+    .await
+    .unwrap();
+    let s1 = items::find_or_create(
+        &db.pool,
+        lib,
+        NewItem::Season {
+            show_id: show,
+            season: 1,
+        },
+    )
+    .await
+    .unwrap();
+    let mut eps = Vec::new();
+    for n in 1..=2 {
+        eps.push(
+            items::find_or_create(
+                &db.pool,
+                lib,
+                NewItem::Episode {
+                    season_id: s1,
+                    episode: n,
+                    title: "Ep",
+                },
+            )
+            .await
+            .unwrap(),
+        );
+    }
+    let film = movie(&db.pool, lib, "Heat").await;
+    activity::add_watch_time(&db.pool, u, eps[0], 600)
+        .await
+        .unwrap();
+    activity::add_watch_time(&db.pool, u, eps[1], 500)
+        .await
+        .unwrap();
+    activity::add_watch_time(&db.pool, u, film, 900)
+        .await
+        .unwrap();
+    activity::add_watch_time(&db.pool, u, film, 0)
+        .await
+        .unwrap();
+    let top = activity::top_titles(&db.pool, u, 5).await.unwrap();
+    assert_eq!(top.len(), 2, "two episodes are one show");
+    assert_eq!((top[0].item_id, top[0].seconds), (show, 1100));
+    assert_eq!((top[1].item_id, top[1].seconds), (film, 900));
+    let totals = activity::totals(&db.pool, u).await.unwrap();
+    assert_eq!((totals.total_s, totals.titles), (2000, 3));
+}
+
+#[tokio::test]
+async fn open_duplicate_ignores_declined_and_other_kinds() {
+    use crate::requests::{self, NewRequest};
+    let db = db().await;
+    let u = user(&db.pool, "Mia").await;
+    let id = requests::create(
+        &db.pool,
+        &NewRequest {
+            user_id: u,
+            kind: "movie",
+            title: "Heat",
+            year: None,
+            tmdb_id: Some(949),
+            poster: None,
+            overview: None,
+            note: None,
+        },
+    )
+    .await
+    .unwrap();
+    assert!(
+        requests::open_duplicate(&db.pool, "movie", 949)
+            .await
+            .unwrap()
+    );
+    assert!(
+        !requests::open_duplicate(&db.pool, "show", 949)
+            .await
+            .unwrap()
+    );
+    assert!(
+        !requests::open_duplicate(&db.pool, "movie", 1)
+            .await
+            .unwrap()
+    );
+    requests::set_status(&db.pool, id, "approved", None)
+        .await
+        .unwrap();
+    assert!(
+        requests::open_duplicate(&db.pool, "movie", 949)
+            .await
+            .unwrap()
+    );
+    requests::set_status(&db.pool, id, "declined", None)
+        .await
+        .unwrap();
+    assert!(
+        !requests::open_duplicate(&db.pool, "movie", 949)
+            .await
+            .unwrap()
+    );
+}

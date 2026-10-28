@@ -57,6 +57,10 @@ impl Default for Notifications {
     }
 }
 
+fn secret_url(kind: &str) -> bool {
+    matches!(kind, "discord" | "slack" | "webhook")
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Event {
     DeviceRequest,
@@ -88,6 +92,10 @@ impl Notifications {
         for c in &mut out.channels {
             c.token = hide(&c.token);
             c.smtp_password = hide(&c.smtp_password);
+            // A Discord, Slack or webhook address is itself the secret.
+            if secret_url(&c.kind) {
+                c.url = hide(&c.url);
+            }
         }
         out
     }
@@ -101,6 +109,9 @@ impl Notifications {
             let prev = old.channels.get(i).filter(|p| p.kind == c.kind);
             if c.token == MASK {
                 c.token = prev.map(|p| p.token.clone()).unwrap_or_default();
+            }
+            if c.url == MASK && secret_url(&c.kind) {
+                c.url = prev.map(|p| p.url.clone()).unwrap_or_default();
             }
             if c.smtp_password == MASK {
                 c.smtp_password = prev.map(|p| p.smtp_password.clone()).unwrap_or_default();
@@ -233,7 +244,8 @@ pub async fn send(http: &reqwest::Client, c: &Channel, msg: &Message) -> Result<
         .timeout(timeout)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        // The error text carries the URL, which holds the Telegram bot token or a webhook secret.
+        .map_err(|e| e.without_url().to_string())?;
     if res.status().is_success() {
         Ok(())
     } else {
@@ -300,6 +312,19 @@ mod tests {
         assert_eq!(seen.channels[0].token, MASK);
         let back = seen.merged(&stored);
         assert_eq!(back.channels[0].token, "secret");
+        let hook = Notifications {
+            channels: vec![Channel {
+                kind: "discord".into(),
+                url: "https://discord.com/api/webhooks/1/abc".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        assert_eq!(hook.masked().channels[0].url, MASK);
+        assert_eq!(
+            hook.masked().merged(&hook).channels[0].url,
+            hook.channels[0].url
+        );
         // A channel whose kind changed does not inherit the old secret.
         let mut changed = stored.masked();
         changed.channels[0].kind = "gotify".into();

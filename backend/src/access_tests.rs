@@ -25,8 +25,8 @@ use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::Semaphore;
 use tower::ServiceExt;
 
-const LAN: &str = "192.168.1.20:50000";
-const WAN: &str = "203.0.113.7:50000";
+pub(crate) const LAN: &str = "192.168.1.20:50000";
+pub(crate) const WAN: &str = "203.0.113.7:50000";
 
 struct World {
     state: AppState,
@@ -46,7 +46,7 @@ struct World {
     other_show_ep: i64,
 }
 
-async fn state() -> AppState {
+pub(crate) async fn state() -> AppState {
     let opts = SqliteConnectOptions::from_str("sqlite::memory:")
         .unwrap()
         .foreign_keys(true);
@@ -90,7 +90,7 @@ async fn state() -> AppState {
     }
 }
 
-async fn user(state: &AppState, name: &str, admin: bool, pin: Option<&str>) -> i64 {
+pub(crate) async fn user(state: &AppState, name: &str, admin: bool, pin: Option<&str>) -> i64 {
     let pw = admin.then(|| crate::auth::hash_password("password1").unwrap());
     let pin = pin.map(|p| crate::auth::hash_password(p).unwrap());
     users::create(
@@ -108,7 +108,7 @@ async fn user(state: &AppState, name: &str, admin: bool, pin: Option<&str>) -> i
     .unwrap()
 }
 
-async fn session(state: &AppState, user_id: i64, lan_only: bool) -> String {
+pub(crate) async fn session(state: &AppState, user_id: i64, lan_only: bool) -> String {
     let (token, hash) = new_token();
     users::create_session_scoped(&state.db, &hash, user_id, 3600, lan_only)
         .await
@@ -116,7 +116,7 @@ async fn session(state: &AppState, user_id: i64, lan_only: bool) -> String {
     token
 }
 
-async fn movie(state: &AppState, lib: i64, title: &str, rating: Option<&str>) -> i64 {
+pub(crate) async fn movie(state: &AppState, lib: i64, title: &str, rating: Option<&str>) -> i64 {
     let id = items::find_or_create(
         &state.db,
         lib,
@@ -297,7 +297,7 @@ async fn world() -> World {
     }
 }
 
-async fn call(
+pub(crate) async fn call(
     app: &Router,
     method: Method,
     uri: &str,

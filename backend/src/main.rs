@@ -13,6 +13,8 @@ use tracing::{info, warn};
 mod access;
 #[cfg(test)]
 mod access_tests;
+#[cfg(test)]
+mod accounts_tests;
 mod auth;
 mod boot;
 mod discovery;
