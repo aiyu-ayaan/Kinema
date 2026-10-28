@@ -43,6 +43,7 @@ export function SharesSection() {
                 </p>
                 <p className="text-caption text-muted">
                   {t('shares.expires', { date: date(s.expires_at) })}
+                  {s.max_uses != null && ` · ${t('shares.viewers', { used: s.viewers, max: s.max_uses })}`}
                   {s.creator_name && ` · ${t('shares.by', { name: s.creator_name })}`}
                 </p>
               </div>

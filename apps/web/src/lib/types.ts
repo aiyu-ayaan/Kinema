@@ -85,6 +85,10 @@ export interface Share {
   created_at: number
   expires_at: number
   revoked_at: number | null
+  /** Most distinct viewers the link admits; null = no limit. */
+  max_uses: number | null
+  /** Viewers admitted so far (counted only while max_uses is set). */
+  viewers: number
 }
 
 export interface CreatedShare {

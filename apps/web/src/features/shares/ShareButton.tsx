@@ -11,6 +11,8 @@ import { t, type MessageKey } from '@/lib/i18n'
 import type { ItemCard } from '@/lib/types'
 
 const HOURS = [24, 168, 720, 2160] as const
+/** 0 = no limit. */
+const VIEWERS = [0, 1, 2, 5, 10] as const
 
 /** Admin: makes an expiring link to this title. The full link is shown once. */
 export function ShareButton({ item }: { item: ItemCard }) {
@@ -18,9 +20,10 @@ export function ShareButton({ item }: { item: ItemCard }) {
   const [open, setOpen] = useState(false)
   const [label, setLabel] = useState('')
   const [hours, setHours] = useState<number>(168)
+  const [viewers, setViewers] = useState<number>(0)
   const [copied, setCopied] = useState(false)
   const create = useMutation({
-    mutationFn: () => api.createShare({ item_id: item.id, expires_in_hours: hours, label: label.trim() || undefined }),
+    mutationFn: () => api.createShare({ item_id: item.id, expires_in_hours: hours, label: label.trim() || undefined, max_uses: viewers || undefined }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['shares'] }),
   })
   const link = create.data ? `${window.location.origin}${create.data.path}` : ''
@@ -29,6 +32,7 @@ export function ShareButton({ item }: { item: ItemCard }) {
     setOpen(false)
     setCopied(false)
     setLabel('')
+    setViewers(0)
     create.reset()
   }
 
@@ -93,6 +97,19 @@ export function ShareButton({ item }: { item: ItemCard }) {
                   </option>
                 ))}
               </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="share-viewers" className="text-label font-medium">
+                {t('share.viewers')}
+              </label>
+              <Select id="share-viewers" value={viewers} onChange={(e) => setViewers(Number(e.target.value))}>
+                {VIEWERS.map((n) => (
+                  <option key={n} value={n}>
+                    {n === 0 ? t('share.viewers.any') : n === 1 ? t('share.viewers.one') : t('share.viewers.n', { count: n })}
+                  </option>
+                ))}
+              </Select>
+              <p className="text-caption text-muted">{t('share.viewersHint')}</p>
             </div>
             <ErrorText>{create.error?.message}</ErrorText>
           </form>

@@ -138,7 +138,7 @@ export const api = {
   setContentRating: (id: number, content_rating: string | null) =>
     request<void>('PUT', `/items/${id}/content-rating`, { content_rating }),
   shares: () => request<Share[]>('GET', '/shares'),
-  createShare: (body: { item_id: number; expires_in_hours: number; label?: string }) =>
+  createShare: (body: { item_id: number; expires_in_hours: number; label?: string; max_uses?: number }) =>
     request<CreatedShare>('POST', '/shares', body),
   revokeShare: (id: number) => request<void>('DELETE', `/shares/${id}`),
   /** Signs in, or says the administrator must approve this device first. */
