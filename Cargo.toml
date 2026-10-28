@@ -69,4 +69,6 @@ mimalloc = { version = "0.1", default-features = false }
 
 [profile.release]
 strip = true
-lto = "thin"
+lto = "fat"
+codegen-units = 1
+# panic stays "unwind": tokio catches a panicking task, so one bad request cannot stop the server.

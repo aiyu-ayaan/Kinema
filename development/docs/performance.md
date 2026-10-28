@@ -29,7 +29,7 @@
 - Thumbnail: input seeking and keyframe-only decode.
 - Scrub sprites: off by default (admin setting `scrub_thumbnails`); keyframe-only decode of the whole file once, on first scrub, at `nice 19`. Measured on a synthetic 20 min 1080p H.264 file (GOP 240, 1.9 GB, 4-core VM): 3.3 s wall, 1.9 s CPU for 2 sheets. Real footage with HEVC 4K decodes slower per keyframe; not measured.
 - Allocator: `mimalloc` as the global allocator in the binary (musl's own malloc is slow under many threads; same on glibc and MSVC builds for one behaviour everywhere).
-- Release profile: `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, `strip = true`, `opt-level = 3`.
+- Release profile: `lto = "fat"`, `codegen-units = 1`, `strip = true`, default `opt-level = 3`. Not `panic = "abort"`: tokio isolates a panicking task only when panics unwind, so abort would turn one bad request into a server crash.
 - Avoid holding the DB writer across awaits; batch inserts in transactions of ~500 rows during scans.
 
 ## Throttling
