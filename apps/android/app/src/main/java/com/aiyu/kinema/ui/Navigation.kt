@@ -83,6 +83,13 @@ data object AboutKey : NavKey
 @Serializable
 data object AcknowledgementsKey : NavKey
 
+/** Settings › Requests and Watch activity (AccountScreens.kt). */
+@Serializable
+data object RequestsKey : NavKey
+
+@Serializable
+data object ActivityKey : NavKey
+
 @Serializable
 data class ActivePlayback(val id: Long, val start: Double? = null) : java.io.Serializable
 
@@ -127,6 +134,8 @@ fun AppNavigation() {
                     entry<UpdatesKey> { Page { UpdatesScreen() } }
                     entry<AboutKey> { Page { AboutScreen() } }
                     entry<AcknowledgementsKey> { Page { AcknowledgementsScreen() } }
+                    entry<RequestsKey> { Page { RequestsScreen() } }
+                    entry<ActivityKey> { Page { ActivityScreen() } }
                 },
             )
             com.aiyu.kinema.update.UpdatePrompt()

@@ -357,6 +357,7 @@ fun ProfilesScreen(s: Session.SignedOut) {
             }
         }
         error?.let { Text(errorText(it), color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
+        s.notice?.let { Text(it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
         Spacer(Modifier.height(8.dp))
         TextButton({ confirmForget = true }, Modifier.navigationBarsPadding()) { Text(stringResource(R.string.connect_change_server)) }
     }
@@ -370,6 +371,23 @@ fun ProfilesScreen(s: Session.SignedOut) {
             confirmButton = { TextButton({ confirmForget = false; repository.forgetServer() }) { Text(stringResource(R.string.forget_action)) } },
             dismissButton = { TextButton({ confirmForget = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
+    }
+}
+
+/** A new device after the right password: polls until the administrator approves or refuses it. */
+@Composable
+fun ApprovalScreen(s: Session.AwaitingApproval) {
+    val repository = LocalRepository.current
+    LaunchedEffect(s.pollToken) { repository.awaitApproval(s) }
+    androidx.activity.compose.BackHandler(onBack = repository::cancelApproval)
+    EntryColumn(stringResource(R.string.approval_title), stringResource(R.string.approval_body)) {
+        Panel(3) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                LoadingIndicator(Modifier.size(48.dp))
+                Text(stringResource(R.string.approval_device, s.userName, s.deviceName), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            }
+        }
+        TextButton(repository::cancelApproval, Modifier.navigationBarsPadding()) { Text(stringResource(R.string.action_cancel)) }
     }
 }
 

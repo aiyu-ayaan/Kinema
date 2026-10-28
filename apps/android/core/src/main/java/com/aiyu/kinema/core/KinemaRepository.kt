@@ -3,7 +3,9 @@ package com.aiyu.kinema.core
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
+import android.os.Build
 import java.net.URI
+import java.util.UUID
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +24,9 @@ sealed interface Session {
     data object NoServer : Session
     data class Unreachable(val server: String, val error: ApiException) : Session
     /** Connected, nobody signed in: pick a profile. [needsSetup] until the admin finishes setup in the web app. */
-    data class SignedOut(val server: String, val serverName: String, val profiles: List<User>, val needsSetup: Boolean) : Session
+    data class SignedOut(val server: String, val serverName: String, val profiles: List<User>, val needsSetup: Boolean, val notice: String? = null) : Session
+    /** The profile's lock was right but this device is new: waiting for the administrator ([KinemaRepository.awaitApproval]). */
+    data class AwaitingApproval(val server: String, val userName: String, val deviceName: String, val pollToken: String) : Session
     data class SignedIn(val server: String, val user: User) : Session
 }
 
@@ -219,11 +223,11 @@ class KinemaRepository(context: Context) {
         }
     }
 
-    private suspend fun signedOut() {
+    private suspend fun signedOut(notice: String? = null) {
         val api = _api.value ?: return
         val info = api.serverInfo().also(::rememberInfo)
         val status = api.authStatus()
-        _session.value = Session.SignedOut(api.baseUrl, info.name, if (status.needsSetup) emptyList() else api.profiles(), status.needsSetup)
+        _session.value = Session.SignedOut(api.baseUrl, info.name, if (status.needsSetup) emptyList() else api.profiles(), status.needsSetup, notice)
     }
 
     /**
@@ -255,13 +259,51 @@ class KinemaRepository(context: Context) {
     suspend fun login(user: User, password: String?, pin: String?): ApiException? {
         val api = _api.value ?: return ApiException("No server", ApiException.OFFLINE)
         return try {
-            val session = api.login(user.id, password, pin)
-            store.put(TOKEN, session.token)
-            _session.value = Session.SignedIn(api.baseUrl, session.user)
+            when (val r = api.login(user.id, password, pin, device())) {
+                is LoginResult.SignedIn -> signIn(api, r.session)
+                is LoginResult.ApprovalRequired -> _session.value = Session.AwaitingApproval(api.baseUrl, user.name, r.deviceName, r.pollToken)
+            }
             null
         } catch (e: ApiException) {
             e
         }
+    }
+
+    private fun signIn(api: KinemaApi, session: SessionResponse) {
+        store.put(TOKEN, session.token)
+        _session.value = Session.SignedIn(api.baseUrl, session.user)
+    }
+
+    /** Random per install and kept across servers and sign-outs, so the administrator approves a phone once. */
+    private fun device(): DeviceInfo {
+        val id = store.get(DEVICE_ID) ?: UUID.randomUUID().toString().also { store.put(DEVICE_ID, it) }
+        return DeviceInfo(id, "mobile", deviceLabel(Build.MANUFACTURER, Build.MODEL))
+    }
+
+    /**
+     * Asks the server every few seconds whether the administrator decided; returns when this device is signed in, was
+     * refused (back to the picker with the server's message) or the caller is cancelled. Network errors just wait.
+     */
+    suspend fun awaitApproval(waiting: Session.AwaitingApproval) {
+        while (true) {
+            delay(APPROVAL_POLL_MS)
+            val api = _api.value ?: return
+            try {
+                val r = api.devicePoll(waiting.pollToken)
+                if (r is PollResult.SignedIn) return signIn(api, r.session)
+            } catch (e: ApiException) {
+                if (e.status == 404) return refused(e.message)
+            }
+        }
+    }
+
+    /** Leaves the waiting screen for the profile picker; the request stays with the administrator. */
+    fun cancelApproval() {
+        scope.launch { runCatching { signedOut() } }
+    }
+
+    private suspend fun refused(message: String?) {
+        runCatching { signedOut(message) }
     }
 
     /** Back to the profile picker. */
@@ -349,5 +391,7 @@ class KinemaRepository(context: Context) {
         const val DYNAMIC = "dynamic_color"
         const val PIP = "picture_in_picture"
         const val VOLUME = "player_volume"
+        const val DEVICE_ID = "device_id"
+        const val APPROVAL_POLL_MS = 5_000L
     }
 }

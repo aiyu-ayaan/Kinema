@@ -16,6 +16,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import kotlinx.serialization.json.add
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -78,6 +79,12 @@ class KinemaApi(val baseUrl: String, pin: String?, connectSeconds: Long = 6, pri
         }
     }
 
+    private fun <T> parsed(text: String, parse: (String) -> T): T = try {
+        parse(text)
+    } catch (e: kotlinx.serialization.SerializationException) {
+        throw ApiException(e.message ?: "bad response", 500)
+    }
+
     private suspend fun <T> call(method: String, path: String, out: KSerializer<T>, body: JsonObject? = null): T {
         val text = send(method, path, body)
         return try {
@@ -93,14 +100,35 @@ class KinemaApi(val baseUrl: String, pin: String?, connectSeconds: Long = 6, pri
     suspend fun me() = call("GET", "/auth/me", User.serializer())
     suspend fun logout() = send("POST", "/auth/logout").let { }
 
-    suspend fun login(userId: Long, password: String?, pin: String?) = call(
-        "POST", "/auth/login", SessionResponse.serializer(),
-        buildJsonObject {
+    suspend fun login(userId: Long, password: String?, pin: String?, device: DeviceInfo): LoginResult = parsed(
+        send("POST", "/auth/login", buildJsonObject {
             put("user_id", userId)
             password?.let { put("password", it) }
             pin?.let { put("pin", it) }
-        },
+            putJsonObject("device") { put("id", device.id); put("kind", device.kind); put("name", device.name) }
+        }),
+        ::parseLogin,
     )
+
+    /** 404 (`auth.device_denied`) when the administrator refused the device or the request is gone. */
+    suspend fun devicePoll(pollToken: String): PollResult =
+        parsed(send("POST", "/auth/device/poll", buildJsonObject { put("poll_token", pollToken) }), ::parsePoll)
+
+    suspend fun requests() = call("GET", "/requests", ListSerializer(MediaRequest.serializer()))
+    suspend fun requestSearch(q: String, kind: String) = call("GET", "/requests/search?q=${enc(q)}&kind=${enc(kind)}", RequestSearch.serializer())
+    suspend fun createRequest(kind: String, title: String, year: Int?, tmdbId: Long?, poster: String?, overview: String?, note: String?) =
+        call("POST", "/requests", MediaRequest.serializer(), buildJsonObject {
+            put("kind", kind)
+            put("title", title)
+            put("year", year)
+            put("tmdb_id", tmdbId)
+            put("poster", poster)
+            put("overview", overview)
+            put("note", note)
+        })
+    suspend fun withdrawRequest(id: Long) = send("DELETE", "/requests/$id").let { }
+
+    suspend fun myStats() = call("GET", "/profile/stats", WatchStats.serializer())
 
     suspend fun home() = call("GET", "/home", Home.serializer())
     suspend fun libraries() = call("GET", "/libraries", ListSerializer(Library.serializer()))

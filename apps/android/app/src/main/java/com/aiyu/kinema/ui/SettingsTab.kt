@@ -22,11 +22,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material.icons.rounded.QueryStats
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.SettingsBrightness
 import androidx.compose.material.icons.rounded.SystemUpdate
@@ -113,6 +115,7 @@ fun SettingsTab() {
         ConnectionSection()
         AppearanceSection()
         PlaybackSection()
+        AccountSection()
         Section(stringResource(R.string.settings_server), 5) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ShapedIcon(Icons.Rounded.Security, MaterialShapes.Clover4Leaf, c.tertiaryContainer, c.onTertiaryContainer)
@@ -233,6 +236,16 @@ private fun KinemaSection() {
             onClick = { navigator.go(UpdatesKey) },
         )
         RowCard(stringResource(R.string.about_title), stringResource(R.string.settings_about_subtitle, version), Icons.Rounded.Info, onClick = { navigator.go(AboutKey) })
+    }
+}
+
+/** Settings › Requests and Watch activity, each its own screen (AccountScreens.kt). */
+@Composable
+private fun AccountSection() {
+    val navigator = LocalNavigator.current
+    Section(stringResource(R.string.settings_account), 4) {
+        RowCard(stringResource(R.string.settings_requests), stringResource(R.string.settings_requests_subtitle), Icons.Rounded.Inbox, onClick = { navigator.go(RequestsKey) })
+        RowCard(stringResource(R.string.settings_activity), stringResource(R.string.settings_activity_subtitle), Icons.Rounded.QueryStats, onClick = { navigator.go(ActivityKey) })
     }
 }
 

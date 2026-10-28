@@ -37,6 +37,7 @@ import com.aiyu.kinema.ui.ConnectScreen
 import com.aiyu.kinema.ui.LoadingBox
 import com.aiyu.kinema.ui.LocalApi
 import com.aiyu.kinema.ui.LocalRepository
+import com.aiyu.kinema.ui.ApprovalScreen
 import com.aiyu.kinema.ui.ProfilesScreen
 import com.aiyu.kinema.ui.UnreachableScreen
 import com.aiyu.kinema.ui.theme.KinemaTheme
@@ -122,6 +123,7 @@ private fun KinemaRoot() {
             Session.NoServer -> ConnectScreen()
             is Session.Unreachable -> UnreachableScreen(s)
             is Session.SignedOut -> ProfilesScreen(s)
+            is Session.AwaitingApproval -> ApprovalScreen(s)
             is Session.SignedIn -> AppNavigation()
         }
     }
