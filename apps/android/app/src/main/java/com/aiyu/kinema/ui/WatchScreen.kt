@@ -73,6 +73,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,6 +83,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.aiyu.kinema.R
 import com.aiyu.kinema.core.ItemCard
+
+/** Where the side list stopped for a show; the next episode's player starts there. */
+private object KeptScroll {
+    var show: Long? = null
+    var index = 0
+    var offset = 0
+}
 
 /** How long before the end the next episode is offered when the credits were not found. */
 internal const val UP_NEXT_S = 60.0
@@ -265,11 +273,25 @@ internal fun UpNextList(
             .sortedWith(compareByDescending<ItemCard> { it.progress != null }.thenBy { it.watched }.thenByDescending { it.rating ?: 0.0 })
             .take(40)
     }
+    // The player is rebuilt for every title: the list's place in a show is taken over from the one before.
+    val show = if (episode) item.showId else null
+    val kept = remember { if (show != null && KeptScroll.show == show) KeptScroll.index to KeptScroll.offset else null }
     val state = rememberLazyListState()
     val loaded = (list.state.value as? Load.Ok)?.value
     // Beside the video the list opens on the playing episode; under it, the details come first.
     LaunchedEffect(loaded != null) {
-        if (top == null) loaded?.indexOfFirst { it.id == item.id }?.takeIf { it > 1 }?.let { state.scrollToItem(it) }
+        if (loaded == null) return@LaunchedEffect
+        if (kept != null) state.scrollToItem(kept.first, kept.second)
+        else if (top == null) loaded.indexOfFirst { it.id == item.id }.takeIf { it > 1 }?.let { state.scrollToItem(it) }
+    }
+    // Only once rows exist: a list still loading would save a clamped position over the real one.
+    LaunchedEffect(show, loaded != null) {
+        if (show == null || loaded == null) return@LaunchedEffect
+        snapshotFlow { state.firstVisibleItemIndex to state.firstVisibleItemScrollOffset }.collect { (index, offset) ->
+            KeptScroll.show = show
+            KeptScroll.index = index
+            KeptScroll.offset = offset
+        }
     }
     LazyColumn(modifier, state, contentPadding, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (top != null) item(key = "top") { top() }
