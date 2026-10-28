@@ -1,3 +1,30 @@
+## v0.0.1-alpha.12 (2026-10-28)
+
+- !alpha(all) : Release alpha build
+- docs(Shares) : Viewer limit, rate limit and transcode cap
+- web(Shares) : Choose how many viewers a share link admits, show the count
+- backend(Shares) : Viewer limit, per-address rate limit and a transcode cap per share link
+- backend(Security) : Artwork requests respect a profile's library and content limits
+- db(Rating) : Fix match replaces the old title's certification
+- docs(Packaging) : Reconcile TODO and packaging doc with what ships
+- build(Packaging) : Windows server zip script, update-ffmpeg checks the published builds
+- core(Platform) : Pause HLS runs on Windows with NtSuspendProcess, drop the unused kill stub
+- backend(Perf) : Four ffprobe runs at once on an SSD, two on an HDD
+- backend(Perf) : Hold background ffmpeg work while a re-encode runs or the machine is busy
+- build(Perf) : Fat LTO and one codegen unit for release builds
+- backend(Perf) : mimalloc as the global allocator
+- docs(Owner) : Site owner role and upgrade behaviour
+- web(Owner) : Site owner, administrator and member badges; android(Owner) : Role in Settings
+- backend(Owner) : Site owner role that stays admin and cannot be deleted; upgrade test on real databases
+- docs(Accounts) : Device approval, activity, requests and notifications; credit lettre
+- backend(Tests) : Cover device approval, activity, requests and notifications; mask webhook addresses
+- web(Accounts) : Device approval screen, activity, devices, requests and notification settings
+- android(Accounts) : Device approval at sign-in, title requests and watch activity
+- backend(Accounts) : Device approval, watch activity, title requests and admin notifications
+- db(Accounts) : Add devices, watch time and title request tables
+- android(Player) : Keep the episode list scroll position when another episode starts; docs(Player) : Kept list scroll
+- web(Player) : Keep the episode list scroll position when another episode starts
+
 ## v0.0.1-alpha.11 (2026-10-27)
 
 - !alpha(all) : Release alpha build
