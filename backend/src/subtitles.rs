@@ -62,7 +62,7 @@ async fn run(state: AppState, library_id: i64) -> anyhow::Result<()> {
             } else if !subtitles::is_text_subtitle(job.codec.as_deref()) {
                 continue;
             } else if let Some(ext) = &job.external_path {
-                let _slot = state.thumb_slots.acquire().await?;
+                let _slot = state.background_slot(&state.thumb_slots).await?;
                 if let Err(e) = subtitles::extract_vtt(&bins, Path::new(ext), None, &out).await {
                     warn!("subtitle {ext}: {e}");
                     mark_failed(&failed).await;
@@ -88,7 +88,7 @@ async fn extract_embedded(
     path: &Path,
     tracks: &[(i64, PathBuf, PathBuf)],
 ) -> anyhow::Result<()> {
-    let _slot = state.thumb_slots.acquire().await?;
+    let _slot = state.background_slot(&state.thumb_slots).await?;
     let all: Vec<(i64, PathBuf)> = tracks.iter().map(|(i, o, _)| (*i, o.clone())).collect();
     if subtitles::extract_tracks(bins, path, &all).await.is_ok() {
         return Ok(());
@@ -119,7 +119,7 @@ async fn ocr(
     let Some(lang) = tool.language_for(job.language.as_deref()) else {
         return Ok(());
     };
-    let _slot = state.thumb_slots.acquire().await?;
+    let _slot = state.background_slot(&state.thumb_slots).await?;
     match kinema_media::ocr::ocr_to_vtt(
         bins,
         tool,

@@ -19,7 +19,7 @@ async fn run(state: AppState, library_id: i64) -> anyhow::Result<()> {
         return Ok(());
     };
     for (id, path, size) in keyframes::missing(&state.db, library_id).await? {
-        let _permit = state.thumb_slots.acquire().await?;
+        let _permit = state.background_slot(&state.thumb_slots).await?;
         let built = kinema_media::keyframes::build(
             &bins,
             std::path::Path::new(&path),

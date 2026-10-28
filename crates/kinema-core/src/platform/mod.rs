@@ -84,6 +84,21 @@ pub fn has_v4l2_hevc_decoder() -> bool {
     }
 }
 
+/// One-minute load average per core. None where the OS has no `/proc/loadavg` (Windows).
+pub fn load_per_core() -> Option<f64> {
+    #[cfg(target_os = "linux")]
+    {
+        let text = std::fs::read_to_string("/proc/loadavg").ok()?;
+        let load: f64 = text.split_whitespace().next()?.parse().ok()?;
+        let cores = std::thread::available_parallelism().map_or(1, |n| n.get());
+        Some(load / cores as f64)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        None
+    }
+}
+
 /// GPU render nodes (`/dev/dri/renderD128`, ...), the devices VA-API encodes on. Linux only:
 /// Windows reaches the GPU through NVENC and Quick Sync without a device path.
 pub fn render_nodes() -> Vec<PathBuf> {

@@ -38,7 +38,7 @@
 - An HLS run (remux or re-encode) is stopped (SIGSTOP) once it is 30 s past the last segment asked for and continued when the player nears; idle sessions end after 60 s (`media-pipeline.md` 6a). Not on Windows yet.
 - Each re-encode gets a share of the cores (`-threads`, Auto = cores / `max_transcodes`), so even the full-speed lead never takes the whole machine.
 
-- Scan and thumbnail workers pause while any transcode session is active or while system load per core exceeds 0.8.
+- Background workers (probe, thumbnails, skip markers, subtitle extraction and OCR, keyframe index) wait while any re-encode runs or while the one-minute load per core exceeds 0.8 (`AppState::background_slot`; load is Linux only, `/proc/loadavg`). The wait is capped at 10 minutes, so an always-busy box still gets its library scanned. Scrub sprites are not held back: a viewer is waiting for them.
 - Network and disk reads for background jobs are rate limited so playback gets priority.
 
 ## Measuring

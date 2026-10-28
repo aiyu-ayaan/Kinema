@@ -42,7 +42,7 @@ async fn run(state: AppState, library_id: i64) -> anyhow::Result<()> {
         if out.exists() || failed.exists() {
             continue;
         }
-        let _permit = state.thumb_slots.acquire().await?;
+        let _permit = state.background_slot(&state.thumb_slots).await?;
         let position = f64::from(settings.thumbnail_position) / 100.0;
         // Short clips use their middle; long ones skip logos and cold opens.
         let at = file

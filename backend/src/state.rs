@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
-use tokio::sync::{Semaphore, mpsc::UnboundedSender};
+use tokio::sync::{AcquireError, Semaphore, SemaphorePermit, mpsc::UnboundedSender};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -60,7 +60,30 @@ impl AppState {
     pub fn settings(&self) -> ServerSettings {
         self.settings.read().map(|s| s.clone()).unwrap_or_default()
     }
+
+    /// A slot of `slots` for background work (probe, thumbnails, markers, subtitles), held back
+    /// while a re-encode runs or the machine is busy so playback keeps the disk and the cores.
+    /// The wait is capped: a box that is always busy still gets its library scanned.
+    pub async fn background_slot<'a>(
+        &self,
+        slots: &'a Semaphore,
+    ) -> Result<SemaphorePermit<'a>, AcquireError> {
+        // Taken first, so only the few slot holders poll, not every queued file.
+        let permit = slots.acquire().await?;
+        let started = Instant::now();
+        while started.elapsed() < BACKGROUND_MAX_WAIT && self.playback_busy() {
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        }
+        Ok(permit)
+    }
+
+    fn playback_busy(&self) -> bool {
+        self.active_transcodes.load(Ordering::SeqCst) > 0
+            || kinema_core::platform::load_per_core().is_some_and(|l| l > 0.8)
+    }
 }
+
+const BACKGROUND_MAX_WAIT: std::time::Duration = std::time::Duration::from_secs(600);
 
 /// Counts a running stream for as long as it lives.
 pub struct Counted(Arc<AtomicUsize>);

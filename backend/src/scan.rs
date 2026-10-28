@@ -504,7 +504,7 @@ async fn probe_all(state: &AppState, files: Vec<(i64, PathBuf, Vec<Sidecar>)>) {
         let state = state.clone();
         let bins = bins.clone();
         set.spawn(async move {
-            let Ok(_permit) = state.probe_slots.acquire().await else {
+            let Ok(_permit) = state.background_slot(&state.probe_slots).await else {
                 return;
             };
             let result = match kinema_media::probe::probe(&bins, &path).await {

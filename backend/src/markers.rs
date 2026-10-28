@@ -216,6 +216,6 @@ fn print_path(state: &AppState, file: &MarkerFile, part: Part) -> PathBuf {
 
 /// Runs `work` holding the background media slot; None when the server is shutting down.
 async fn slot<T>(state: &AppState, work: impl std::future::Future<Output = T>) -> Option<T> {
-    let _permit = state.thumb_slots.acquire().await.ok()?;
+    let _permit = state.background_slot(&state.thumb_slots).await.ok()?;
     Some(work.await)
 }
