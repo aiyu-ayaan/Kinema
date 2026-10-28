@@ -1,7 +1,9 @@
 //! Locked fields, playlists, collections and shelves against a real (temporary) SQLite file.
 
 use crate::items::{self, Edit, Meta};
-use crate::{SqlitePool, collections, init_pool, libraries, playlists, run_migrations, shelves};
+use crate::{
+    SqlitePool, collections, init_pool, libraries, playlists, run_migrations, shelves, users,
+};
 
 struct TestDb {
     pool: SqlitePool,
@@ -510,4 +512,120 @@ async fn open_duplicate_ignores_declined_and_other_kinds() {
             .await
             .unwrap()
     );
+}
+
+/// An existing install upgrading to device approval and the site owner: every profile keeps
+/// its role, sessions keep working, and the earliest administrator becomes the owner.
+#[tokio::test]
+async fn upgrade_keeps_roles_and_sessions() {
+    let path = std::env::temp_dir().join(format!("kinema-test-{}.db", uuid::Uuid::new_v4()));
+    let pool = init_pool(&format!("sqlite://{}", path.display()))
+        .await
+        .expect("pool");
+    let db = TestDb {
+        pool: pool.clone(),
+        path,
+    };
+    // The schema as deployed before these features.
+    let mut before = sqlx::migrate!("./migrations");
+    let all = before.migrations.to_vec();
+    before.migrations = all
+        .iter()
+        .filter(|m| m.version < 20261028000001)
+        .cloned()
+        .collect::<Vec<_>>()
+        .into();
+    before.run(&db.pool).await.expect("old migrations");
+    for (name, admin) in [("Kid", 0), ("Owner", 1), ("Second admin", 1)] {
+        sqlx::query("INSERT INTO users (name, is_admin, created_at) VALUES (?1, ?2, 0)")
+            .bind(name)
+            .bind(admin)
+            .execute(&db.pool)
+            .await
+            .expect("user");
+    }
+    sqlx::query(
+        "INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES ('h', 1, 0, 9999999999)",
+    )
+    .execute(&db.pool)
+    .await
+    .expect("session");
+
+    run_migrations(&db.pool).await.expect("new migrations");
+
+    let all = users::list(&db.pool).await.expect("list");
+    let role = |n: &str| {
+        let u = all.iter().find(|u| u.name == n).expect("profile");
+        (u.is_admin, u.is_owner)
+    };
+    assert_eq!(role("Kid"), (false, false), "member stays a member");
+    assert_eq!(
+        role("Owner"),
+        (true, true),
+        "earliest admin becomes the owner"
+    );
+    assert_eq!(
+        role("Second admin"),
+        (true, false),
+        "other admins keep the role"
+    );
+    let (user, _) = users::session_lookup(&db.pool, "h")
+        .await
+        .expect("lookup")
+        .expect("old session still works");
+    assert_eq!(user.name, "Kid");
+
+    // The owner can be neither demoted nor deleted, even bypassing the API.
+    let owner = all.iter().find(|u| u.is_owner).expect("owner").id;
+    assert!(
+        sqlx::query("UPDATE users SET is_admin = 0 WHERE id = ?1")
+            .bind(owner)
+            .execute(&db.pool)
+            .await
+            .is_err()
+    );
+    assert!(users::delete(&db.pool, owner).await.is_err());
+}
+
+/// Upgrades a copy of a real database and checks no profile changed role. Never point it at
+/// a live file: `KINEMA_UPGRADE_DB=/path/to/copy.db cargo test -p kinema-db -- --ignored upgrade_real`.
+#[tokio::test]
+#[ignore]
+async fn upgrade_real_database_copy() {
+    let Ok(path) = std::env::var("KINEMA_UPGRADE_DB") else {
+        return;
+    };
+    let pool = init_pool(&format!("sqlite://{path}")).await.expect("pool");
+    let roles = |pool: SqlitePool| async move {
+        sqlx::query_as::<_, (i64, String, bool)>("SELECT id, name, is_admin FROM users ORDER BY id")
+            .fetch_all(&pool)
+            .await
+            .expect("users")
+    };
+    let before = roles(pool.clone()).await;
+    let sessions: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sessions")
+        .fetch_one(&pool)
+        .await
+        .expect("sessions");
+    run_migrations(&pool).await.expect("migrations");
+    let after = roles(pool.clone()).await;
+    assert_eq!(before, after, "every profile keeps its admin / member role");
+    let left: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sessions")
+        .fetch_one(&pool)
+        .await
+        .expect("sessions");
+    assert_eq!(sessions, left, "no session is dropped");
+    let owners = users::list(&pool).await.expect("list");
+    let owners: Vec<_> = owners.iter().filter(|u| u.is_owner).collect();
+    assert!(owners.len() <= 1);
+    if before.iter().any(|(_, _, admin)| *admin) {
+        assert_eq!(owners.len(), 1, "one owner when there is an admin");
+        assert!(owners[0].is_admin);
+    }
+    for (id, name, admin) in &before {
+        println!(
+            "{id} {name} admin={admin} owner={}",
+            owners.iter().any(|o| o.id == *id)
+        );
+    }
 }

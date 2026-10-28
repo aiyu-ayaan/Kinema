@@ -45,6 +45,12 @@ async fn remove(
     let device = devices::get(&state.db, id)
         .await?
         .ok_or_else(ApiError::not_found)?;
+    let owner = kinema_db::users::get(&state.db, device.user_id)
+        .await?
+        .is_some_and(|u| u.is_owner);
+    if owner && device.user_id != me.id {
+        return Err(ApiError::new(StatusCode::FORBIDDEN, "users.owner_only"));
+    }
     // Removing the admin's own device would end the session making this request.
     if device.user_id == me.id && device.status == "approved" {
         let mine = devices::list(&state.db)

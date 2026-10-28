@@ -593,3 +593,45 @@ async fn notification_secrets_are_masked_and_kept() {
         StatusCode::FORBIDDEN
     );
 }
+
+#[tokio::test]
+async fn site_owner_cannot_be_demoted_deleted_or_edited_by_others() {
+    let e = env().await;
+    // The test harness creates the admin directly; mark it owner like setup or the migration does.
+    sqlx::query("UPDATE users SET is_owner = 1 WHERE id = ?1")
+        .bind(e.admin_id)
+        .execute(&e.state.db)
+        .await
+        .unwrap();
+    let other = user(&e.state, "Other admin", true, None).await;
+    let other_token = session(&e.state, other, false).await;
+    let as_other = |method: Method, uri: String, body: Option<Value>| {
+        let (app, token) = (e.app.clone(), other_token.clone());
+        async move { call(&app, method, &uri, Some(&token), LAN, body).await }
+    };
+    let uri = format!("/users/{}", e.admin_id);
+    let body = json!({"name": "Admin", "is_admin": false, "password": "newpassword1"});
+    assert_eq!(
+        as_other(Method::PATCH, uri.clone(), Some(body)).await.0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        as_other(Method::DELETE, uri.clone(), None).await.0,
+        StatusCode::BAD_REQUEST
+    );
+
+    // The owner cannot step down either.
+    let (s, v) = admin_call(
+        &e,
+        Method::PATCH,
+        &uri,
+        Some(json!({"name": "Admin", "is_admin": false})),
+    )
+    .await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    assert_eq!(v["error"]["code"], "users.owner_stays_admin");
+
+    let (_, list) = admin_call(&e, Method::GET, "/users", None).await;
+    assert_eq!(list[0]["is_owner"], true, "owner listed first");
+    assert_eq!(list[0]["is_admin"], true);
+}

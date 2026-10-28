@@ -67,5 +67,8 @@
   "notify.test.title": "Kinema test notification",
   "notify.test.body": "Notifications from Kinema reach this channel.",
   "notify.channel_missing": "There is no channel at this position. Save the settings first.",
-  "notify.send_failed": "Sending failed. Check the channel's address, token and credentials."
+  "notify.send_failed": "Sending failed. Check the channel's address, token and credentials.",
+  "users.owner_stays_admin": "The site owner is always an administrator.",
+  "users.owner_delete": "The site owner cannot be deleted.",
+  "users.owner_only": "Only the site owner can change the site owner's profile or devices."
 }

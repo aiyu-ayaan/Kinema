@@ -196,6 +196,13 @@ async fn update(
     let current = users::get(&state.db, id)
         .await?
         .ok_or_else(ApiError::not_found)?;
+    // Only the owner edits the owner, so another admin cannot reset its lock and take over.
+    if current.is_owner && id != me.id {
+        return Err(ApiError::new(StatusCode::FORBIDDEN, "users.owner_only"));
+    }
+    if current.is_owner && !p.is_admin {
+        return Err(ApiError::bad_request("users.owner_stays_admin"));
+    }
     if current.is_admin && !p.is_admin && users::admin_count(&state.db).await? <= 1 {
         return Err(ApiError::bad_request("users.last_admin"));
     }
@@ -244,6 +251,12 @@ async fn remove(
 ) -> ApiResult<StatusCode> {
     if id == me.id {
         return Err(ApiError::bad_request("users.self_delete"));
+    }
+    let target = users::get(&state.db, id)
+        .await?
+        .ok_or_else(ApiError::not_found)?;
+    if target.is_owner {
+        return Err(ApiError::bad_request("users.owner_delete"));
     }
     users::delete(&state.db, id).await?;
     Ok(StatusCode::NO_CONTENT)

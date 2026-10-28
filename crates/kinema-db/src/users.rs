@@ -8,12 +8,14 @@ pub struct User {
     pub id: i64,
     pub name: String,
     pub is_admin: bool,
+    /// The first administrator: always an admin, never deleted.
+    pub is_owner: bool,
     pub avatar: Option<String>,
     pub has_password: bool,
     pub has_pin: bool,
 }
 
-const USER_COLS: &str = "u.id, u.name, u.is_admin, u.avatar,
+const USER_COLS: &str = "u.id, u.name, u.is_admin, u.is_owner, u.avatar,
   u.password_hash IS NOT NULL AS has_password, u.pin_hash IS NOT NULL AS has_pin";
 
 pub async fn count(pool: &SqlitePool) -> Result<i64, DbError> {
@@ -38,8 +40,8 @@ pub async fn create_first_admin(
     password_hash: &str,
 ) -> Result<Option<i64>, DbError> {
     let res = sqlx::query(
-        "INSERT INTO users (name, password_hash, is_admin, created_at)
-         SELECT ?1, ?2, 1, ?3 WHERE NOT EXISTS (SELECT 1 FROM users)",
+        "INSERT INTO users (name, password_hash, is_admin, is_owner, created_at)
+         SELECT ?1, ?2, 1, 1, ?3 WHERE NOT EXISTS (SELECT 1 FROM users)",
     )
     .bind(name)
     .bind(password_hash)
@@ -51,7 +53,8 @@ pub async fn create_first_admin(
 
 pub async fn list(pool: &SqlitePool) -> Result<Vec<User>, DbError> {
     Ok(sqlx::query_as(&format!(
-        "SELECT {USER_COLS} FROM users u ORDER BY u.is_admin DESC, u.name COLLATE NOCASE"
+        "SELECT {USER_COLS} FROM users u
+         ORDER BY u.is_owner DESC, u.is_admin DESC, u.name COLLATE NOCASE"
     ))
     .fetch_all(pool)
     .await?)
