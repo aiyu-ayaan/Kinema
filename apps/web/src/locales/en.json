@@ -649,5 +649,7 @@
   "notify.hint.recipients": "Separate several addresses with commas.",
   "notify.security.tls": "TLS (implicit, usually port 465)",
   "notify.security.starttls": "STARTTLS (usually port 587)",
-  "notify.security.none": "None"
+  "notify.security.none": "None",
+  "users.owner": "Site owner",
+  "users.member": "Member"
 }

@@ -18,7 +18,7 @@ export function SettingRow({ label, description, children, htmlFor }: { label: s
   )
 }
 
-export function Switch({ checked, onChange, id, label }: { checked: boolean; onChange: (v: boolean) => void; id?: string; label?: string }) {
+export function Switch({ checked, onChange, id, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; id?: string; label?: string; disabled?: boolean }) {
   return (
     <button
       id={id}
@@ -26,9 +26,10 @@ export function Switch({ checked, onChange, id, label }: { checked: boolean; onC
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border transition-colors duration-fast',
+        'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border transition-colors duration-fast disabled:cursor-not-allowed disabled:opacity-50',
         checked ? 'border-primary bg-primary' : 'border-border-strong bg-raised',
       )}
     >

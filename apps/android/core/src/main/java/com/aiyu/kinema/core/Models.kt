@@ -22,6 +22,7 @@ data class User(
     val id: Long,
     val name: String,
     @SerialName("is_admin") val isAdmin: Boolean = false,
+    @SerialName("is_owner") val isOwner: Boolean = false,
     val avatar: String? = null,
     @SerialName("has_password") val hasPassword: Boolean = false,
     @SerialName("has_pin") val hasPin: Boolean = false,

@@ -4,6 +4,8 @@ export interface User {
   id: number
   name: string
   is_admin: boolean
+  /** The first administrator: always an admin, never deleted, edited only by itself. */
+  is_owner: boolean
   avatar: AvatarColor | null
   has_password: boolean
   has_pin: boolean

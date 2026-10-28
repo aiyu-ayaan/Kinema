@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowsLeftRight, Check, HouseLine, LockSimple, PencilSimple, Plus, ShieldCheck, ShieldStar, Trash } from '@phosphor-icons/react'
+import { ArrowsLeftRight, Check, Crown, HouseLine, LockSimple, PencilSimple, Plus, ShieldCheck, ShieldStar, Trash } from '@phosphor-icons/react'
 import { Avatar } from '@/components/ui/Avatar'
 import { avatarColors } from '@/components/ui/avatarColors'
 import { Button } from '@/components/ui/Button'
@@ -109,7 +109,7 @@ function ProfileEditor({ user, open, onClose }: { user: ManagedUser | null; open
 
         <div className="-mx-4 divide-y divide-border border-y border-border">
           <SettingRow label={t('users.admin')} description={t('users.adminHint')}>
-            <Switch checked={isAdmin} onChange={setIsAdmin} label={t('users.admin')} />
+            <Switch checked={isAdmin} onChange={setIsAdmin} disabled={user?.is_owner} label={t('users.admin')} />
           </SettingRow>
         </div>
 
@@ -266,11 +266,19 @@ export function UsersSection() {
               <p className="flex flex-wrap items-center gap-2 text-body font-medium">
                 {u.name}
                 {u.id === me?.id && <span className="text-caption text-subtle">{t('users.you')}</span>}
-                {u.is_admin && (
+                {u.is_owner && (
+                  <Badge tone="primary">
+                    <Crown size={12} weight="fill" aria-hidden />
+                    {t('users.owner')}
+                  </Badge>
+                )}
+                {u.is_admin ? (
                   <Badge tone="primary">
                     <ShieldCheck size={12} weight="fill" />
                     {t('users.admin')}
                   </Badge>
+                ) : (
+                  <Badge>{t('users.member')}</Badge>
                 )}
                 {(u.has_pin || u.has_password) && (
                   <Badge>
@@ -294,11 +302,11 @@ export function UsersSection() {
               <p className="truncate text-caption text-muted">{u.library_ids.length > 0 ? t('users.limitedTo', { names: libraryNames(u.library_ids) }) : t('users.accessAll')}</p>
             </div>
             <Button size="sm" variant="ghost" aria-label={t('transfer.open', { name: u.name })} title={t('transfer.title')} icon={<ArrowsLeftRight size={16} />} onClick={() => setTransfer(u)} />
-            <Button size="sm" variant="ghost" aria-label={t('users.edit')} title={t('users.edit')} icon={<PencilSimple size={16} />} onClick={() => setEditing(u)} />
+            <Button size="sm" variant="ghost" aria-label={t('users.edit')} title={t('users.edit')} icon={<PencilSimple size={16} />} disabled={u.is_owner && u.id !== me?.id} onClick={() => setEditing(u)} />
             <Button
               size="sm"
               variant="ghost"
-              disabled={u.id === me?.id}
+              disabled={u.id === me?.id || u.is_owner}
               aria-label={t('users.delete')}
               title={t('users.delete')}
               icon={<Trash size={16} />}

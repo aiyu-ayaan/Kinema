@@ -106,7 +106,12 @@ fun SettingsTab() {
                     Avatar(user, size = 64.dp)
                     Column(Modifier.weight(1f)) {
                         Text(user.name, style = MaterialTheme.typography.titleLarge)
-                        Text(info?.name ?: "", style = MaterialTheme.typography.bodyMedium)
+                        val role = when {
+                            user.isOwner -> R.string.role_owner
+                            user.isAdmin -> R.string.role_admin
+                            else -> R.string.role_member
+                        }
+                        Text("${stringResource(role)} · ${info?.name ?: ""}", style = MaterialTheme.typography.bodyMedium)
                     }
                     FilledTonalButton(repository::logout) { Text(stringResource(R.string.settings_switch_profile)) }
                 }

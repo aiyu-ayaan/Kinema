@@ -315,4 +315,7 @@
     <string name="duration_hm">%1$dh %2$dm</string>
     <string name="duration_h">%1$dh</string>
     <string name="duration_m">%1$dm</string>
+    <string name="role_owner">Site owner</string>
+    <string name="role_admin">Administrator</string>
+    <string name="role_member">Member</string>
 </resources>
