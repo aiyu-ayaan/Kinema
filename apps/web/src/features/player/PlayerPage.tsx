@@ -41,6 +41,11 @@ import { useKeptScroll } from './useKeptScroll'
 import { SkipPill, UP_NEXT_S, UpNextCard, UpNextList, WatchDetails } from './WatchPanels'
 
 
+/** Lead-ins shorter than this play as they are. */
+const CATCH_UP_MIN_S = 0.25
+/** Fast enough to pass a 5 s keyframe gap in well under a second, slow enough to stop within a frame or two. */
+const CATCH_UP_RATE = 8
+
 /** Loudest volume: 200 %, the upper 100 % being boost (as in MX Player). */
 const MAX_LEVEL = 2
 
@@ -206,6 +211,12 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   const loadSeq = useRef(0)
   /** Stream drops in a row; reset once a frame plays. */
   const netRetries = useRef(0)
+  /**
+   * Copied video can only start on a keyframe, up to a few seconds before the asked time, and a piped stream cannot
+   * seek. The lead-in is played through fast and silent behind the held frame; this is the stream time to stop at.
+   */
+  const catchUp = useRef<number | null>(null)
+  const [catchingUp, setCatchingUp] = useState(false)
 
   const absTime = useCallback(() => {
     const v = videoRef.current
@@ -244,6 +255,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
         setAudio(p.audio)
         setPlan(p)
         mode.current = p.mode
+        catchUp.current = null
         if (p.mode === 'direct') {
           whole.current = true
           offset.current = 0
@@ -263,6 +275,8 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
           // ffmpeg gets the requested time; p.start is where its output really begins.
           offset.current = p.start
           pendingSeek.current = null
+          // A quarter second early is not worth a fast-forward.
+          catchUp.current = at - p.start > CATCH_UP_MIN_S ? at - p.start : null
           setSrc(api.streamUrl(file.id, audioIdx, caps.current, at))
         }
       } catch (e) {
@@ -338,6 +352,35 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     },
     [audio, duration, load],
   )
+
+  /** Plays the keyframe lead-in at CATCH_UP_RATE, muted, until the asked time; the clock stays on the target meanwhile. */
+  const startCatchUp = useCallback((v: HTMLVideoElement) => {
+    const until = catchUp.current
+    if (until == null) return
+    const wasMuted = v.muted
+    v.muted = true
+    v.playbackRate = CATCH_UP_RATE
+    setCatchingUp(true)
+    const restore = () => {
+      v.playbackRate = 1
+      v.muted = wasMuted
+      setCatchingUp(false)
+    }
+    // A 15 ms timer: timeupdate (250 ms x rate) and requestVideoFrameCallback (skips callbacks at 8x) both overshot
+    // by seconds; this lands within about 0.15 s of the target.
+    const timer = window.setInterval(() => {
+      // A newer seek or track change took over: it owns the clock now.
+      if (catchUp.current !== until || !v.isConnected) {
+        window.clearInterval(timer)
+        restore()
+      } else if (v.currentTime >= until) {
+        window.clearInterval(timer)
+        catchUp.current = null
+        seekTarget.current = null
+        restore()
+      }
+    }, 15)
+  }, [])
 
   // Only a drag or key that moved the bar seeks: a press without movement or a stray key must not restart a stream.
   const commitScrub = () => {
@@ -601,11 +644,13 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
               onClick={togglePlay}
               onDoubleClick={toggleFullscreen}
               onLoadedMetadata={(e) => {
+                const v = e.currentTarget
                 // A new stream: remux/transcode seeks are done once it has loaded.
-                if (pendingSeek.current) e.currentTarget.currentTime = pendingSeek.current
+                if (pendingSeek.current) v.currentTime = pendingSeek.current
+                else if (catchUp.current != null) startCatchUp(v)
                 else seekTarget.current = null
                 pendingSeek.current = null
-                e.currentTarget.play().catch(() => {})
+                v.play().catch(() => {})
               }}
               onSeeked={() => {
                 seekTarget.current = null
@@ -629,7 +674,8 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
               }}
               onCanPlay={() => setWaiting(false)}
               onVolumeChange={(e) => {
-                setMuted(e.currentTarget.muted)
+                // The catch-up's own mute is not the viewer's.
+                if (catchUp.current == null) setMuted(e.currentTarget.muted)
                 setVolume(e.currentTarget.volume)
               }}
               onEnded={() => {
@@ -659,6 +705,11 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
               }}
             />
 
+            {catchingUp && (
+              // The frame held at the seek, over the fast lead-in.
+              <div className="pointer-events-none absolute inset-0 bg-black bg-contain bg-center bg-no-repeat" style={{ backgroundImage: videoRef.current?.poster ? `url(${videoRef.current.poster})` : undefined }} />
+            )}
+
             {activeCues.length > 0 && (
               <div className={cn('pointer-events-none absolute inset-x-0 flex flex-col items-center gap-1 px-6 text-center transition-all duration-slow', showChrome ? 'bottom-28' : 'bottom-12')}>
                 {activeCues.map((c, i) => (
@@ -669,7 +720,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
               </div>
             )}
 
-            {waiting && !error && (
+            {(waiting || catchingUp) && !error && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                 <CircleNotch size={48} className="animate-spin text-primary" aria-label={t('common.loading')} />
               </div>
