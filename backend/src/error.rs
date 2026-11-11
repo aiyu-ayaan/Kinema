@@ -49,7 +49,18 @@ macro_rules! internal_from {
 internal_from!(
     kinema_db::DbError,
     kinema_media::MediaError,
-    kinema_meta::MetaError,
     std::io::Error,
     tokio::task::JoinError
 );
+
+impl From<kinema_meta::MetaError> for ApiError {
+    fn from(e: kinema_meta::MetaError) -> Self {
+        tracing::error!("{}", e.chain());
+        if e.is_transient() {
+            // Upstream, not this server: say so instead of "check the server log".
+            ApiError::new(StatusCode::BAD_GATEWAY, "meta.unavailable")
+        } else {
+            ApiError::internal()
+        }
+    }
+}

@@ -35,6 +35,8 @@ export function FixMatch({ item }: { item: ItemCard }) {
 
   function search(e?: FormEvent) {
     e?.preventDefault()
+    // A failed pick belongs to the old results; a new search starts clean.
+    apply.reset()
     const y = Number(year)
     setQuery({ q: title.trim(), year: year && Number.isFinite(y) ? y : null })
   }

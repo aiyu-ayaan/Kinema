@@ -21,6 +21,7 @@
   "fs.not_found": "That folder does not exist or cannot be read.",
   "match.unsupported": "Only movies and shows can be matched. Open the show to fix an episode.",
   "match.no_key": "Add a TMDB key in Settings first.",
+  "meta.unavailable": "TMDB did not answer. Check the server's internet connection and try again.",
   "settings.tmdb_invalid": "TMDB rejected this key. Check it and try again.",
   "media.ffmpeg_missing": "ffmpeg was not found, so this file cannot be converted for the browser.",
   "media.subtitle_unsupported": "This subtitle is an image format and cannot be shown yet. Turn on subtitle OCR in Settings → Languages to read it.",

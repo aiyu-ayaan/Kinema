@@ -246,12 +246,20 @@ fn non_empty(s: Option<String>) -> Option<String> {
 impl TmdbClient {
     /// Accepts a v3 API key or a v4 read access token.
     pub fn new(api_key: String) -> Self {
+        // One client per process: its pool keeps the TLS connection to TMDB, so a match search or a
+        // scan does not pay a new DNS lookup and handshake (or meet a flaky resolver) per call.
+        static CLIENT: std::sync::OnceLock<Client> = std::sync::OnceLock::new();
+        let client = CLIENT
+            .get_or_init(|| {
+                Client::builder()
+                    .user_agent(concat!("Kinema/", env!("CARGO_PKG_VERSION")))
+                    .timeout(std::time::Duration::from_secs(20))
+                    .build()
+                    .unwrap_or_default()
+            })
+            .clone();
         Self {
-            client: Client::builder()
-                .user_agent(concat!("Kinema/", env!("CARGO_PKG_VERSION")))
-                .timeout(std::time::Duration::from_secs(20))
-                .build()
-                .unwrap_or_default(),
+            client,
             api_key,
             language: None,
         }
@@ -263,7 +271,23 @@ impl TmdbClient {
         self
     }
 
+    /// One retry after a dropped connection, a rate limit or a TMDB server error: those pass in a moment,
+    /// and a manual match should not fail on them.
     async fn get<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        query: &[(&str, String)],
+    ) -> Result<T, MetaError> {
+        match self.get_once(path, query).await {
+            Err(e) if e.is_transient() => {
+                tokio::time::sleep(std::time::Duration::from_millis(700)).await;
+                self.get_once(path, query).await
+            }
+            r => r,
+        }
+    }
+
+    async fn get_once<T: DeserializeOwned>(
         &self,
         path: &str,
         query: &[(&str, String)],
@@ -279,8 +303,13 @@ impl TmdbClient {
             req.query(&[("api_key", &self.api_key)])
         };
         let res = req.send().await?;
-        if !res.status().is_success() {
-            return Err(MetaError::Tmdb(format!("{} {}", res.status(), path)));
+        let status = res.status();
+        if !status.is_success() {
+            return Err(if status.as_u16() == 429 || status.is_server_error() {
+                MetaError::Unavailable(format!("{status} {path}"))
+            } else {
+                MetaError::Tmdb(format!("{status} {path}"))
+            });
         }
         Ok(res.json().await?)
     }
