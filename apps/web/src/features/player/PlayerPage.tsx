@@ -11,7 +11,10 @@ import {
   FlagBanner,
   Pause,
   Play,
+  ListBullets,
   Rectangle,
+  SkipBack,
+  SkipForward,
   SpeakerHigh,
   SpeakerSlash,
   Stop,
@@ -180,6 +183,8 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
   }, [])
   const [menu, setMenu] = useState(false)
   const [markerPanel, setMarkerPanel] = useState(false)
+  // The season's episodes over the video, so full screen can switch episodes too (as on Android).
+  const [episodesPanel, setEpisodesPanel] = useState(false)
   const [hoverFrac, setHoverFrac] = useState<number | null>(null)
   const tiles = useScrubTiles(item.id, detail.features.scrub_thumbnails)
   const isAdmin = useIsAdmin()
@@ -429,6 +434,11 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     }
   }, [item.id, navigate, report])
 
+  // Previous and next episode (or the playlist's next entry); replaces this title so Back still leaves the player.
+  const prevId = item.kind === 'episode' ? detail.prev_id : null
+  const nextId = detail.next_id
+  const playOther = useCallback((id: number | null) => id != null && navigate(`/play/${id}?t=0`, { replace: true }), [navigate])
+
   // Progress every 10 s while playing, and once on leaving.
   useEffect(() => {
     if (!playing) return
@@ -480,7 +490,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     hideTimer.current = window.setTimeout(() => setChrome(false), 3000)
   }, [])
   useEffect(() => () => window.clearTimeout(hideTimer.current), [])
-  const showChrome = chrome || !playing || menu || markerPanel
+  const showChrome = chrome || !playing || menu || markerPanel || episodesPanel
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -500,7 +510,9 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
       } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         e.preventDefault()
         setLevel(level + (e.key === 'ArrowUp' ? 0.05 : -0.05))
-      } else if (e.key === 'f') toggleFullscreen()
+      } else if (e.key === 'N' && e.shiftKey) playOther(nextId)
+      else if (e.key === 'P' && e.shiftKey) playOther(prevId)
+      else if (e.key === 'f') toggleFullscreen()
       else if (e.key === 't') toggleTheater()
       else if (e.key === 'm') v.muted = !v.muted
       else if (e.key === 's' || e.key === 'x') {
@@ -511,7 +523,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [level, playhead, poke, seek, setLevel, stop, toggleFullscreen, toggleTheater, togglePlay])
+  }, [level, nextId, playOther, playhead, poke, prevId, seek, setLevel, stop, toggleFullscreen, toggleTheater, togglePlay])
 
   useEffect(() => {
     const onChange = () => setFullscreen(!!document.fullscreenElement)
@@ -576,6 +588,7 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
             onClick={() => {
               if (menu) setMenu(false)
               if (markerPanel) setMarkerPanel(false)
+              if (episodesPanel) setEpisodesPanel(false)
             }}
             className={cn('relative aspect-video w-full overflow-hidden bg-black text-white', theater ? 'max-h-[calc(100dvh-120px)]' : 'max-h-[calc(100dvh-140px)] lg:rounded-lg', !showChrome && 'cursor-none')}
           >
@@ -744,6 +757,15 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
               </div>
             )}
 
+            {episodesPanel && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="anim-enter absolute inset-y-0 end-0 z-20 w-[min(440px,100%)] overflow-y-auto border-s border-white/10 bg-bg/95 p-3 text-fg shadow-overlay backdrop-blur-md"
+              >
+                <UpNextList detail={detail} scrollToCurrent />
+              </div>
+            )}
+
             {/* Bottom controls */}
             <div
               onClick={(e) => e.stopPropagation()}
@@ -781,6 +803,11 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
                 </div>
               ) : null}
               <div className="mt-1 flex items-center gap-1">
+                {prevId != null && (
+                  <IconButton label={t('player.prev')} onClick={() => playOther(prevId)}>
+                    <SkipBack size={22} weight="fill" />
+                  </IconButton>
+                )}
                 <IconButton label={t('player.back10')} onClick={() => seek(playhead() - 10)}>
                   <ClockCounterClockwise size={22} />
                 </IconButton>
@@ -790,6 +817,11 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
                 <IconButton label={t('player.forward10')} onClick={() => seek(playhead() + 10)}>
                   <ClockClockwise size={22} />
                 </IconButton>
+                {nextId != null && (
+                  <IconButton label={t('player.next')} onClick={() => playOther(nextId)}>
+                    <SkipForward size={22} weight="fill" />
+                  </IconButton>
+                )}
                 <IconButton label={t('player.stop')} onClick={stop}>
                   <Stop size={22} weight="fill" />
                 </IconButton>
@@ -825,6 +857,11 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
                   {isAdmin && (
                     <IconButton label={t('player.markers.open')} onClick={() => setMarkerPanel((o) => !o)} className={markerPanel ? 'bg-white/15' : undefined}>
                       <FlagBanner size={22} weight={markerPanel ? 'fill' : 'regular'} />
+                    </IconButton>
+                  )}
+                  {item.kind === 'episode' && (
+                    <IconButton label={t('player.episodes')} onClick={() => setEpisodesPanel((o) => !o)} className={episodesPanel ? 'bg-white/15' : undefined}>
+                      <ListBullets size={22} weight={episodesPanel ? 'bold' : 'regular'} />
                     </IconButton>
                   )}
                   {onTracks && (

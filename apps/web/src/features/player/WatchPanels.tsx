@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type Ref } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type Ref } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { CheckCircle, CircleNotch, Info, Play, SkipForward, Star, Subtitles, Waveform, X } from '@phosphor-icons/react'
@@ -190,6 +190,8 @@ export function WatchDetails({ detail, onTracks }: { detail: ItemDetail; onTrack
 export function UpNextList({ detail, scrollToCurrent }: { detail: ItemDetail; scrollToCurrent: boolean }) {
   const { item } = detail
   const playNext = usePlayNext()
+  // The list can show twice (under the video and in the player's episode panel): each needs its own heading id.
+  const titleId = useId()
   const episode = item.kind === 'episode'
   const [season, setSeason] = useState(item.parent_id)
   const seasons = useQuery({
@@ -223,9 +225,9 @@ export function UpNextList({ detail, scrollToCurrent }: { detail: ItemDetail; sc
   }, [scrollToCurrent, list])
 
   return (
-    <section aria-labelledby="up-next-title" className="flex flex-col">
+    <section aria-labelledby={titleId} className="flex flex-col">
       <div className="sticky top-0 z-[1] flex flex-col gap-2 bg-bg px-4 pb-2 pt-3 lg:px-0 lg:pt-0">
-        <h2 id="up-next-title" className="text-title font-semibold">
+        <h2 id={titleId} className="text-title font-semibold">
           {t(episode ? 'watch.episodes' : 'watch.moreToWatch')}
         </h2>
         {(seasons.data?.length ?? 0) > 1 && (
