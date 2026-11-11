@@ -355,6 +355,9 @@ private fun Player(
     var cues by remember { mutableStateOf<List<Cue>>(emptyList()) }
     // Remux and transcode streams start at `offset`, so the title's time is offset + the player's position.
     var offset by remember { mutableDoubleStateOf(0.0) }
+    // Copied video starts on the keyframe before the asked time and the pipe cannot seek: the lead-in plays fast and
+    // silent up to this stream position (ms), with the clock held on the target.
+    var catchUpMs by remember { mutableStateOf<Long?>(null) }
     var time by remember { mutableDoubleStateOf(startAt) }
     var scrub by remember { mutableStateOf<Float?>(null) }
     var scrubTiles by remember { mutableStateOf<List<ScrubTile>>(emptyList()) }
@@ -389,7 +392,7 @@ private fun Player(
     fun absTime() = offset + player.currentPosition / 1000.0
 
     // While a new stream loads, the player still reports the old one: skips build on the pending target instead.
-    fun now() = if (buffering) time else absTime()
+    fun now() = if (buffering || catchUpMs != null) time else absTime()
 
     fun report(watched: Boolean = false, notify: Boolean = false) {
         val pos = absTime()
@@ -419,6 +422,7 @@ private fun Player(
                             .apply { if (art != null) setArtworkData(art, MediaMetadata.PICTURE_TYPE_FRONT_COVER) }
                             .build(),
                     ).build()
+                    catchUpMs = null
                     if (p.mode == "direct") {
                         offset = 0.0
                         player.setMediaItem(media(api.streamUrl(file.id, audioIdx, caps, 0.0)), (at * 1000).toLong())
@@ -426,6 +430,7 @@ private fun Player(
                         // ffmpeg gets the requested time; p.start is where its output really begins.
                         offset = p.start
                         player.setMediaItem(media(api.streamUrl(file.id, audioIdx, caps, at)))
+                        catchUpMs = ((at - p.start) * 1000).toLong().takeIf { it > CATCH_UP_MIN_MS }
                     }
                     player.prepare()
                     player.play()
@@ -442,7 +447,7 @@ private fun Player(
         } else {
             // Inside what this stream already holds: jump there and leave the server's ffmpeg running. Not while a
             // stream is loading: the player still reports the old one.
-            val local = if (buffering) null else StreamSeek.bufferedTargetMs(
+            val local = if (buffering || catchUpMs != null) null else StreamSeek.bufferedTargetMs(
                 target, offset, player.currentPosition, player.bufferedPosition, player.isCurrentMediaItemSeekable,
             )
             if (local != null) {
@@ -500,10 +505,26 @@ private fun Player(
         var lastReport = 0L
         while (true) {
             delay(250)
-            if (!buffering) time = absTime()
+            if (!buffering && catchUpMs == null) time = absTime()
             val d = duration
             if (!watchedSent && d != null && d > 0 && time / d > 0.92) { watchedSent = true; report(true) }
             if (playing && System.currentTimeMillis() - lastReport > 10_000) { lastReport = System.currentTimeMillis(); report() }
+        }
+    }
+
+    LaunchedEffect(catchUpMs) {
+        val until = catchUpMs ?: return@LaunchedEffect
+        val volume = player.volume
+        player.volume = 0f
+        player.setPlaybackSpeed(CATCH_UP_SPEED)
+        try {
+            // Polled every frame or so: at 8x a 250 ms poll would overshoot by 2 s.
+            while (player.currentPosition < until) delay(16)
+            catchUpMs = null
+        } finally {
+            // Also on a newer load, which replaces catchUpMs and cancels this.
+            player.setPlaybackSpeed(1f)
+            player.volume = volume
         }
     }
 
@@ -676,7 +697,7 @@ private fun Player(
             scrubTiles = scrubTiles,
             showChrome = showChrome,
             playing = playing,
-            buffering = buffering,
+            buffering = buffering || catchUpMs != null,
             error = error,
             detail = detail,
             plan = plan,
@@ -744,6 +765,10 @@ private fun Player(
 
 /** After a skip, further single taps on a side within this window skip again (YouTube's rapid taps); it matches [SeekHint]. */
 private const val SEEK_STREAK_MS = 700L
+/** Lead-ins shorter than this play as they are. */
+private const val CATCH_UP_MIN_MS = 250L
+/** Passes a 5 s keyframe gap in under a second and still stops within a frame or two. */
+private const val CATCH_UP_SPEED = 8f
 
 /**
  * Tap toggles the controls; a double tap on the outer thirds skips 10s back or forward, in the middle it pauses.
