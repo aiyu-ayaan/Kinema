@@ -282,12 +282,12 @@ pub fn transcode_threads(configured: u32, max_transcodes: u32) -> u32 {
     (cores / max_transcodes.max(1)).max(4)
 }
 
-/// How far a re-encode may run ahead of the wall clock. The browser holds that much, so a seek
-/// inside it stays local; past it ffmpeg keeps pace with playback instead of taking every core.
+/// How far a progressive stream (re-encode or remux) may run ahead of the wall clock. Past it ffmpeg
+/// keeps pace with playback instead of taking every core, or for a remux, all of the link.
 /// Every play and seek encodes this lead at full speed, so a shorter lead is a shorter CPU spike.
 pub const THROTTLE_AHEAD_S: f64 = 30.0;
 
-/// Seconds of output a re-encode has written, read from ffmpeg's `-progress` lines on stderr.
+/// Seconds of output a stream has written, read from ffmpeg's `-progress` lines on stderr.
 #[derive(Debug, Clone, Default)]
 pub struct Progress(Arc<AtomicU64>);
 
@@ -382,8 +382,9 @@ pub(crate) fn ffmpeg_command(
     let mut cmd = Command::new(hw_decode.unwrap_or(&bins.ffmpeg));
     kinema_core::platform::configure_playback_process(cmd.as_std_mut());
     cmd.args(["-hide_banner", "-loglevel", "error", "-nostdin"]);
-    if reencode && hls.is_none() {
-        // Progress for the throttle (Progress::watch); remux is cheap and left to run.
+    if hls.is_none() {
+        // Progress for the throttle (Progress::watch). A remux is cheap on CPU, but unpaced it sends the
+        // whole title at link speed and a seek's small requests queue behind it on the same connection.
         cmd.args(["-progress", "pipe:2", "-nostats"]);
     }
     if hw_decode.is_some() {
@@ -491,11 +492,7 @@ pub(crate) fn ffmpeg_command(
     ]);
     cmd.stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())
-        .stderr(if reencode {
-            std::process::Stdio::piped()
-        } else {
-            std::process::Stdio::null()
-        })
+        .stderr(std::process::Stdio::piped())
         .kill_on_drop(true);
     cmd
 }
