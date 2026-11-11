@@ -317,10 +317,12 @@ function Player({ detail, startAt }: { detail: ItemDetail; startAt: number }) {
         v.currentTime = target
         return
       }
-      // Inside what this stream already holds: seek locally instead of restarting ffmpeg.
+      // Inside what this stream lets the element seek: seek locally instead of restarting ffmpeg. A piped stream
+      // has no Range support, so Chrome reports seekable [0, 0] and clamps any currentTime to 0, replaying the
+      // stream from its start; `buffered` must not be trusted for that.
       const local = target - offset.current
-      for (let i = 0; i < v.buffered.length; i++) {
-        if (local >= v.buffered.start(i) && local <= v.buffered.end(i)) {
+      for (let i = 0; i < v.seekable.length; i++) {
+        if (local >= v.seekable.start(i) && local <= v.seekable.end(i) && v.seekable.end(i) > 0) {
           seekTarget.current = target
           setTime(target)
           v.currentTime = local
