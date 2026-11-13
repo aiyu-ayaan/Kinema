@@ -1,3 +1,15 @@
+## v0.0.1-alpha.13 (2026-11-11)
+
+- !alpha(all) : Release alpha build
+- docs(Playback) : Keyframe catch-up after remux seeks
+- android(Player) : Catch up a remux's keyframe lead-in at 8x to the asked time
+- web(Player) : Play a remux's keyframe lead-in fast and silent up to the asked time
+- docs(Playback) : Remux pacing, pipe seeks, player episode controls, TMDB retry
+- web(Player) : Previous and next episode buttons, episode panel over the video
+- meta(TMDB) : Shared client, one retry on transient failures, clear error
+- web(Player) : Seek a piped stream by restarting it, never by currentTime
+- backend(Playback) : Pace remux streams 30 s ahead like transcodes
+
 ## v0.0.1-alpha.12 (2026-10-28)
 
 - !alpha(all) : Release alpha build
