@@ -1,6 +1,6 @@
 # HTTP API
 
-Base path `/api`, over HTTPS (self-signed by default, see `security.md`). JSON bodies. Auth: `Authorization: Bearer <session token>` or `kinema_session` cookie. Errors: `{"error": {"code": "...", "message": "..."}}` with the matching HTTP status.
+Base path `/api`, over HTTPS (self-signed by default, see `security.md`). JSON bodies. Auth: `Authorization: Bearer <session token>` or `kinema_session` cookie. Errors: `{"error": {"code": "...", "message": "..."}}` with the matching HTTP status. Locale resolution: `locale_middleware` checks `?lang=`/`?locale=` → `X-Kinema-Lang`/`X-Locale` → `Accept-Language` → `en`, sets `Content-Language`, and localizes error and notification messages across 27 languages (see `i18n.md`).
 
 This is Kinema's own API. It is not Plex-compatible.
 
@@ -63,6 +63,8 @@ This is Kinema's own API. It is not Plex-compatible.
 | POST | `/libraries/{id}/thumbnails` | Admin: delete and regenerate a library's thumbnails |
 | POST | `/libraries/{id}/match` | Admin: look up unmatched titles again |
 | GET | `/server/info` | Public: `{name, version, public_url, tls_fingerprint, capabilities}`; apps read `public_url` to stream away from home and `tls_fingerprint` to recognise the same server on the LAN |
+| GET | `/locales` | Public: list of all 27 supported locales (`{code, name, rtl}`) |
+| GET | `/locales/{lang}` | Public: translated backend catalog JSON for `{lang}` (falls back to `en`) |
 | GET | `/`, `/index.html`, any client route | The web UI page with `__KINEMA_SERVER_NAME__` replaced by the HTML-escaped server name (`backend/src/web.rs`), so tab titles, bookmarks and link previews show it before scripts run |
 | GET | `/server/status` | Admin: dashboard data; per library `scanning`, `generating_thumbnails`, `extracting_subtitles` |
 | POST | `/server/cache/{thumbnails\|subtitles\|images}/clear` | Admin: clear a cache |

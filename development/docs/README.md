@@ -9,6 +9,7 @@
 | [api.md](api.md) | HTTP API reference |
 | [web-ui.md](web-ui.md) | React web UI: stack, layout, flavors, data flow |
 | [android.md](android.md) | Android app: modules, discovery, certificate pinning, home/public address, navigation, player |
+| [i18n.md](i18n.md) | 27-language internationalization & RTL architecture across backend, web, desktop, and Android |
 | [media-pipeline.md](media-pipeline.md) | Scanning, probing, direct play, remux, transcode, HLS |
 | [boot-checks.md](boot-checks.md) | Startup checks, the `Features` clients read, how to add a boot task |
 | [metadata-and-artwork.md](metadata-and-artwork.md) | Filename parsing, TMDB, posters, thumbnails |

@@ -71,7 +71,7 @@ Query keys follow `['libraries']`, `['items', libraryId, filters]`, `['home']`. 
 
 ## MVP screens
 
-Sign-in / first-run setup, Home, Library grid, Item (movie, show, season, episode), Search, Settings (admin: libraries, folder picker, TMDB key), Settings › Updates (`/settings/updates`) and Settings › About Kinema (`/settings/about`: version, developer, link to `/settings/about/acknowledgements`, the credits in `src/lib/credits.ts`), Player (route-split chunk). Strings live in `src/locales/en.json` and go through `t()` in `src/lib/i18n.ts`. UI kit mirrors Domus: `components/ui/{Button,Field,Card,Modal}`.
+Sign-in / first-run setup, Home, Library grid, Item (movie, show, season, episode), Search, Settings (admin: libraries, folder picker, TMDB key), Settings › Updates (`/settings/updates`) and Settings › About Kinema (`/settings/about`: version, developer, link to `/settings/about/acknowledgements`, the credits in `src/lib/credits.ts`), Player (route-split chunk). Strings live in `src/locales/*.json` (27 languages, `en.json` bundled and non-English chunks lazy-loaded via `import.meta.glob`) and go through `t()` in `src/lib/i18n.ts` with language metadata and RTL detection (`ar`, `ur` → `dir='rtl'`) in `src/lib/languages.ts`. Language selectors appear on `AuthScreen.tsx` and `ProfilePage.tsx`, and `lib/api.ts` sends `Accept-Language` with every request. UI kit mirrors Domus: `components/ui/{Button,Field,Card,Modal}`.
 
 ## Profiles and sharing screens (2026-10-22)
 
@@ -86,8 +86,8 @@ Sign-in / first-run setup, Home, Library grid, Item (movie, show, season, episod
 
 As in Domus, dev and prod instances must not interfere.
 
-- Dev: localStorage keys `kinema.dev.token`, `kinema.dev.theme`; favicon `/favicon-dev.svg`; `DEV` pill in the navigation. Built with `pnpm build:web:dev`.
-- Prod: `kinema.token`, `kinema.theme`. Built with `pnpm build:web:prod`.
+- Dev: localStorage keys `kinema.dev.token`, `kinema.dev.theme`, `kinema.dev.language`; favicon `/favicon-dev.svg`; `DEV` pill in the navigation. Built with `pnpm build:web:dev`.
+- Prod: `kinema.token`, `kinema.theme`, `kinema.language`. Built with `pnpm build:web:prod`.
 
 ## Serving
 

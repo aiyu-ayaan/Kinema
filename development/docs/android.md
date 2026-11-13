@@ -180,11 +180,11 @@ Update downloads the APK into the cache with a plain OkHttp client (the app's ow
 
 ## Strings
 
-Every user-facing string is in `app/src/main/res/values/strings.xml` (English). A translation is a `values-<lang>/strings.xml`.
+Every user-facing string is in `app/src/main/res/values/strings.xml` (English: 270 `<string>` and 7 `<plurals>` entries), with complete translations across all 26 non-English `values-<qual>/strings.xml` directories (27 languages total, including `values-in`, `values-pt-rBR`, `values-zh-rCN`, `values-zh-rTW`, `values-ar`, and `values-ur`; see [`i18n.md`](i18n.md)).
 
-Audit (2026-10-22): no user-facing literal is left in the Kotlin code. What remains is deliberate: animation `label`s (debug names), the example address placeholder `192.168.1.10:3000`, proper nouns and library names in the About screens, `error("No repository")`-style programmer errors, and the messages the server sends (`ApiException`, shown as received; the server's own i18n is separate). The two update HTTP errors moved to `update_github_status` and `update_download_status`.
-
-Translations: `values-es`, `values-fr`, `values-de`, `values-hi`, each with the same 51 strings (actions, errors, tabs, sign-in, search, title actions, player controls and messages, appearance and playback settings). **Machine-quality drafts, needs review by a native speaker** (Hindi most of all) before any release counts on them. Everything not translated (plurals, Connect, Trust, Settings › Connection, Updates, About, watch page) falls back to English; `tools:ignore="MissingTranslation"` on the default file keeps lint quiet about that until a language is complete. To add a language: copy a `values-<lang>/strings.xml`, keep the `name`s and the `%1$s` placeholders, use typographic apostrophes (`’`) so nothing needs escaping, and add plurals with the language's own categories.
+- **Manifest & Gradle**: `res/xml/locales_config.xml` is wired via `android:localeConfig="@xml/locales_config"` alongside `android:supportsRtl="true"` in `AndroidManifest.xml`, and `app/build.gradle.kts` sets `androidResources { localeFilters += ... }`.
+- **In-app language picker**: `AppLocale.kt` uses the platform `LocaleManager` on Android 13+ (API 33+) and `SharedPreferences` + `Configuration` wrapping in `MainActivity.attachBaseContext` on API 26–32, exposed via a Language picker dialog in `SettingsTab.kt` (`AppearanceSection`) and tested in `AppLocaleTest.kt`.
+- **Audit**: no user-facing literal is left in the Kotlin code. What remains is deliberate: animation `label`s (debug names), the example address placeholder `192.168.1.10:3000`, proper nouns and library names in the About screens, and `error("No repository")`-style programmer errors. Server-sent messages (`ApiException`) are localized by the backend according to `Accept-Language`.
 
 ## Shortcuts
 

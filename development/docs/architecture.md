@@ -142,3 +142,15 @@ data/
   cache/hls/          live transcode sessions, purged on start
   logs/
 ```
+
+## Internationalization (i18n)
+
+All four surfaces (backend, web, desktop, Android) share a canonical **27-language** catalog with RTL support (`ar`, `ur`). See [`i18n.md`](i18n.md) for the full language table and per-platform details.
+
+```mermaid
+flowchart LR
+  Clients["Web / Desktop / Android<br/>27 locale catalogs + RTL (ar, ur)"] -->|"Accept-Language / ?lang= / X-Kinema-Lang"| MW["backend locale_middleware<br/>tokio::task_local! + Content-Language"]
+  MW --> Catalogs["backend/src/i18n.rs<br/>27 embedded JSON catalogs"]
+  Catalogs --> ApiErr["ApiError &amp; Notify"]
+  Catalogs --> ApiLoc["GET /api/locales{,/:lang}"]
+```
