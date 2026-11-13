@@ -68,6 +68,8 @@ fun PlaylistScreen(id: Long) {
     val loader = rememberLoad(id) { it.playlist(id) }
     val snackbar = remember { SnackbarHostState() }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    val deleteFailedMessage = stringResource(R.string.playlist_delete_failed)
+    val removeFailedMessage = stringResource(R.string.playlist_remove_failed)
 
     fun deletePlaylist() {
         scope.launch {
@@ -77,7 +79,7 @@ fun PlaylistScreen(id: Long) {
                     nav.back()
                 }
                 .onFailure {
-                    snackbar.showSnackbar("Failed to delete playlist")
+                    snackbar.showSnackbar(deleteFailedMessage)
                 }
         }
     }
@@ -91,7 +93,7 @@ fun PlaylistScreen(id: Long) {
                     loader.reload()
                 }
                 .onFailure {
-                    snackbar.showSnackbar("Failed to remove item")
+                    snackbar.showSnackbar(removeFailedMessage)
                 }
         }
     }

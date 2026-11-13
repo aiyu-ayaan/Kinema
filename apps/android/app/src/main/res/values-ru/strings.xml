@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kinema</string>
+    <!-- Shared actions -->
+    <string name="action_back">Назад</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_details">Подробнее</string>
+    <string name="action_play">Воспроизвести</string>
+    <string name="action_resume">Продолжить</string>
+    <string name="action_retry">Повторить</string>
+    <string name="action_save">Сохранить</string>
+
+    <!-- Errors -->
+    <string name="error_title">Что-то пошло не так</string>
+    <string name="error_generic">Не получилось. Попробуйте ещё раз.</string>
+    <string name="error_offline">Не удаётся подключиться к серверу. Проверьте, что он запущен и телефон находится в той же сети, или укажите публичный адрес.</string>
+    <string name="error_untrusted">Сертификат сервера отличается от одобренного ранее. Подключитесь заново, чтобы проверить его.</string>
+
+    <!-- Connect -->
+    <string name="connect_title">Kinema</string>
+    <string name="connect_subtitle">Ваши фильмы и сериалы с вашего собственного сервера.</string>
+    <string name="connect_found">В этой сети</string>
+    <string name="connect_rescan">Искать снова</string>
+    <string name="connect_scanning">Поиск серверов…</string>
+    <string name="connect_none">Ни один сервер не ответил. Убедитесь, что Kinema запущен и телефон подключён к той же сети Wi-Fi, или введите адрес ниже.</string>
+    <string name="connect_this_computer">Этот компьютер · %1$s</string>
+    <string name="connect_manual">Ввести адрес</string>
+    <string name="connect_address">Адрес сервера</string>
+    <string name="connect_address_hint">Указан в веб-интерфейсе Kinema в разделе Настройки › Сеть</string>
+    <string name="connect_invalid">Введите адрес, например 192.168.1.10:3000 или media.example.com.</string>
+    <string name="connect_action">Подключиться</string>
+    <string name="connect_change_server">Выбрать другой сервер</string>
+
+    <string name="trust_title">Доверять этому серверу?</string>
+    <string name="trust_body">%1$s создал собственный сертификат безопасности. Перед тем как доверять ему, убедитесь, что этот код совпадает с кодом в веб-интерфейсе Kinema в разделе Настройки › Сеть.</string>
+    <string name="trust_accept">Доверять</string>
+
+    <string name="unreachable_title">Сервер недоступен</string>
+    <string name="unreachable_body">Kinema по адресу %1$s не ответил ни по домашнему, ни по публичному адресу.</string>
+
+    <string name="forget_title">Выбрать другой сервер?</string>
+    <string name="forget_body">Этот телефон забудет сервер, его адреса и сертификат. История просмотров останется на сервере.</string>
+    <string name="forget_action">Забыть сервер</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">Кто смотрит?</string>
+    <string name="profiles_locked">Заблокировано</string>
+    <string name="profiles_setup_title">Сначала завершите настройку</string>
+    <string name="profiles_setup_body">Откройте %1$s в браузере, чтобы создать первую учётную запись и добавить медиафайлы. Затем вернитесь сюда.</string>
+    <string name="unlock_password">Пароль</string>
+    <string name="unlock_pin">PIN-код</string>
+    <string name="unlock_show">Показать</string>
+    <string name="unlock_hide">Скрыть</string>
+    <string name="unlock_action">Войти</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">Главная</string>
+    <string name="tab_library">Библиотека</string>
+    <string name="tab_search">Поиск</string>
+    <string name="tab_settings">Настройки</string>
+
+    <!-- Home -->
+    <string name="home_continue">Продолжить просмотр</string>
+    <string name="home_shelf_movies">Недавно добавленные фильмы</string>
+    <string name="home_shelf_shows">Недавно добавленные сериалы</string>
+    <string name="home_shelf_episodes">Новые серии</string>
+    <string name="home_hero_continue">Продолжить просмотр</string>
+    <string name="home_hero_new">Новое</string>
+    <string name="home_empty_title">Здесь пока пусто</string>
+    <string name="home_empty_body">Фильмы и сериалы появятся здесь, когда администратор сервера добавит библиотеку в веб-интерфейсе Kinema.</string>
+
+    <!-- Library and search -->
+    <string name="library_none_title">Нет библиотек</string>
+    <string name="library_none_body">На сервере пока нет доступных вам библиотек.</string>
+    <string name="library_switcher_title">Библиотеки</string>
+    <string name="library_expand">Показать сериалы</string>
+    <string name="library_collapse">Скрыть сериалы</string>
+    <plurals name="library_show_count">
+        <item quantity="one">%d сериал</item>
+        <item quantity="few">%d сериала</item>
+        <item quantity="many">%d сериалов</item>
+        <item quantity="other">%d сериалов</item>
+    </plurals>
+    <string name="library_empty_title">Эта библиотека пуста</string>
+    <string name="library_empty_body">Новые файлы появятся здесь после того, как сервер их просканирует.</string>
+    <string name="search_hint">Фильмы, сериалы, серии</string>
+    <string name="search_clear">Очистить</string>
+    <string name="search_idle_title">Найдите, что посмотреть</string>
+    <string name="search_idle_body">Ищите по названию во всех библиотеках.</string>
+    <string name="search_none_title">Ничего не найдено</string>
+    <string name="search_none_body">Нет совпадений для «%1$s».</string>
+
+    <!-- Title page -->
+    <string name="item_watched">Просмотрено</string>
+    <string name="item_mark_watched">Отметить как просмотренное</string>
+    <string name="item_mark_unwatched">Отметить как непросмотренное</string>
+    <string name="item_from_start">Смотреть с начала</string>
+    <string name="item_play_episode">Смотреть С%1$d · Э%2$d</string>
+    <string name="item_episode_short">С%1$d · Э%2$d</string>
+    <string name="item_season_no">С%1$d</string>
+    <string name="item_episode_no">Э%1$d</string>
+    <string name="item_episode_number">Серия %1$d</string>
+    <string name="item_left">Осталось %1$s</string>
+    <string name="item_seasons">Сезоны</string>
+    <string name="item_episodes">Серии</string>
+    <string name="item_cast">В ролях</string>
+    <string name="item_previous">Предыдущая</string>
+    <string name="item_next">Следующая</string>
+    <string name="item_file">Файл</string>
+    <plurals name="item_seasons">
+        <item quantity="one">%d сезон</item>
+        <item quantity="few">%d сезона</item>
+        <item quantity="many">%d сезонов</item>
+        <item quantity="other">%d сезонов</item>
+    </plurals>
+    <plurals name="item_episodes">
+        <item quantity="one">%d серия</item>
+        <item quantity="few">%d серии</item>
+        <item quantity="many">%d серий</item>
+        <item quantity="other">%d серий</item>
+    </plurals>
+    <plurals name="item_audio_tracks">
+        <item quantity="one">%d аудиодорожка</item>
+        <item quantity="few">%d аудиодорожки</item>
+        <item quantity="many">%d аудиодорожек</item>
+        <item quantity="other">%d аудиодорожек</item>
+    </plurals>
+    <plurals name="item_subtitle_tracks">
+        <item quantity="one">%d субтитр</item>
+        <item quantity="few">%d субтитра</item>
+        <item quantity="many">%d субтитров</item>
+        <item quantity="other">%d субтитров</item>
+    </plurals>
+    <string name="format_hours_minutes">%1$d ч %2$d мин</string>
+    <string name="format_minutes">%1$d мин</string>
+
+    <!-- Player -->
+    <string name="player_pause">Пауза</string>
+    <string name="player_stop">Стоп</string>
+    <string name="player_volume">Громкость</string>
+    <string name="player_brightness">Яркость</string>
+    <string name="player_boost">Усиление %1$d%%</string>
+    <string name="player_back10">Назад на 10 секунд</string>
+    <string name="player_forward10">Вперёд на 10 секунд</string>
+    <string name="player_seconds">%1$d с</string>
+    <string name="player_next">Следующая серия</string>
+    <string name="player_up_next_in">Далее через %1$s</string>
+    <string name="player_play_now">Смотреть сейчас</string>
+    <string name="player_dismiss">Скрыть</string>
+    <string name="player_skip_intro">Пропустить заставку</string>
+    <string name="player_skip_credits">Пропустить титры</string>
+    <string name="player_pip">Картинка в картинке</string>
+    <string name="player_fullscreen">Полный экран</string>
+    <string name="player_exit_fullscreen">Выйти из полноэкранного режима</string>
+    <string name="player_minimize">Свернуть</string>
+    <string name="player_up_next_list">Серии и другое</string>
+    <string name="watch_episodes">Серии</string>
+    <string name="watch_more">Что ещё посмотреть</string>
+    <string name="watch_now_playing">Сейчас играет</string>
+    <string name="watch_nothing">Здесь пока больше нечего смотреть</string>
+    <string name="player_tracks">Аудио и субтитры</string>
+    <string name="player_audio">Аудио</string>
+    <string name="player_subtitles">Субтитры</string>
+    <string name="player_subtitles_off">Выкл.</string>
+    <string name="series_tracks">Аудио и субтитры для всех серий</string>
+    <string name="series_hint">Дорожки берутся из первой серии. Каждая серия использует ту же позицию дорожки, поэтому это работает, если все серии из одного релиза.</string>
+    <string name="series_default">По умолчанию сервера</string>
+    <string name="series_no_streams">Первая серия ещё не проанализирована. Повторите попытку после завершения сканирования.</string>
+    <string name="player_subtitle_image">Графические субтитры пока не поддерживаются</string>
+    <string name="player_fill">Заполнить экран</string>
+    <string name="player_fit">По размеру экрана</string>
+    <string name="player_mode_direct">Прямое воспроизведение</string>
+    <string name="player_mode_remux">Прямой поток</string>
+    <string name="player_mode_transcode">Конвертация</string>
+    <string name="player_error_title">Не удаётся воспроизвести</string>
+    <string name="player_error">Воспроизведение остановлено. Проверьте подключение и повторите попытку.</string>
+    <string name="player_no_file">У этого названия нет файла для воспроизведения.</string>
+    <string name="track_mono">Моно</string>
+    <string name="track_stereo">Стерео</string>
+    <string name="track_numbered">Дорожка %1$d</string>
+
+    <!-- Settings -->
+    <string name="settings_switch_profile">Сменить</string>
+    <string name="settings_connection">Подключение</string>
+    <string name="settings_route_local">Дома</string>
+    <string name="settings_route_public">Вне дома · публичный адрес</string>
+    <string name="settings_route_hint">Kinema использует домашний адрес, когда он отвечает, и переключается на публичный, когда вы уходите.</string>
+    <string name="settings_local_url">Домашний адрес</string>
+    <string name="settings_public_url">Публичный адрес</string>
+    <string name="settings_public_hint">Обратный прокси или туннель для доступа к серверу откуда угодно</string>
+    <string name="settings_public_from_server">Адрес сервера: %1$s</string>
+    <string name="settings_public_test">Проверить</string>
+    <string name="settings_public_ok">Сервер отвечает по этому адресу</string>
+    <string name="settings_public_unreachable">Нет ответа по этому адресу отсюда</string>
+    <string name="settings_appearance">Оформление</string>
+    <string name="settings_theme_system">Системная</string>
+    <string name="settings_theme_light">Светлая</string>
+    <string name="settings_theme_dark">Тёмная</string>
+    <string name="settings_dynamic">Цвета обоев</string>
+    <string name="settings_dynamic_hint">Окрашивать приложение в цвета ваших обоев</string>
+    <string name="settings_language">Язык</string>
+    <string name="settings_language_system">По умолчанию</string>
+    <string name="settings_language_picker_title">Язык приложения</string>
+    <string name="player_notification_channel">Воспроизведение медиа</string>
+    <string name="player_notification_channel_desc">Элементы управления воспроизведением и медиауведомление</string>
+    <string name="settings_playback">Воспроизведение</string>
+    <string name="settings_pip">Картинка в картинке</string>
+    <string name="settings_pip_on">При выходе из приложения видео продолжает играть в маленьком окне. Закрытие окна ставит видео на паузу.</string>
+    <string name="settings_pip_off">При выходе из приложения звук продолжает играть с управлением в уведомлении.</string>
+    <string name="settings_server">Сервер</string>
+    <string name="settings_cert_pinned">Частный сертификат, одобренный на этом телефоне</string>
+    <string name="settings_cert_public">Сертификат, подписанный публичным центром</string>
+    <string name="settings_kinema">Kinema</string>
+    <string name="settings_updates">Обновления</string>
+    <string name="settings_updates_subtitle">Версия %1$s, примечания к выпуску и канал</string>
+    <string name="settings_about_subtitle">Версия %1$s, разработчик и благодарности</string>
+    <string name="update_title">Обновления</string>
+    <string name="update_checking">Проверка обновлений…</string>
+    <string name="update_check_failed">Не удалось проверить обновления</string>
+    <string name="update_check_failed_body">У вас установлена %1$s. Проверьте подключение и повторите попытку.</string>
+    <string name="update_failed">Не удалось обновить: %1$s</string>
+    <string name="update_up_to_date">Установлена последняя версия Kinema</string>
+    <string name="update_dev_build">Сборка для разработки</string>
+    <string name="update_dev_build_body">У вас установлена %1$s. Сборка для разработки обновляется пересборкой.</string>
+    <string name="update_you_have">У вас установлена %1$s.</string>
+    <string name="update_available">Доступна Kinema %1$s</string>
+    <string name="update_prompt_body">У вас установлена %1$s. Android запросит подтверждение перед установкой; сервер, вход и настройки сохранятся. Примечания к выпуску и канал находятся в Настройках, в разделе Обновления.</string>
+    <string name="update_downloading_percent">Загрузка %1$d%%</string>
+    <string name="update_install">Обновить</string>
+    <string name="update_download_install">Скачать и установить</string>
+    <string name="update_check_again">Проверить снова</string>
+    <string name="update_later">Позже</string>
+    <string name="update_channel">Канал</string>
+    <string name="update_channel_stable">Стабильный</string>
+    <string name="update_channel_beta">Бета</string>
+    <string name="update_channel_alpha">Альфа</string>
+    <string name="update_channel_hint">Бета и Альфа получают новые сборки раньше, а также все стабильные выпуски.</string>
+    <string name="update_whats_new_in">Что нового в %1$s</string>
+    <string name="update_in_this_version">В этой версии</string>
+    <string name="update_loading_notes">Загрузка примечаний к выпуску…</string>
+    <string name="update_no_notes">Для этой версии нет примечаний к выпуску.</string>
+    <string name="about_title">О Kinema</string>
+    <string name="about_section_app">Приложение</string>
+    <string name="about_version_build">Версия %1$s · сборка %2$d</string>
+    <string name="about_privacy_title">Конфиденциальность</string>
+    <string name="about_privacy_subtitle">Работает на вашем сервере. Ваша библиотека и история просмотров никогда его не покидают.</string>
+    <string name="about_source_code">Исходный код</string>
+    <string name="about_section_developer">Разработчик</string>
+    <string name="about_developer_tagline">Спроектировано и создано одним разработчиком.</string>
+    <string name="about_github">GitHub</string>
+    <string name="about_portfolio">Портфолио</string>
+    <string name="about_section_open_source">Открытый исходный код</string>
+    <string name="about_acknowledgements">Благодарности</string>
+    <string name="about_acknowledgements_subtitle">Библиотеки и проекты, на которых основано приложение для Android</string>
+    <string name="about_tmdb">Метаданные и обложки фильмов и сериалов через ваш сервер. Этот продукт использует API TMDB, но не одобрен и не сертифицирован TMDB.</string>
+    <string name="about_plex">Вдохновение: идея личного медиасервера. Код и ресурсы Plex не используются.</string>
+    <string name="update_github_status">GitHub ответил %1$d</string>
+    <string name="update_download_status">Загрузка ответила %1$d</string>
+    <string name="update_conflict">Android отклонил обновление: оно подписано другим ключом, отличным от установленного приложения. Сначала удалите эту копию.</string>
+
+    <!-- Playlists and Collections -->
+    <string name="home_shelf_playlists">Плейлисты</string>
+    <string name="home_shelf_collections">Коллекции</string>
+    <string name="playlist_title">Плейлист</string>
+    <string name="playlist_play_all">Смотреть всё</string>
+    <string name="playlist_empty">Этот плейлист пуст</string>
+    <string name="playlist_empty_body">Добавьте фильмы или серии в этот плейлист.</string>
+    <string name="playlist_add">Добавить в плейлист</string>
+    <string name="playlist_create">Новый плейлист</string>
+    <string name="playlist_name">Название плейлиста</string>
+    <string name="playlist_delete">Удалить плейлист</string>
+    <string name="playlist_delete_confirm">Удалить плейлист «%1$s»?</string>
+    <string name="playlist_remove">Удалить из плейлиста</string>
+    <string name="playlist_added">Добавлено в %1$s</string>
+    <string name="playlist_created">Плейлист создан</string>
+    <string name="playlist_delete_failed">Не удалось удалить плейлист</string>
+    <string name="playlist_remove_failed">Не удалось удалить элемент</string>
+    <string name="collection_title">Коллекция</string>
+    <string name="collection_empty">Эта коллекция пуста</string>
+    <string name="collection_empty_body">В этой коллекции пока нет фильмов или сериалов.</string>
+    <string name="action_delete">Удалить</string>
+    <string name="action_create">Создать</string>
+    <plurals name="playlist_items_count">
+        <item quantity="one">%d элемент</item>
+        <item quantity="few">%d элемента</item>
+        <item quantity="many">%d элементов</item>
+        <item quantity="other">%d элементов</item>
+    </plurals>
+    <plurals name="collection_items_count">
+        <item quantity="one">%d название</item>
+        <item quantity="few">%d названия</item>
+        <item quantity="many">%d названий</item>
+        <item quantity="other">%d названий</item>
+    </plurals>
+    <string name="approval_title">Ожидание одобрения</string>
+    <string name="approval_body">Ожидание одобрения этого устройства администратором.</string>
+    <string name="approval_device">Вход как %1$s с %2$s</string>
+    <string name="settings_account">Ваш аккаунт</string>
+    <string name="settings_requests">Запросы</string>
+    <string name="settings_requests_subtitle">Попросить добавить фильм или сериал</string>
+    <string name="settings_activity">История просмотров</string>
+    <string name="settings_activity_subtitle">Ваше время просмотра и история</string>
+    <string name="requests_title">Запросы</string>
+    <string name="requests_new">Запросить название</string>
+    <string name="requests_empty">Запросов пока нет</string>
+    <string name="requests_empty_body">Не можете что-то найти? Попросите администратора добавить это.</string>
+    <string name="requests_withdraw">Отозвать</string>
+    <string name="requests_status_pending">На рассмотрении</string>
+    <string name="requests_status_approved">Одобрено</string>
+    <string name="requests_status_declined">Отклонено</string>
+    <string name="requests_status_available">Доступно</string>
+    <string name="requests_kind_movie">Фильм</string>
+    <string name="requests_kind_show">Сериал</string>
+    <string name="requests_search">Название</string>
+    <string name="requests_note">Примечание (необязательно)</string>
+    <string name="requests_no_tmdb">На сервере нет поиска по названиям. Введите нужное название вручную.</string>
+    <string name="requests_no_results">Нет совпадений</string>
+    <string name="requests_submit">Отправить запрос</string>
+    <string name="requests_admin_note">Администратор: %1$s</string>
+    <string name="activity_title">История просмотров</string>
+    <string name="activity_total">Всего</string>
+    <string name="activity_week">За 7 дней</string>
+    <string name="activity_month">За 30 дней</string>
+    <string name="activity_titles">Названия</string>
+    <string name="activity_completed">Завершено</string>
+    <string name="activity_daily">Время просмотра по дням</string>
+    <string name="activity_daily_peak">Пик %1$s</string>
+    <string name="activity_top_titles">Самые просматриваемые</string>
+    <string name="activity_top_genres">Популярные жанры</string>
+    <string name="activity_history">Недавно воспроизведённые</string>
+    <string name="activity_empty">Пока ничего не просмотрено</string>
+    <string name="activity_empty_body">Ваше время просмотра появится здесь, когда вы что-нибудь посмотрите.</string>
+    <string name="duration_hm">%1$d ч %2$d мин</string>
+    <string name="duration_h">%1$d ч</string>
+    <string name="duration_m">%1$d мин</string>
+    <string name="role_owner">Владелец сайта</string>
+    <string name="role_admin">Администратор</string>
+    <string name="role_member">Участник</string>
+</resources>

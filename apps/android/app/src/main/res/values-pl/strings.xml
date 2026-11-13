@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kinema</string>
+    <!-- Shared actions -->
+    <string name="action_back">Wstecz</string>
+    <string name="action_cancel">Anuluj</string>
+    <string name="action_details">Szczegóły</string>
+    <string name="action_play">Odtwórz</string>
+    <string name="action_resume">Wznów</string>
+    <string name="action_retry">Spróbuj ponownie</string>
+    <string name="action_save">Zapisz</string>
+
+    <!-- Errors -->
+    <string name="error_title">Coś poszło nie tak</string>
+    <string name="error_generic">To nie zadziałało. Spróbuj ponownie.</string>
+    <string name="error_offline">Nie można połączyć się z serwerem. Sprawdź, czy działa i czy ten telefon jest w tej samej sieci, lub ustaw adres publiczny.</string>
+    <string name="error_untrusted">Certyfikat serwera różni się od zatwierdzonego wcześniej. Połącz się ponownie, aby go sprawdzić.</string>
+
+    <!-- Connect -->
+    <string name="connect_title">Kinema</string>
+    <string name="connect_subtitle">Twoje filmy i seriale z własnego serwera.</string>
+    <string name="connect_found">W tej sieci</string>
+    <string name="connect_rescan">Szukaj ponownie</string>
+    <string name="connect_scanning">Szukanie serwerów…</string>
+    <string name="connect_none">Żaden serwer nie odpowiedział. Upewnij się, że Kinema działa i telefon jest w tej samej sieci Wi-Fi, lub wpisz adres poniżej.</string>
+    <string name="connect_this_computer">Ten komputer · %1$s</string>
+    <string name="connect_manual">Wpisz adres</string>
+    <string name="connect_address">Adres serwera</string>
+    <string name="connect_address_hint">Widoczny w Kinema w przeglądarce w Ustawienia › Sieć</string>
+    <string name="connect_invalid">Wpisz adres, np. 192.168.1.10:3000 lub media.example.com.</string>
+    <string name="connect_action">Połącz</string>
+    <string name="connect_change_server">Użyj innego serwera</string>
+
+    <string name="trust_title">Czy zaufać temu serwerowi?</string>
+    <string name="trust_body">%1$s utworzył własny certyfikat bezpieczeństwa. Przed zatwierdzeniem sprawdź, czy ten kod zgadza się z kodem w Kinema w przeglądarce w Ustawienia › Sieć.</string>
+    <string name="trust_accept">Zaufaj</string>
+
+    <string name="unreachable_title">Serwer nieosiągalny</string>
+    <string name="unreachable_body">Kinema pod adresem %1$s nie odpowiedział ani pod adresem lokalnym, ani publicznym.</string>
+
+    <string name="forget_title">Użyć innego serwera?</string>
+    <string name="forget_body">Ten telefon zapomni serwer, jego adresy oraz certyfikat. Twoja historia oglądania pozostanie na serwerze.</string>
+    <string name="forget_action">Zapomnij serwer</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">Kto ogląda?</string>
+    <string name="profiles_locked">Zablokowano</string>
+    <string name="profiles_setup_title">Najpierw dokończ konfigurację</string>
+    <string name="profiles_setup_body">Otwórz %1$s w przeglądarce, aby utworzyć pierwsze konto i dodać multimedia. Następnie wróć tutaj.</string>
+    <string name="unlock_password">Hasło</string>
+    <string name="unlock_pin">PIN</string>
+    <string name="unlock_show">Pokaż</string>
+    <string name="unlock_hide">Ukryj</string>
+    <string name="unlock_action">Zaloguj się</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">Start</string>
+    <string name="tab_library">Biblioteka</string>
+    <string name="tab_search">Szukaj</string>
+    <string name="tab_settings">Ustawienia</string>
+
+    <!-- Home -->
+    <string name="home_continue">Oglądaj dalej</string>
+    <string name="home_shelf_movies">Ostatnio dodane filmy</string>
+    <string name="home_shelf_shows">Ostatnio dodane seriale</string>
+    <string name="home_shelf_episodes">Nowe odcinki</string>
+    <string name="home_hero_continue">Oglądaj dalej</string>
+    <string name="home_hero_new">Nowość</string>
+    <string name="home_empty_title">Jeszcze nic tu nie ma</string>
+    <string name="home_empty_body">Tytuły pojawią się tutaj, gdy administrator serwera doda bibliotekę w Kinema w przeglądarce.</string>
+
+    <!-- Library and search -->
+    <string name="library_none_title">Brak bibliotek</string>
+    <string name="library_none_body">Serwer nie ma jeszcze żadnych bibliotek, które możesz zobaczyć.</string>
+    <string name="library_switcher_title">Biblioteki</string>
+    <string name="library_expand">Pokaż seriale</string>
+    <string name="library_collapse">Ukryj seriale</string>
+    <plurals name="library_show_count">
+        <item quantity="one">%d serial</item>
+        <item quantity="few">%d seriale</item>
+        <item quantity="many">%d seriali</item>
+        <item quantity="other">%d seriali</item>
+    </plurals>
+    <string name="library_empty_title">Ta biblioteka jest pusta</string>
+    <string name="library_empty_body">Nowe pliki pojawią się tutaj po przeskanowaniu ich przez serwer.</string>
+    <string name="search_hint">Filmy, seriale, odcinki</string>
+    <string name="search_clear">Wyczyść</string>
+    <string name="search_idle_title">Znajdź coś do obejrzenia</string>
+    <string name="search_idle_body">Szukaj według tytułu we wszystkich bibliotekach.</string>
+    <string name="search_none_title">Brak wyników</string>
+    <string name="search_none_body">Nic nie pasuje do „%1$s”.</string>
+
+    <!-- Title page -->
+    <string name="item_watched">Obejrzane</string>
+    <string name="item_mark_watched">Oznacz jako obejrzane</string>
+    <string name="item_mark_unwatched">Oznacz jako nieobejrzane</string>
+    <string name="item_from_start">Odtwórz od początku</string>
+    <string name="item_play_episode">Odtwórz S%1$d · E%2$d</string>
+    <string name="item_episode_short">S%1$d · E%2$d</string>
+    <string name="item_season_no">S%1$d</string>
+    <string name="item_episode_no">E%1$d</string>
+    <string name="item_episode_number">Odcinek %1$d</string>
+    <string name="item_left">Pozostało %1$s</string>
+    <string name="item_seasons">Sezony</string>
+    <string name="item_episodes">Odcinki</string>
+    <string name="item_cast">Obsada</string>
+    <string name="item_previous">Poprzedni</string>
+    <string name="item_next">Następny</string>
+    <string name="item_file">Plik</string>
+    <plurals name="item_seasons">
+        <item quantity="one">%d sezon</item>
+        <item quantity="few">%d sezony</item>
+        <item quantity="many">%d sezonów</item>
+        <item quantity="other">%d sezonów</item>
+    </plurals>
+    <plurals name="item_episodes">
+        <item quantity="one">%d odcinek</item>
+        <item quantity="few">%d odcinki</item>
+        <item quantity="many">%d odcinków</item>
+        <item quantity="other">%d odcinków</item>
+    </plurals>
+    <plurals name="item_audio_tracks">
+        <item quantity="one">%d ścieżka dźwiękowa</item>
+        <item quantity="few">%d ścieżki dźwiękowe</item>
+        <item quantity="many">%d ścieżek dźwiękowych</item>
+        <item quantity="other">%d ścieżek dźwiękowych</item>
+    </plurals>
+    <plurals name="item_subtitle_tracks">
+        <item quantity="one">%d napis</item>
+        <item quantity="few">%d napisy</item>
+        <item quantity="many">%d napisów</item>
+        <item quantity="other">%d napisów</item>
+    </plurals>
+    <string name="format_hours_minutes">%1$d godz. %2$d min</string>
+    <string name="format_minutes">%1$d min</string>
+
+    <!-- Player -->
+    <string name="player_pause">Pauza</string>
+    <string name="player_stop">Zatrzymaj</string>
+    <string name="player_volume">Głośność</string>
+    <string name="player_brightness">Jasność</string>
+    <string name="player_boost">Wzmocnienie %1$d%%</string>
+    <string name="player_back10">Cofnij o 10 sekund</string>
+    <string name="player_forward10">Przewiń o 10 sekund</string>
+    <string name="player_seconds">%1$d s</string>
+    <string name="player_next">Następny odcinek</string>
+    <string name="player_up_next_in">Następny za %1$s</string>
+    <string name="player_play_now">Odtwórz teraz</string>
+    <string name="player_dismiss">Ukryj</string>
+    <string name="player_skip_intro">Pomiń czołówkę</string>
+    <string name="player_skip_credits">Pomiń napisy</string>
+    <string name="player_pip">Obraz w obrazie</string>
+    <string name="player_fullscreen">Pełny ekran</string>
+    <string name="player_exit_fullscreen">Wyjdź z pełnego ekranu</string>
+    <string name="player_minimize">Minimalizuj</string>
+    <string name="player_up_next_list">Odcinki i więcej</string>
+    <string name="watch_episodes">Odcinki</string>
+    <string name="watch_more">Więcej do obejrzenia</string>
+    <string name="watch_now_playing">Teraz odtwarzane</string>
+    <string name="watch_nothing">Nie ma tu jeszcze nic więcej do obejrzenia</string>
+    <string name="player_tracks">Dźwięk i napisy</string>
+    <string name="player_audio">Dźwięk</string>
+    <string name="player_subtitles">Napisy</string>
+    <string name="player_subtitles_off">Wyłączone</string>
+    <string name="series_tracks">Dźwięk i napisy dla wszystkich odcinków</string>
+    <string name="series_hint">Ścieżki pochodzą z pierwszego odcinka. Każdy odcinek używa tej samej pozycji ścieżki, więc działa to, gdy wszystkie odcinki pochodzą z tego samego wydania.</string>
+    <string name="series_default">Domyślne serwera</string>
+    <string name="series_no_streams">Pierwszy odcinek nie został jeszcze przeanalizowany. Spróbuj ponownie po zakończeniu skanowania.</string>
+    <string name="player_subtitle_image">Napisy graficzne nie mogą być jeszcze wyświetlane</string>
+    <string name="player_fill">Wypełnij ekran</string>
+    <string name="player_fit">Dopasuj do ekranu</string>
+    <string name="player_mode_direct">Odtwarzanie bezpośrednie</string>
+    <string name="player_mode_remux">Strumień bezpośredni</string>
+    <string name="player_mode_transcode">Konwertowanie</string>
+    <string name="player_error_title">Nie można odtworzyć</string>
+    <string name="player_error">Wideo zostało zatrzymane. Sprawdź połączenie i spróbuj ponownie.</string>
+    <string name="player_no_file">Ten tytuł nie ma pliku możliwego do odtworzenia.</string>
+    <string name="track_mono">Mono</string>
+    <string name="track_stereo">Stereo</string>
+    <string name="track_numbered">Ścieżka %1$d</string>
+
+    <!-- Settings -->
+    <string name="settings_switch_profile">Zmień</string>
+    <string name="settings_connection">Połączenie</string>
+    <string name="settings_route_local">W domu</string>
+    <string name="settings_route_public">Poza domem · adres publiczny</string>
+    <string name="settings_route_hint">Kinema używa adresu domowego, gdy odpowiada, i przełącza się na adres publiczny, gdy wychodzisz.</string>
+    <string name="settings_local_url">Adres domowy</string>
+    <string name="settings_public_url">Adres publiczny</string>
+    <string name="settings_public_hint">Odwrotne proxy lub tunel łączący się z serwerem z dowolnego miejsca</string>
+    <string name="settings_public_from_server">Używany adres serwera: %1$s</string>
+    <string name="settings_public_test">Testuj</string>
+    <string name="settings_public_ok">Serwer odpowiada pod tym adresem</string>
+    <string name="settings_public_unreachable">Brak odpowiedzi pod tym adresem stąd</string>
+    <string name="settings_appearance">Wygląd</string>
+    <string name="settings_theme_system">Systemowy</string>
+    <string name="settings_theme_light">Jasny</string>
+    <string name="settings_theme_dark">Ciemny</string>
+    <string name="settings_dynamic">Kolory tapety</string>
+    <string name="settings_dynamic_hint">Dopasuj kolory aplikacji do swojej tapety</string>
+    <string name="settings_language">Język</string>
+    <string name="settings_language_system">Domyślny systemu</string>
+    <string name="settings_language_picker_title">Język aplikacji</string>
+    <string name="player_notification_channel">Odtwarzanie multimediów</string>
+    <string name="player_notification_channel_desc">Sterowanie odtwarzaniem i powiadomienie multimedialne</string>
+    <string name="settings_playback">Odtwarzanie</string>
+    <string name="settings_pip">Obraz w obrazie</string>
+    <string name="settings_pip_on">Po wyjściu z aplikacji wideo nadal odtwarza się w małym oknie. Zamknięcie okna wstrzymuje odtwarzanie.</string>
+    <string name="settings_pip_off">Po wyjściu z aplikacji dźwięk nadal gra, ze sterowaniem w powiadomieniu.</string>
+    <string name="settings_server">Serwer</string>
+    <string name="settings_cert_pinned">Certyfikat prywatny, zatwierdzony na tym telefonie</string>
+    <string name="settings_cert_public">Certyfikat podpisany przez publiczny urząd</string>
+    <string name="settings_kinema">Kinema</string>
+    <string name="settings_updates">Aktualizacje</string>
+    <string name="settings_updates_subtitle">Wersja %1$s, informacje o wydaniu i kanał</string>
+    <string name="settings_about_subtitle">Wersja %1$s, twórca i podziękowania</string>
+    <string name="update_title">Aktualizacje</string>
+    <string name="update_checking">Sprawdzanie aktualizacji…</string>
+    <string name="update_check_failed">Nie udało się sprawdzić aktualizacji</string>
+    <string name="update_check_failed_body">Masz wersję %1$s. Sprawdź połączenie i spróbuj ponownie.</string>
+    <string name="update_failed">Aktualizacja nie powiodła się: %1$s</string>
+    <string name="update_up_to_date">Kinema jest aktualna</string>
+    <string name="update_dev_build">Wersja deweloperska</string>
+    <string name="update_dev_build_body">Masz wersję %1$s. Wersję deweloperską aktualizuje się przez ponowne zbudowanie.</string>
+    <string name="update_you_have">Masz wersję %1$s.</string>
+    <string name="update_available">Dostępna jest Kinema %1$s</string>
+    <string name="update_prompt_body">Masz wersję %1$s. Android zapyta przed instalacją; Twój serwer, logowanie i ustawienia zostaną zachowane. Informacje o wydaniu i kanał są w Ustawieniach, w sekcji Aktualizacje.</string>
+    <string name="update_downloading_percent">Pobieranie %1$d%%</string>
+    <string name="update_install">Aktualizuj</string>
+    <string name="update_download_install">Pobierz i zainstaluj</string>
+    <string name="update_check_again">Sprawdź ponownie</string>
+    <string name="update_later">Później</string>
+    <string name="update_channel">Kanał</string>
+    <string name="update_channel_stable">Stabilny</string>
+    <string name="update_channel_beta">Beta</string>
+    <string name="update_channel_alpha">Alfa</string>
+    <string name="update_channel_hint">Beta i Alfa otrzymują nowe kompilacje wcześniej, a także każdą wersję stabilną.</string>
+    <string name="update_whats_new_in">Co nowego w %1$s</string>
+    <string name="update_in_this_version">W tej wersji</string>
+    <string name="update_loading_notes">Ładowanie informacji o wydaniu…</string>
+    <string name="update_no_notes">Brak informacji o wydaniu dla tej wersji.</string>
+    <string name="about_title">O aplikacji Kinema</string>
+    <string name="about_section_app">Aplikacja</string>
+    <string name="about_version_build">Wersja %1$s · kompilacja %2$d</string>
+    <string name="about_privacy_title">Prywatność</string>
+    <string name="about_privacy_subtitle">Działa na Twoim własnym serwerze. Twoja biblioteka i historia oglądania nigdy go nie opuszczają.</string>
+    <string name="about_source_code">Kod źródłowy</string>
+    <string name="about_section_developer">Twórca</string>
+    <string name="about_developer_tagline">Zaprojektowana i zbudowana przez jednego programistę.</string>
+    <string name="about_github">GitHub</string>
+    <string name="about_portfolio">Portfolio</string>
+    <string name="about_section_open_source">Otwarte oprogramowanie</string>
+    <string name="about_acknowledgements">Podziękowania</string>
+    <string name="about_acknowledgements_subtitle">Biblioteki i projekty, na których opiera się aplikacja na Androida</string>
+    <string name="about_tmdb">Metadane i grafiki filmów oraz seriali przez Twój serwer. Ten produkt korzysta z API TMDB, ale nie jest wspierany ani certyfikowany przez TMDB.</string>
+    <string name="about_plex">Inspiracja: pomysł osobistego serwera multimediów. Nie użyto żadnego kodu ani zasobów Plex.</string>
+    <string name="update_github_status">GitHub odpowiedział %1$d</string>
+    <string name="update_download_status">Pobieranie odpowiedziało %1$d</string>
+    <string name="update_conflict">Android odrzucił aktualizację: jest podpisana innym kluczem niż zainstalowana aplikacja. Najpierw odinstaluj tę kopię.</string>
+
+    <!-- Playlists and Collections -->
+    <string name="home_shelf_playlists">Playlisty</string>
+    <string name="home_shelf_collections">Kolekcje</string>
+    <string name="playlist_title">Playlista</string>
+    <string name="playlist_play_all">Odtwórz wszystko</string>
+    <string name="playlist_empty">Ta playlista jest pusta</string>
+    <string name="playlist_empty_body">Dodaj filmy lub odcinki do tej playlisty.</string>
+    <string name="playlist_add">Dodaj do playlisty</string>
+    <string name="playlist_create">Nowa playlista</string>
+    <string name="playlist_name">Nazwa playlisty</string>
+    <string name="playlist_delete">Usuń playlistę</string>
+    <string name="playlist_delete_confirm">Usunąć playlistę „%1$s”?</string>
+    <string name="playlist_remove">Usuń z playlisty</string>
+    <string name="playlist_added">Dodano do %1$s</string>
+    <string name="playlist_created">Utworzono playlistę</string>
+    <string name="playlist_delete_failed">Nie udało się usunąć playlisty</string>
+    <string name="playlist_remove_failed">Nie udało się usunąć elementu</string>
+    <string name="collection_title">Kolekcja</string>
+    <string name="collection_empty">Ta kolekcja jest pusta</string>
+    <string name="collection_empty_body">Brak tytułów w tej kolekcji.</string>
+    <string name="action_delete">Usuń</string>
+    <string name="action_create">Utwórz</string>
+    <plurals name="playlist_items_count">
+        <item quantity="one">%d element</item>
+        <item quantity="few">%d elementy</item>
+        <item quantity="many">%d elementów</item>
+        <item quantity="other">%d elementów</item>
+    </plurals>
+    <plurals name="collection_items_count">
+        <item quantity="one">%d tytuł</item>
+        <item quantity="few">%d tytuły</item>
+        <item quantity="many">%d tytułów</item>
+        <item quantity="other">%d tytułów</item>
+    </plurals>
+    <string name="approval_title">Oczekiwanie na zatwierdzenie</string>
+    <string name="approval_body">Oczekiwanie na zatwierdzenie tego urządzenia przez administratora.</string>
+    <string name="approval_device">Logowanie jako %1$s z %2$s</string>
+    <string name="settings_account">Twoje konto</string>
+    <string name="settings_requests">Prośby</string>
+    <string name="settings_requests_subtitle">Poproś o dodanie filmu lub serialu</string>
+    <string name="settings_activity">Aktywność oglądania</string>
+    <string name="settings_activity_subtitle">Twój czas oglądania i historia</string>
+    <string name="requests_title">Prośby</string>
+    <string name="requests_new">Poproś o tytuł</string>
+    <string name="requests_empty">Brak próśb</string>
+    <string name="requests_empty_body">Nie możesz czegoś znaleźć? Poproś administratora o dodanie.</string>
+    <string name="requests_withdraw">Wycofaj</string>
+    <string name="requests_status_pending">Oczekująca</string>
+    <string name="requests_status_approved">Zatwierdzona</string>
+    <string name="requests_status_declined">Odrzucona</string>
+    <string name="requests_status_available">Dostępna</string>
+    <string name="requests_kind_movie">Film</string>
+    <string name="requests_kind_show">Serial</string>
+    <string name="requests_search">Tytuł</string>
+    <string name="requests_note">Notatka (opcjonalnie)</string>
+    <string name="requests_no_tmdb">Serwer nie ma wyszukiwania tytułów. Wpisz tytuł, którego szukasz.</string>
+    <string name="requests_no_results">Brak wyników</string>
+    <string name="requests_submit">Wyślij prośbę</string>
+    <string name="requests_admin_note">Administrator: %1$s</string>
+    <string name="activity_title">Aktywność oglądania</string>
+    <string name="activity_total">Łącznie</string>
+    <string name="activity_week">Ostatnie 7 dni</string>
+    <string name="activity_month">Ostatnie 30 dni</string>
+    <string name="activity_titles">Tytuły</string>
+    <string name="activity_completed">Ukończone</string>
+    <string name="activity_daily">Dzienny czas oglądania</string>
+    <string name="activity_daily_peak">Szczyt %1$s</string>
+    <string name="activity_top_titles">Najczęściej oglądane</string>
+    <string name="activity_top_genres">Najpopularniejsze gatunki</string>
+    <string name="activity_history">Ostatnio odtwarzane</string>
+    <string name="activity_empty">Nic jeszcze nie obejrzano</string>
+    <string name="activity_empty_body">Twój czas oglądania pojawi się tutaj, gdy coś odtworzysz.</string>
+    <string name="duration_hm">%1$d godz. %2$d min</string>
+    <string name="duration_h">%1$d godz.</string>
+    <string name="duration_m">%1$d min</string>
+    <string name="role_owner">Właściciel serwisu</string>
+    <string name="role_admin">Administrator</string>
+    <string name="role_member">Członek</string>
+</resources>

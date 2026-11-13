@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kinema</string>
+    <!-- Shared actions -->
+    <string name="action_back">ย้อนกลับ</string>
+    <string name="action_cancel">ยกเลิก</string>
+    <string name="action_details">รายละเอียด</string>
+    <string name="action_play">เล่น</string>
+    <string name="action_resume">เล่นต่อ</string>
+    <string name="action_retry">ลองอีกครั้ง</string>
+    <string name="action_save">บันทึก</string>
+
+    <!-- Errors -->
+    <string name="error_title">เกิดข้อผิดพลาด</string>
+    <string name="error_generic">ดำเนินการไม่สำเร็จ กรุณาลองอีกครั้ง</string>
+    <string name="error_offline">ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่าเซิร์ฟเวอร์ทำงานอยู่และโทรศัพท์เครื่องนี้อยู่ในเครือข่ายเดียวกัน หรือตั้งค่าที่อยู่สาธารณะ</string>
+    <string name="error_untrusted">ใบรับรองของเซิร์ฟเวอร์ไม่ตรงกับที่คุณอนุมัติไว้ กรุณาเชื่อมต่อใหม่เพื่อตรวจสอบ</string>
+
+    <!-- Connect -->
+    <string name="connect_title">Kinema</string>
+    <string name="connect_subtitle">ภาพยนตร์และรายการของคุณ จากเซิร์ฟเวอร์ของคุณเอง</string>
+    <string name="connect_found">บนเครือข่ายนี้</string>
+    <string name="connect_rescan">ค้นหาอีกครั้ง</string>
+    <string name="connect_scanning">กำลังค้นหาเซิร์ฟเวอร์…</string>
+    <string name="connect_none">ไม่พบเซิร์ฟเวอร์ที่ตอบกลับ กรุณาตรวจสอบว่า Kinema กำลังทำงานอยู่และโทรศัพท์นี้เชื่อมต่อ Wi-Fi เดียวกัน หรือป้อนที่อยู่ด้านล่าง</string>
+    <string name="connect_this_computer">คอมพิวเตอร์เครื่องนี้ · %1$s</string>
+    <string name="connect_manual">ป้อนที่อยู่</string>
+    <string name="connect_address">ที่อยู่เซิร์ฟเวอร์</string>
+    <string name="connect_address_hint">แสดงใน Kinema บนเว็บที่ การตั้งค่า › เครือข่าย</string>
+    <string name="connect_invalid">ป้อนที่อยู่ เช่น 192.168.1.10:3000 หรือ media.example.com</string>
+    <string name="connect_action">เชื่อมต่อ</string>
+    <string name="connect_change_server">ใช้เซิร์ฟเวอร์อื่น</string>
+
+    <string name="trust_title">เชื่อถือเซิร์ฟเวอร์นี้หรือไม่?</string>
+    <string name="trust_body">%1$s สร้างใบรับรองความปลอดภัยขึ้นเอง กรุณาตรวจสอบว่ารหัสนี้ตรงกับรหัสใน Kinema บนเว็บที่ การตั้งค่า › เครือข่าย ก่อนกดเชื่อถือ</string>
+    <string name="trust_accept">เชื่อถือ</string>
+
+    <string name="unreachable_title">ไม่สามารถเข้าถึงเซิร์ฟเวอร์</string>
+    <string name="unreachable_body">Kinema ที่ %1$s ไม่ตอบกลับทั้งที่อยู่บ้านและที่อยู่สาธารณะ</string>
+
+    <string name="forget_title">ใช้เซิร์ฟเวอร์อื่นหรือไม่?</string>
+    <string name="forget_body">โทรศัพท์เครื่องนี้จะลบข้อมูลเซิร์ฟเวอร์ ที่อยู่ และใบรับรอง ประวัติการรับชมของคุณจะยังคงอยู่บนเซิร์ฟเวอร์</string>
+    <string name="forget_action">ลืมเซิร์ฟเวอร์</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">ใครกำลังรับชม?</string>
+    <string name="profiles_locked">ล็อกอยู่</string>
+    <string name="profiles_setup_title">ตั้งค่าให้เสร็จก่อน</string>
+    <string name="profiles_setup_body">เปิด %1$s ในเบราว์เซอร์เพื่อสร้างบัญชีแรกและเพิ่มสื่อของคุณ จากนั้นกลับมาที่นี่</string>
+    <string name="unlock_password">รหัสผ่าน</string>
+    <string name="unlock_pin">PIN</string>
+    <string name="unlock_show">แสดง</string>
+    <string name="unlock_hide">ซ่อน</string>
+    <string name="unlock_action">ลงชื่อเข้าใช้</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">หน้าหลัก</string>
+    <string name="tab_library">คลังสื่อ</string>
+    <string name="tab_search">ค้นหา</string>
+    <string name="tab_settings">การตั้งค่า</string>
+
+    <!-- Home -->
+    <string name="home_continue">ดูต่อ</string>
+    <string name="home_shelf_movies">ภาพยนตร์ที่เพิ่มล่าสุด</string>
+    <string name="home_shelf_shows">รายการที่เพิ่มล่าสุด</string>
+    <string name="home_shelf_episodes">ตอนใหม่</string>
+    <string name="home_hero_continue">ดูต่อ</string>
+    <string name="home_hero_new">ใหม่</string>
+    <string name="home_empty_title">ยังไม่มีเนื้อหาที่นี่</string>
+    <string name="home_empty_body">รายการจะปรากฏที่นี่เมื่อผู้ดูแลเซิร์ฟเวอร์เพิ่มคลังสื่อใน Kinema บนเว็บ</string>
+
+    <!-- Library and search -->
+    <string name="library_none_title">ไม่มีคลังสื่อ</string>
+    <string name="library_none_body">เซิร์ฟเวอร์ยังไม่มีคลังสื่อที่คุณสามารถดูได้</string>
+    <string name="library_switcher_title">คลังสื่อ</string>
+    <string name="library_expand">แสดงรายการ</string>
+    <string name="library_collapse">ซ่อนรายการ</string>
+    <plurals name="library_show_count">
+        <item quantity="other">%d รายการ</item>
+    </plurals>
+    <string name="library_empty_title">คลังสื่อนี้ว่างเปล่า</string>
+    <string name="library_empty_body">ไฟล์ใหม่จะปรากฏที่นี่หลังจากเซิร์ฟเวอร์สแกนเสร็จ</string>
+    <string name="search_hint">ภาพยนตร์ รายการ ตอน</string>
+    <string name="search_clear">ล้าง</string>
+    <string name="search_idle_title">ค้นหาสิ่งที่อยากดู</string>
+    <string name="search_idle_body">ค้นหาตามชื่อเรื่องในทุกคลังสื่อ</string>
+    <string name="search_none_title">ไม่พบผลลัพธ์</string>
+    <string name="search_none_body">ไม่มีรายการที่ตรงกับ “%1$s”</string>
+
+    <!-- Title page -->
+    <string name="item_watched">ดูแล้ว</string>
+    <string name="item_mark_watched">ทำเครื่องหมายว่าดูแล้ว</string>
+    <string name="item_mark_unwatched">ทำเครื่องหมายว่ายังไม่ได้ดู</string>
+    <string name="item_from_start">เล่นตั้งแต่ต้น</string>
+    <string name="item_play_episode">เล่น S%1$d · E%2$d</string>
+    <string name="item_episode_short">S%1$d · E%2$d</string>
+    <string name="item_season_no">S%1$d</string>
+    <string name="item_episode_no">E%1$d</string>
+    <string name="item_episode_number">ตอนที่ %1$d</string>
+    <string name="item_left">เหลือ %1$s</string>
+    <string name="item_seasons">ซีซัน</string>
+    <string name="item_episodes">ตอน</string>
+    <string name="item_cast">นักแสดง</string>
+    <string name="item_previous">ก่อนหน้า</string>
+    <string name="item_next">ถัดไป</string>
+    <string name="item_file">ไฟล์</string>
+    <plurals name="item_seasons">
+        <item quantity="other">%d ซีซัน</item>
+    </plurals>
+    <plurals name="item_episodes">
+        <item quantity="other">%d ตอน</item>
+    </plurals>
+    <plurals name="item_audio_tracks">
+        <item quantity="other">%d แทร็กเสียง</item>
+    </plurals>
+    <plurals name="item_subtitle_tracks">
+        <item quantity="other">%d คำบรรยาย</item>
+    </plurals>
+    <string name="format_hours_minutes">%1$d ชม. %2$d นาที</string>
+    <string name="format_minutes">%1$d นาที</string>
+
+    <!-- Player -->
+    <string name="player_pause">หยุดชั่วคราว</string>
+    <string name="player_stop">หยุด</string>
+    <string name="player_volume">ระดับเสียง</string>
+    <string name="player_brightness">ความสว่าง</string>
+    <string name="player_boost">เร่งเสียง %1$d%%</string>
+    <string name="player_back10">ย้อนกลับ 10 วินาที</string>
+    <string name="player_forward10">ไปข้างหน้า 10 วินาที</string>
+    <string name="player_seconds">%1$d วินาที</string>
+    <string name="player_next">ตอนถัดไป</string>
+    <string name="player_up_next_in">ตอนถัดไปใน %1$s</string>
+    <string name="player_play_now">เล่นเลย</string>
+    <string name="player_dismiss">ซ่อน</string>
+    <string name="player_skip_intro">ข้ามช่วงเปิดเรื่อง</string>
+    <string name="player_skip_credits">ข้ามเครดิต</string>
+    <string name="player_pip">การแสดงภาพซ้อนภาพ</string>
+    <string name="player_fullscreen">เต็มหน้าจอ</string>
+    <string name="player_exit_fullscreen">ออกจากเต็มหน้าจอ</string>
+    <string name="player_minimize">ย่อขนาด</string>
+    <string name="player_up_next_list">ตอนและเพิ่มเติม</string>
+    <string name="watch_episodes">ตอน</string>
+    <string name="watch_more">รายการอื่นที่น่าสนใจ</string>
+    <string name="watch_now_playing">กำลังเล่น</string>
+    <string name="watch_nothing">ยังไม่มีรายการอื่นให้รับชมที่นี่</string>
+    <string name="player_tracks">เสียงและคำบรรยาย</string>
+    <string name="player_audio">เสียง</string>
+    <string name="player_subtitles">คำบรรยาย</string>
+    <string name="player_subtitles_off">ปิด</string>
+    <string name="series_tracks">เสียง &amp; คำบรรยายสำหรับทุกตอน</string>
+    <string name="series_hint">ข้อมูลแทร็กนำมาจากตอนแรก ทุกตอนใช้ตำแหน่งแทร็กเดียวกัน จึงใช้งานได้เมื่อทุกตอนมาจากชุดเผยแพร่เดียวกัน</string>
+    <string name="series_default">ค่าเริ่มต้นของเซิร์ฟเวอร์</string>
+    <string name="series_no_streams">ยังไม่ได้วิเคราะห์ตอนแรก กรุณาลองอีกครั้งหลังจากสแกนเสร็จ</string>
+    <string name="player_subtitle_image">ยังไม่สามารถแสดงคำบรรยายแบบรูปภาพได้</string>
+    <string name="player_fill">ขยายเต็มหน้าจอ</string>
+    <string name="player_fit">พอดีหน้าจอ</string>
+    <string name="player_mode_direct">เล่นโดยตรง</string>
+    <string name="player_mode_remux">สตรีมโดยตรง</string>
+    <string name="player_mode_transcode">กำลังแปลงไฟล์</string>
+    <string name="player_error_title">ไม่สามารถเล่นได้</string>
+    <string name="player_error">วิดีโอหยุดเล่น กรุณาตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง</string>
+    <string name="player_no_file">เรื่องนี้ไม่มีไฟล์ที่เล่นได้</string>
+    <string name="track_mono">โมโน</string>
+    <string name="track_stereo">สเตอริโอ</string>
+    <string name="track_numbered">แทร็ก %1$d</string>
+
+    <!-- Settings -->
+    <string name="settings_switch_profile">สลับ</string>
+    <string name="settings_connection">การเชื่อมต่อ</string>
+    <string name="settings_route_local">ที่บ้าน</string>
+    <string name="settings_route_public">นอกบ้าน · ที่อยู่สาธารณะ</string>
+    <string name="settings_route_hint">Kinema จะใช้ที่อยู่บ้านเมื่อตอบกลับ และสลับไปใช้ที่อยู่สาธารณะเมื่อคุณออกจากบ้าน</string>
+    <string name="settings_local_url">ที่อยู่บ้าน</string>
+    <string name="settings_public_url">ที่อยู่สาธารณะ</string>
+    <string name="settings_public_hint">Reverse proxy หรือ Tunnel ที่เข้าถึงเซิร์ฟเวอร์ได้จากทุกที่</string>
+    <string name="settings_public_from_server">ใช้ค่าของเซิร์ฟเวอร์: %1$s</string>
+    <string name="settings_public_test">ทดสอบ</string>
+    <string name="settings_public_ok">เซิร์ฟเวอร์ตอบกลับที่อยู่นี้</string>
+    <string name="settings_public_unreachable">ไม่มีการตอบกลับที่อยู่นี้จากที่นี่</string>
+    <string name="settings_appearance">รูปลักษณ์</string>
+    <string name="settings_theme_system">ระบบ</string>
+    <string name="settings_theme_light">สว่าง</string>
+    <string name="settings_theme_dark">มืด</string>
+    <string name="settings_dynamic">สีวอลเปเปอร์</string>
+    <string name="settings_dynamic_hint">แต่งสีแอปด้วยสีจากวอลเปเปอร์ของคุณ</string>
+    <string name="settings_language">ภาษา</string>
+    <string name="settings_language_system">ค่าเริ่มต้นของระบบ</string>
+    <string name="settings_language_picker_title">ภาษาของแอป</string>
+    <string name="player_notification_channel">การเล่นสื่อ</string>
+    <string name="player_notification_channel_desc">ปุ่มควบคุมการเล่นและการแจ้งเตือนสื่อ</string>
+    <string name="settings_playback">การเล่น</string>
+    <string name="settings_pip">การแสดงภาพซ้อนภาพ</string>
+    <string name="settings_pip_on">เมื่อออกจากแอป วิดีโอจะเล่นต่อในหน้าต่างเล็ก การปิดหน้าต่างจะหยุดชั่วคราว</string>
+    <string name="settings_pip_off">เมื่อออกจากแอป เสียงจะเล่นต่อพร้อมปุ่มควบคุมในการแจ้งเตือน</string>
+    <string name="settings_server">เซิร์ฟเวอร์</string>
+    <string name="settings_cert_pinned">ใบรับรองส่วนตัว อนุมัติบนโทรศัพท์เครื่องนี้แล้ว</string>
+    <string name="settings_cert_public">ใบรับรองที่ลงนามโดยหน่วยงานสาธารณะ</string>
+    <string name="settings_kinema">Kinema</string>
+    <string name="settings_updates">การอัปเดต</string>
+    <string name="settings_updates_subtitle">เวอร์ชัน %1$s บันทึกการเปลี่ยนแปลง และช่องทาง</string>
+    <string name="settings_about_subtitle">เวอร์ชัน %1$s ผู้พัฒนา และกิตติกรรมประกาศ</string>
+    <string name="update_title">การอัปเดต</string>
+    <string name="update_checking">กำลังตรวจสอบการอัปเดต…</string>
+    <string name="update_check_failed">ไม่สามารถตรวจสอบการอัปเดต</string>
+    <string name="update_check_failed_body">คุณมี %1$s กรุณาตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง</string>
+    <string name="update_failed">ไม่สามารถอัปเดต: %1$s</string>
+    <string name="update_up_to_date">Kinema เป็นเวอร์ชันล่าสุดแล้ว</string>
+    <string name="update_dev_build">บิลด์สำหรับนักพัฒนา</string>
+    <string name="update_dev_build_body">คุณมี %1$s บิลด์สำหรับนักพัฒนาต้องอัปเดตด้วยการคอมไพล์ใหม่</string>
+    <string name="update_you_have">คุณมี %1$s</string>
+    <string name="update_available">มี Kinema %1$s พร้อมให้อัปเดต</string>
+    <string name="update_prompt_body">คุณมี %1$s ระบบ Android จะถามก่อนติดตั้ง โดยข้อมูลเซิร์ฟเวอร์ การลงชื่อเข้าใช้ และการตั้งค่าจะยังอยู่ครบ ดูบันทึกการเปลี่ยนแปลงและช่องทางได้ในการตั้งค่า ใต้หัวข้อการอัปเดต</string>
+    <string name="update_downloading_percent">กำลังดาวน์โหลด %1$d%%</string>
+    <string name="update_install">อัปเดต</string>
+    <string name="update_download_install">ดาวน์โหลดและติดตั้ง</string>
+    <string name="update_check_again">ตรวจสอบอีกครั้ง</string>
+    <string name="update_later">ภายหลัง</string>
+    <string name="update_channel">ช่องทาง</string>
+    <string name="update_channel_stable">Stable</string>
+    <string name="update_channel_beta">Beta</string>
+    <string name="update_channel_alpha">Alpha</string>
+    <string name="update_channel_hint">Beta และ Alpha จะได้รับบิลด์ใหม่ก่อน รวมถึงบิลด์ Stable ทั้งหมดด้วย</string>
+    <string name="update_whats_new_in">มีอะไรใหม่ใน %1$s</string>
+    <string name="update_in_this_version">ในเวอร์ชันนี้</string>
+    <string name="update_loading_notes">กำลังโหลดบันทึกการเปลี่ยนแปลง…</string>
+    <string name="update_no_notes">ไม่มีบันทึกการเปลี่ยนแปลงสำหรับเวอร์ชันนี้</string>
+    <string name="about_title">เกี่ยวกับ Kinema</string>
+    <string name="about_section_app">แอป</string>
+    <string name="about_version_build">เวอร์ชัน %1$s · บิลด์ %2$d</string>
+    <string name="about_privacy_title">ความเป็นส่วนตัว</string>
+    <string name="about_privacy_subtitle">ทำงานบนเซิร์ฟเวอร์ของคุณเอง คลังสื่อและประวัติการรับชมจะไม่ถูกส่งออกไปภายนอก</string>
+    <string name="about_source_code">ซอร์สโค้ด</string>
+    <string name="about_section_developer">ผู้พัฒนา</string>
+    <string name="about_developer_tagline">ออกแบบและพัฒนาโดยนักพัฒนาเพียงคนเดียว</string>
+    <string name="about_github">GitHub</string>
+    <string name="about_portfolio">ผลงาน</string>
+    <string name="about_section_open_source">โอเพนซอร์ส</string>
+    <string name="about_acknowledgements">กิตติกรรมประกาศ</string>
+    <string name="about_acknowledgements_subtitle">ไลบรารีและโปรเจกต์ที่ใช้สร้างแอป Android นี้</string>
+    <string name="about_tmdb">ข้อมูลเมตาและภาพประกอบของภาพยนตร์และรายการผ่านเซิร์ฟเวอร์ของคุณ ผลิตภัณฑ์นี้ใช้ TMDB API แต่ไม่ได้รับการรับรองหรือยืนยันโดย TMDB</string>
+    <string name="about_plex">แรงบันดาลใจ: แนวคิดของเซิร์ฟเวอร์สื่อส่วนตัว ไม่มีการใช้โค้ดหรือทรัพยากรใดๆ ของ Plex</string>
+    <string name="update_github_status">GitHub ตอบกลับ %1$d</string>
+    <string name="update_download_status">การดาวน์โหลดตอบกลับ %1$d</string>
+    <string name="update_conflict">Android ปฏิเสธการอัปเดต: ไฟล์ลงนามด้วยคีย์ที่ต่างจากแอปที่ติดตั้งอยู่ กรุณาถอนการติดตั้งเวอร์ชันนี้ก่อน</string>
+
+    <!-- Playlists and Collections -->
+    <string name="home_shelf_playlists">เพลย์ลิสต์</string>
+    <string name="home_shelf_collections">คอลเลกชัน</string>
+    <string name="playlist_title">เพลย์ลิสต์</string>
+    <string name="playlist_play_all">เล่นทั้งหมด</string>
+    <string name="playlist_empty">เพลย์ลิสต์นี้ว่างเปล่า</string>
+    <string name="playlist_empty_body">เพิ่มภาพยนตร์หรือตอนลงในเพลย์ลิสต์นี้</string>
+    <string name="playlist_add">เพิ่มลงในเพลย์ลิสต์</string>
+    <string name="playlist_create">เพลย์ลิสต์ใหม่</string>
+    <string name="playlist_name">ชื่อเพลย์ลิสต์</string>
+    <string name="playlist_delete">ลบเพลย์ลิสต์</string>
+    <string name="playlist_delete_confirm">ลบเพลย์ลิสต์ “%1$s” หรือไม่?</string>
+    <string name="playlist_remove">นำออกจากเพลย์ลิสต์</string>
+    <string name="playlist_added">เพิ่มลงใน %1$s แล้ว</string>
+    <string name="playlist_created">สร้างเพลย์ลิสต์แล้ว</string>
+    <string name="playlist_delete_failed">ลบเพลย์ลิสต์ไม่สำเร็จ</string>
+    <string name="playlist_remove_failed">นำรายการออกไม่สำเร็จ</string>
+    <string name="collection_title">คอลเลกชัน</string>
+    <string name="collection_empty">คอลเลกชันนี้ว่างเปล่า</string>
+    <string name="collection_empty_body">ยังไม่มีรายการในคอลเลกชันนี้</string>
+    <string name="action_delete">ลบ</string>
+    <string name="action_create">สร้าง</string>
+    <plurals name="playlist_items_count">
+        <item quantity="other">%d รายการ</item>
+    </plurals>
+    <plurals name="collection_items_count">
+        <item quantity="other">%d เรื่อง</item>
+    </plurals>
+    <string name="approval_title">รอการอนุมัติ</string>
+    <string name="approval_body">กำลังรอผู้ดูแลระบบอนุมัติอุปกรณ์นี้</string>
+    <string name="approval_device">กำลังลงชื่อเข้าใช้ในชื่อ %1$s จาก %2$s</string>
+    <string name="settings_account">บัญชีของคุณ</string>
+    <string name="settings_requests">คำขอ</string>
+    <string name="settings_requests_subtitle">ขอให้เพิ่มภาพยนตร์หรือรายการ</string>
+    <string name="settings_activity">กิจกรรมการรับชม</string>
+    <string name="settings_activity_subtitle">เวลาและประวัติการรับชมของคุณ</string>
+    <string name="requests_title">คำขอ</string>
+    <string name="requests_new">ขอเพิ่มเรื่อง</string>
+    <string name="requests_empty">ยังไม่มีคำขอ</string>
+    <string name="requests_empty_body">หาสิ่งที่ต้องการไม่พบใช่ไหม? ลองขอให้ผู้ดูแลระบบเพิ่มให้</string>
+    <string name="requests_withdraw">ยกเลิกคำขอ</string>
+    <string name="requests_status_pending">รอดำเนินการ</string>
+    <string name="requests_status_approved">อนุมัติแล้ว</string>
+    <string name="requests_status_declined">ปฏิเสธแล้ว</string>
+    <string name="requests_status_available">พร้อมรับชม</string>
+    <string name="requests_kind_movie">ภาพยนตร์</string>
+    <string name="requests_kind_show">รายการ</string>
+    <string name="requests_search">ชื่อเรื่อง</string>
+    <string name="requests_note">หมายเหตุ (ไม่บังคับ)</string>
+    <string name="requests_no_tmdb">เซิร์ฟเวอร์ไม่มีระบบค้นหาชื่อเรื่อง กรุณาพิมพ์ชื่อเรื่องที่ต้องการ</string>
+    <string name="requests_no_results">ไม่พบรายการที่ตรงกัน</string>
+    <string name="requests_submit">ส่งคำขอ</string>
+    <string name="requests_admin_note">ผู้ดูแลระบบ: %1$s</string>
+    <string name="activity_title">กิจกรรมการรับชม</string>
+    <string name="activity_total">ทั้งหมด</string>
+    <string name="activity_week">7 วันที่ผ่านมา</string>
+    <string name="activity_month">30 วันที่ผ่านมา</string>
+    <string name="activity_titles">จำนวนเรื่อง</string>
+    <string name="activity_completed">ดูจบแล้ว</string>
+    <string name="activity_daily">เวลาการรับชมรายวัน</string>
+    <string name="activity_daily_peak">สูงสุด %1$s</string>
+    <string name="activity_top_titles">ดูบ่อยที่สุด</string>
+    <string name="activity_top_genres">ประเภทยอดนิยม</string>
+    <string name="activity_history">เล่นล่าสุด</string>
+    <string name="activity_empty">ยังไม่มีการรับชม</string>
+    <string name="activity_empty_body">เวลาการรับชมของคุณจะแสดงที่นี่เมื่อคุณเริ่มเล่นวิดีโอ</string>
+    <string name="duration_hm">%1$d ชม. %2$d นาที</string>
+    <string name="duration_h">%1$d ชม.</string>
+    <string name="duration_m">%1$d นาที</string>
+    <string name="role_owner">เจ้าของเว็บไซต์</string>
+    <string name="role_admin">ผู้ดูแลระบบ</string>
+    <string name="role_member">สมาชิก</string>
+</resources>

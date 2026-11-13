@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kinema</string>
+    <!-- Shared actions -->
+    <string name="action_back">Quay lại</string>
+    <string name="action_cancel">Hủy</string>
+    <string name="action_details">Chi tiết</string>
+    <string name="action_play">Phát</string>
+    <string name="action_resume">Tiếp tục</string>
+    <string name="action_retry">Thử lại</string>
+    <string name="action_save">Lưu</string>
+
+    <!-- Errors -->
+    <string name="error_title">Đã xảy ra lỗi</string>
+    <string name="error_generic">Thao tác không thành công. Hãy thử lại.</string>
+    <string name="error_offline">Không thể kết nối tới máy chủ. Hãy kiểm tra xem máy chủ có đang chạy và điện thoại này có cùng mạng không, hoặc thiết lập địa chỉ công khai.</string>
+    <string name="error_untrusted">Chứng chỉ của máy chủ không phải là chứng chỉ bạn đã chấp thuận. Hãy kết nối lại để xem xét.</string>
+
+    <!-- Connect -->
+    <string name="connect_title">Kinema</string>
+    <string name="connect_subtitle">Phim và chương trình của bạn, từ chính máy chủ của bạn.</string>
+    <string name="connect_found">Trên mạng này</string>
+    <string name="connect_rescan">Tìm kiếm lại</string>
+    <string name="connect_scanning">Đang tìm máy chủ…</string>
+    <string name="connect_none">Không có máy chủ nào phản hồi. Hãy đảm bảo Kinema đang chạy và điện thoại này kết nối cùng mạng Wi-Fi, hoặc nhập địa chỉ bên dưới.</string>
+    <string name="connect_this_computer">Máy tính này · %1$s</string>
+    <string name="connect_manual">Nhập địa chỉ</string>
+    <string name="connect_address">Địa chỉ máy chủ</string>
+    <string name="connect_address_hint">Hiển thị trong Kinema trên web tại Cài đặt › Mạng</string>
+    <string name="connect_invalid">Nhập địa chỉ như 192.168.1.10:3000 hoặc media.example.com.</string>
+    <string name="connect_action">Kết nối</string>
+    <string name="connect_change_server">Dùng máy chủ khác</string>
+
+    <string name="trust_title">Tin cậy máy chủ này?</string>
+    <string name="trust_body">%1$s đã tự tạo chứng chỉ bảo mật riêng. Hãy kiểm tra mã này khớp với mã trong Kinema trên web tại Cài đặt › Mạng trước khi tin cậy.</string>
+    <string name="trust_accept">Tin cậy</string>
+
+    <string name="unreachable_title">Không thể kết nối máy chủ</string>
+    <string name="unreachable_body">Kinema tại %1$s không phản hồi ở cả địa chỉ nhà và địa chỉ công khai.</string>
+
+    <string name="forget_title">Dùng máy chủ khác?</string>
+    <string name="forget_body">Điện thoại này sẽ quên máy chủ, các địa chỉ và chứng chỉ của nó. Lịch sử xem của bạn vẫn được giữ trên máy chủ.</string>
+    <string name="forget_action">Quên máy chủ</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">Ai đang xem?</string>
+    <string name="profiles_locked">Đã khóa</string>
+    <string name="profiles_setup_title">Hoàn tất thiết lập trước</string>
+    <string name="profiles_setup_body">Mở %1$s trong trình duyệt để tạo tài khoản đầu tiên và thêm nội dung đa phương tiện. Sau đó quay lại đây.</string>
+    <string name="unlock_password">Mật khẩu</string>
+    <string name="unlock_pin">Mã PIN</string>
+    <string name="unlock_show">Hiện</string>
+    <string name="unlock_hide">Ẩn</string>
+    <string name="unlock_action">Đăng nhập</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">Trang chủ</string>
+    <string name="tab_library">Thư viện</string>
+    <string name="tab_search">Tìm kiếm</string>
+    <string name="tab_settings">Cài đặt</string>
+
+    <!-- Home -->
+    <string name="home_continue">Tiếp tục xem</string>
+    <string name="home_shelf_movies">Phim mới thêm</string>
+    <string name="home_shelf_shows">Chương trình mới thêm</string>
+    <string name="home_shelf_episodes">Tập mới</string>
+    <string name="home_hero_continue">Tiếp tục xem</string>
+    <string name="home_hero_new">Mới</string>
+    <string name="home_empty_title">Chưa có gì ở đây</string>
+    <string name="home_empty_body">Nội dung sẽ xuất hiện tại đây sau khi quản trị viên máy chủ thêm thư viện trong Kinema trên web.</string>
+
+    <!-- Library and search -->
+    <string name="library_none_title">Không có thư viện</string>
+    <string name="library_none_body">Máy chủ chưa có thư viện nào bạn có thể xem.</string>
+    <string name="library_switcher_title">Thư viện</string>
+    <string name="library_expand">Hiện chương trình</string>
+    <string name="library_collapse">Ẩn chương trình</string>
+    <plurals name="library_show_count">
+        <item quantity="other">%d chương trình</item>
+    </plurals>
+    <string name="library_empty_title">Thư viện này trống</string>
+    <string name="library_empty_body">Các tệp mới sẽ hiện ở đây sau khi máy chủ quét xong.</string>
+    <string name="search_hint">Phim, chương trình, tập phim</string>
+    <string name="search_clear">Xóa</string>
+    <string name="search_idle_title">Tìm nội dung để xem</string>
+    <string name="search_idle_body">Tìm kiếm theo tên trong mọi thư viện.</string>
+    <string name="search_none_title">Không có kết quả</string>
+    <string name="search_none_body">Không có gì khớp với “%1$s”.</string>
+
+    <!-- Title page -->
+    <string name="item_watched">Đã xem</string>
+    <string name="item_mark_watched">Đánh dấu đã xem</string>
+    <string name="item_mark_unwatched">Đánh dấu chưa xem</string>
+    <string name="item_from_start">Phát từ đầu</string>
+    <string name="item_play_episode">Phát M%1$d · T%2$d</string>
+    <string name="item_episode_short">M%1$d · T%2$d</string>
+    <string name="item_season_no">M%1$d</string>
+    <string name="item_episode_no">T%1$d</string>
+    <string name="item_episode_number">Tập %1$d</string>
+    <string name="item_left">Còn %1$s</string>
+    <string name="item_seasons">Mùa</string>
+    <string name="item_episodes">Tập</string>
+    <string name="item_cast">Diễn viên</string>
+    <string name="item_previous">Trước</string>
+    <string name="item_next">Tiếp</string>
+    <string name="item_file">Tệp</string>
+    <plurals name="item_seasons">
+        <item quantity="other">%d mùa</item>
+    </plurals>
+    <plurals name="item_episodes">
+        <item quantity="other">%d tập</item>
+    </plurals>
+    <plurals name="item_audio_tracks">
+        <item quantity="other">%d rãnh âm thanh</item>
+    </plurals>
+    <plurals name="item_subtitle_tracks">
+        <item quantity="other">%d phụ đề</item>
+    </plurals>
+    <string name="format_hours_minutes">%1$dg %2$dp</string>
+    <string name="format_minutes">%1$dp</string>
+
+    <!-- Player -->
+    <string name="player_pause">Tạm dừng</string>
+    <string name="player_stop">Dừng</string>
+    <string name="player_volume">Âm lượng</string>
+    <string name="player_brightness">Độ sáng</string>
+    <string name="player_boost">Tăng âm %1$d%%</string>
+    <string name="player_back10">Lùi 10 giây</string>
+    <string name="player_forward10">Tua 10 giây</string>
+    <string name="player_seconds">%1$d giây</string>
+    <string name="player_next">Tập tiếp theo</string>
+    <string name="player_up_next_in">Tiếp theo trong %1$s</string>
+    <string name="player_play_now">Phát ngay</string>
+    <string name="player_dismiss">Ẩn</string>
+    <string name="player_skip_intro">Bỏ qua giới thiệu</string>
+    <string name="player_skip_credits">Bỏ qua danh đề</string>
+    <string name="player_pip">Hình trong hình</string>
+    <string name="player_fullscreen">Toàn màn hình</string>
+    <string name="player_exit_fullscreen">Thoát toàn màn hình</string>
+    <string name="player_minimize">Thu nhỏ</string>
+    <string name="player_up_next_list">Danh sách tập và thêm</string>
+    <string name="watch_episodes">Các tập</string>
+    <string name="watch_more">Xem thêm</string>
+    <string name="watch_now_playing">Đang phát</string>
+    <string name="watch_nothing">Chưa có nội dung nào khác để xem ở đây</string>
+    <string name="player_tracks">Âm thanh và phụ đề</string>
+    <string name="player_audio">Âm thanh</string>
+    <string name="player_subtitles">Phụ đề</string>
+    <string name="player_subtitles_off">Tắt</string>
+    <string name="series_tracks">Âm thanh &amp; phụ đề cho mọi tập</string>
+    <string name="series_hint">Thông tin rãnh lấy từ tập đầu tiên. Mọi tập dùng cùng vị trí rãnh nên tùy chọn này hoạt động khi tất cả các tập cùng một bản phát hành.</string>
+    <string name="series_default">Mặc định của máy chủ</string>
+    <string name="series_no_streams">Tập đầu tiên chưa được phân tích. Hãy thử lại sau khi quá trình quét hoàn tất.</string>
+    <string name="player_subtitle_image">Chưa thể hiển thị phụ đề dạng ảnh</string>
+    <string name="player_fill">Lấp đầy màn hình</string>
+    <string name="player_fit">Vừa màn hình</string>
+    <string name="player_mode_direct">Phát trực tiếp</string>
+    <string name="player_mode_remux">Truyền trực tiếp</string>
+    <string name="player_mode_transcode">Đang chuyển đổi</string>
+    <string name="player_error_title">Không thể phát</string>
+    <string name="player_error">Video đã dừng. Hãy kiểm tra kết nối và thử lại.</string>
+    <string name="player_no_file">Nội dung này không có tệp phát được.</string>
+    <string name="track_mono">Đơn âm</string>
+    <string name="track_stereo">Âm thanh nổi</string>
+    <string name="track_numbered">Rãnh %1$d</string>
+
+    <!-- Settings -->
+    <string name="settings_switch_profile">Chuyển đổi</string>
+    <string name="settings_connection">Kết nối</string>
+    <string name="settings_route_local">Ở nhà</string>
+    <string name="settings_route_public">Ra ngoài · địa chỉ công khai</string>
+    <string name="settings_route_hint">Kinema dùng địa chỉ nhà khi địa chỉ này phản hồi và chuyển sang địa chỉ công khai khi bạn ra ngoài.</string>
+    <string name="settings_local_url">Địa chỉ nhà</string>
+    <string name="settings_public_url">Địa chỉ công khai</string>
+    <string name="settings_public_hint">Proxy ngược hoặc đường hầm kết nối tới máy chủ từ mọi nơi</string>
+    <string name="settings_public_from_server">Dùng địa chỉ của máy chủ: %1$s</string>
+    <string name="settings_public_test">Kiểm tra</string>
+    <string name="settings_public_ok">Máy chủ phản hồi tại địa chỉ này</string>
+    <string name="settings_public_unreachable">Không có phản hồi tại địa chỉ này từ đây</string>
+    <string name="settings_appearance">Giao diện</string>
+    <string name="settings_theme_system">Hệ thống</string>
+    <string name="settings_theme_light">Sáng</string>
+    <string name="settings_theme_dark">Tối</string>
+    <string name="settings_dynamic">Màu hình nền</string>
+    <string name="settings_dynamic_hint">Phối màu ứng dụng theo màu từ hình nền của bạn</string>
+    <string name="settings_language">Ngôn ngữ</string>
+    <string name="settings_language_system">Mặc định hệ thống</string>
+    <string name="settings_language_picker_title">Ngôn ngữ ứng dụng</string>
+    <string name="player_notification_channel">Phát phương tiện</string>
+    <string name="player_notification_channel_desc">Điều khiển phát lại và thông báo phương tiện</string>
+    <string name="settings_playback">Phát lại</string>
+    <string name="settings_pip">Hình trong hình</string>
+    <string name="settings_pip_on">Khi rời ứng dụng, video tiếp tục phát trong cửa sổ nhỏ. Đóng cửa sổ sẽ tạm dừng phát.</string>
+    <string name="settings_pip_off">Khi rời ứng dụng, âm thanh tiếp tục phát cùng các nút điều khiển trong thông báo.</string>
+    <string name="settings_server">Máy chủ</string>
+    <string name="settings_cert_pinned">Chứng chỉ riêng, đã chấp thuận trên điện thoại này</string>
+    <string name="settings_cert_public">Chứng chỉ được ký bởi tổ chức công khai</string>
+    <string name="settings_kinema">Kinema</string>
+    <string name="settings_updates">Cập nhật</string>
+    <string name="settings_updates_subtitle">Phiên bản %1$s, ghi chú phát hành và kênh</string>
+    <string name="settings_about_subtitle">Phiên bản %1$s, nhà phát triển và ghi nhận</string>
+    <string name="update_title">Cập nhật</string>
+    <string name="update_checking">Đang kiểm tra cập nhật…</string>
+    <string name="update_check_failed">Không thể kiểm tra cập nhật</string>
+    <string name="update_check_failed_body">Bạn đang dùng %1$s. Hãy kiểm tra kết nối và thử lại.</string>
+    <string name="update_failed">Không thể cập nhật: %1$s</string>
+    <string name="update_up_to_date">Kinema đã là phiên bản mới nhất</string>
+    <string name="update_dev_build">Bản dựng phát triển</string>
+    <string name="update_dev_build_body">Bạn đang dùng %1$s. Bản dựng phát triển được cập nhật bằng cách biên dịch lại.</string>
+    <string name="update_you_have">Bạn đang dùng %1$s.</string>
+    <string name="update_available">Đã có Kinema %1$s</string>
+    <string name="update_prompt_body">Bạn đang dùng %1$s. Android sẽ hỏi trước khi cài đặt; máy chủ, đăng nhập và cài đặt của bạn được giữ nguyên. Ghi chú phát hành và kênh nằm trong Cài đặt, mục Cập nhật.</string>
+    <string name="update_downloading_percent">Đang tải xuống %1$d%%</string>
+    <string name="update_install">Cập nhật</string>
+    <string name="update_download_install">Tải xuống và cài đặt</string>
+    <string name="update_check_again">Kiểm tra lại</string>
+    <string name="update_later">Để sau</string>
+    <string name="update_channel">Kênh</string>
+    <string name="update_channel_stable">Stable</string>
+    <string name="update_channel_beta">Beta</string>
+    <string name="update_channel_alpha">Alpha</string>
+    <string name="update_channel_hint">Beta và Alpha nhận bản dựng mới sớm hơn, cùng với mọi bản dựng Stable.</string>
+    <string name="update_whats_new_in">Có gì mới trong %1$s</string>
+    <string name="update_in_this_version">Trong phiên bản này</string>
+    <string name="update_loading_notes">Đang tải ghi chú phát hành…</string>
+    <string name="update_no_notes">Không có ghi chú phát hành cho phiên bản này.</string>
+    <string name="about_title">Giới thiệu về Kinema</string>
+    <string name="about_section_app">Ứng dụng</string>
+    <string name="about_version_build">Phiên bản %1$s · bản dựng %2$d</string>
+    <string name="about_privacy_title">Quyền riêng tư</string>
+    <string name="about_privacy_subtitle">Chạy trên chính máy chủ của bạn. Thư viện và lịch sử xem không bao giờ rời khỏi đó.</string>
+    <string name="about_source_code">Mã nguồn</string>
+    <string name="about_section_developer">Nhà phát triển</string>
+    <string name="about_developer_tagline">Được thiết kế và xây dựng bởi một nhà phát triển.</string>
+    <string name="about_github">GitHub</string>
+    <string name="about_portfolio">Hồ sơ năng lực</string>
+    <string name="about_section_open_source">Mã nguồn mở</string>
+    <string name="about_acknowledgements">Ghi nhận</string>
+    <string name="about_acknowledgements_subtitle">Các thư viện và dự án tạo nên ứng dụng Android này</string>
+    <string name="about_tmdb">Siêu dữ liệu và hình ảnh phim, chương trình thông qua máy chủ của bạn. Sản phẩm này sử dụng API của TMDB nhưng không được TMDB xác nhận hay chứng nhận.</string>
+    <string name="about_plex">Cảm hứng: ý tưởng về một máy chủ phương tiện cá nhân. Không sử dụng mã nguồn hay tài sản nào của Plex.</string>
+    <string name="update_github_status">GitHub phản hồi %1$d</string>
+    <string name="update_download_status">Tải xuống phản hồi %1$d</string>
+    <string name="update_conflict">Android đã từ chối bản cập nhật: ứng dụng được ký bằng khóa khác với ứng dụng đã cài đặt. Hãy gỡ cài đặt bản hiện tại trước.</string>
+
+    <!-- Playlists and Collections -->
+    <string name="home_shelf_playlists">Danh sách phát</string>
+    <string name="home_shelf_collections">Bộ sưu tập</string>
+    <string name="playlist_title">Danh sách phát</string>
+    <string name="playlist_play_all">Phát tất cả</string>
+    <string name="playlist_empty">Danh sách phát này trống</string>
+    <string name="playlist_empty_body">Thêm phim hoặc tập phim vào danh sách phát này.</string>
+    <string name="playlist_add">Thêm vào danh sách phát</string>
+    <string name="playlist_create">Danh sách phát mới</string>
+    <string name="playlist_name">Tên danh sách phát</string>
+    <string name="playlist_delete">Xóa danh sách phát</string>
+    <string name="playlist_delete_confirm">Xóa danh sách phát “%1$s”?</string>
+    <string name="playlist_remove">Xóa khỏi danh sách phát</string>
+    <string name="playlist_added">Đã thêm vào %1$s</string>
+    <string name="playlist_created">Đã tạo danh sách phát</string>
+    <string name="playlist_delete_failed">Không thể xóa danh sách phát</string>
+    <string name="playlist_remove_failed">Không thể xóa mục</string>
+    <string name="collection_title">Bộ sưu tập</string>
+    <string name="collection_empty">Bộ sưu tập này trống</string>
+    <string name="collection_empty_body">Chưa có nội dung nào trong bộ sưu tập này.</string>
+    <string name="action_delete">Xóa</string>
+    <string name="action_create">Tạo</string>
+    <plurals name="playlist_items_count">
+        <item quantity="other">%d mục</item>
+    </plurals>
+    <plurals name="collection_items_count">
+        <item quantity="other">%d nội dung</item>
+    </plurals>
+    <string name="approval_title">Đang chờ phê duyệt</string>
+    <string name="approval_body">Đang chờ quản trị viên phê duyệt thiết bị này.</string>
+    <string name="approval_device">Đang đăng nhập với tên %1$s từ %2$s</string>
+    <string name="settings_account">Tài khoản của bạn</string>
+    <string name="settings_requests">Yêu cầu</string>
+    <string name="settings_requests_subtitle">Yêu cầu thêm phim hoặc chương trình</string>
+    <string name="settings_activity">Hoạt động xem</string>
+    <string name="settings_activity_subtitle">Thời gian và lịch sử xem của bạn</string>
+    <string name="requests_title">Yêu cầu</string>
+    <string name="requests_new">Yêu cầu nội dung</string>
+    <string name="requests_empty">Chưa có yêu cầu nào</string>
+    <string name="requests_empty_body">Không tìm thấy thứ bạn muốn? Hãy nhờ quản trị viên thêm vào.</string>
+    <string name="requests_withdraw">Rút lại</string>
+    <string name="requests_status_pending">Đang chờ</string>
+    <string name="requests_status_approved">Đã duyệt</string>
+    <string name="requests_status_declined">Đã từ chối</string>
+    <string name="requests_status_available">Đã có</string>
+    <string name="requests_kind_movie">Phim lẻ</string>
+    <string name="requests_kind_show">Phim bộ</string>
+    <string name="requests_search">Tiêu đề</string>
+    <string name="requests_note">Ghi chú (không bắt buộc)</string>
+    <string name="requests_no_tmdb">Máy chủ không có tính năng tìm kiếm tiêu đề. Hãy nhập tên phim bạn muốn.</string>
+    <string name="requests_no_results">Không có kết quả khớp</string>
+    <string name="requests_submit">Gửi yêu cầu</string>
+    <string name="requests_admin_note">Quản trị viên: %1$s</string>
+    <string name="activity_title">Hoạt động xem</string>
+    <string name="activity_total">Tổng cộng</string>
+    <string name="activity_week">7 ngày qua</string>
+    <string name="activity_month">30 ngày qua</string>
+    <string name="activity_titles">Tiêu đề</string>
+    <string name="activity_completed">Đã xem xong</string>
+    <string name="activity_daily">Thời gian xem hằng ngày</string>
+    <string name="activity_daily_peak">Cao nhất %1$s</string>
+    <string name="activity_top_titles">Xem nhiều nhất</string>
+    <string name="activity_top_genres">Thể loại hàng đầu</string>
+    <string name="activity_history">Phát gần đây</string>
+    <string name="activity_empty">Chưa xem gì</string>
+    <string name="activity_empty_body">Thời gian xem của bạn sẽ hiện ở đây sau khi bạn phát nội dung nào đó.</string>
+    <string name="duration_hm">%1$dg %2$dp</string>
+    <string name="duration_h">%1$dg</string>
+    <string name="duration_m">%1$dp</string>
+    <string name="role_owner">Chủ trang</string>
+    <string name="role_admin">Quản trị viên</string>
+    <string name="role_member">Thành viên</string>
+</resources>

@@ -1,6 +1,7 @@
 package com.aiyu.kinema
 
 import android.app.Application
+import android.content.Context
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -32,6 +33,7 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import com.aiyu.kinema.core.KinemaRepository
 import com.aiyu.kinema.core.Session
+import com.aiyu.kinema.ui.AppLocale
 import com.aiyu.kinema.ui.AppNavigation
 import com.aiyu.kinema.ui.ConnectScreen
 import com.aiyu.kinema.ui.LoadingBox
@@ -62,6 +64,10 @@ class KinemaApp : Application(), SingletonImageLoader.Factory {
 
 class MainActivity : ComponentActivity() {
     private val repository get() = (application as KinemaApp).repository
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrapContext(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

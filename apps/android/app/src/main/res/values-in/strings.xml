@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kinema</string>
+    <!-- Shared actions -->
+    <string name="action_back">Kembali</string>
+    <string name="action_cancel">Batal</string>
+    <string name="action_details">Detail</string>
+    <string name="action_play">Putar</string>
+    <string name="action_resume">Lanjutkan</string>
+    <string name="action_retry">Coba lagi</string>
+    <string name="action_save">Simpan</string>
+
+    <!-- Errors -->
+    <string name="error_title">Terjadi kesalahan</string>
+    <string name="error_generic">Tidak berhasil. Coba lagi.</string>
+    <string name="error_offline">Tidak dapat menjangkau server. Pastikan server berjalan dan ponsel ini berada di jaringan yang sama, atau atur alamat publik.</string>
+    <string name="error_untrusted">Sertifikat server bukan yang Anda setujui sebelumnya. Hubungkan kembali untuk meninjaunya.</string>
+
+    <!-- Connect -->
+    <string name="connect_title">Kinema</string>
+    <string name="connect_subtitle">Film dan serial Anda, dari server Anda sendiri.</string>
+    <string name="connect_found">Di jaringan ini</string>
+    <string name="connect_rescan">Cari lagi</string>
+    <string name="connect_scanning">Mencari server…</string>
+    <string name="connect_none">Tidak ada server yang menjawab. Pastikan Kinema berjalan dan ponsel ini berada di Wi-Fi yang sama, atau masukkan alamatnya di bawah.</string>
+    <string name="connect_this_computer">Komputer ini · %1$s</string>
+    <string name="connect_manual">Masukkan alamat</string>
+    <string name="connect_address">Alamat server</string>
+    <string name="connect_address_hint">Ditampilkan di Kinema versi web pada Pengaturan › Jaringan</string>
+    <string name="connect_invalid">Masukkan alamat seperti 192.168.1.10:3000 atau media.example.com.</string>
+    <string name="connect_action">Hubungkan</string>
+    <string name="connect_change_server">Gunakan server lain</string>
+
+    <string name="trust_title">Percayai server ini?</string>
+    <string name="trust_body">%1$s membuat sertifikat keamanannya sendiri. Pastikan kode ini cocok dengan yang ada di Kinema versi web pada Pengaturan › Jaringan sebelum Anda mempercayainya.</string>
+    <string name="trust_accept">Percayai</string>
+
+    <string name="unreachable_title">Server tidak dapat dijangkau</string>
+    <string name="unreachable_body">Kinema di %1$s tidak menjawab di alamat rumah maupun alamat publiknya.</string>
+
+    <string name="forget_title">Gunakan server lain?</string>
+    <string name="forget_body">Ponsel ini akan melupakan server, alamat, dan sertifikatnya. Riwayat tontonan Anda tetap tersimpan di server.</string>
+    <string name="forget_action">Lupakan server</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">Siapa yang menonton?</string>
+    <string name="profiles_locked">Terkunci</string>
+    <string name="profiles_setup_title">Selesaikan pengaturan terlebih dahulu</string>
+    <string name="profiles_setup_body">Buka %1$s di browser untuk membuat akun pertama dan menambahkan media Anda. Lalu kembali ke sini.</string>
+    <string name="unlock_password">Kata sandi</string>
+    <string name="unlock_pin">PIN</string>
+    <string name="unlock_show">Tampilkan</string>
+    <string name="unlock_hide">Sembunyikan</string>
+    <string name="unlock_action">Masuk</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">Beranda</string>
+    <string name="tab_library">Pustaka</string>
+    <string name="tab_search">Cari</string>
+    <string name="tab_settings">Pengaturan</string>
+
+    <!-- Home -->
+    <string name="home_continue">Lanjutkan menonton</string>
+    <string name="home_shelf_movies">Film baru ditambahkan</string>
+    <string name="home_shelf_shows">Serial baru ditambahkan</string>
+    <string name="home_shelf_episodes">Episode baru</string>
+    <string name="home_hero_continue">Lanjutkan menonton</string>
+    <string name="home_hero_new">Baru</string>
+    <string name="home_empty_title">Belum ada apa pun di sini</string>
+    <string name="home_empty_body">Judul akan muncul di sini setelah administrator server menambahkan pustaka di Kinema versi web.</string>
+
+    <!-- Library and search -->
+    <string name="library_none_title">Tidak ada pustaka</string>
+    <string name="library_none_body">Server belum memiliki pustaka yang dapat Anda lihat.</string>
+    <string name="library_switcher_title">Pustaka</string>
+    <string name="library_expand">Tampilkan serial</string>
+    <string name="library_collapse">Sembunyikan serial</string>
+    <plurals name="library_show_count">
+        <item quantity="other">%d serial</item>
+    </plurals>
+    <string name="library_empty_title">Pustaka ini kosong</string>
+    <string name="library_empty_body">File baru akan muncul di sini setelah server memindainya.</string>
+    <string name="search_hint">Film, serial, episode</string>
+    <string name="search_clear">Hapus</string>
+    <string name="search_idle_title">Cari sesuatu untuk ditonton</string>
+    <string name="search_idle_body">Cari berdasarkan judul di seluruh pustaka.</string>
+    <string name="search_none_title">Tidak ada hasil</string>
+    <string name="search_none_body">Tidak ada yang cocok dengan “%1$s”.</string>
+
+    <!-- Title page -->
+    <string name="item_watched">Sudah ditonton</string>
+    <string name="item_mark_watched">Tandai sudah ditonton</string>
+    <string name="item_mark_unwatched">Tandai belum ditonton</string>
+    <string name="item_from_start">Putar dari awal</string>
+    <string name="item_play_episode">Putar S%1$d · E%2$d</string>
+    <string name="item_episode_short">S%1$d · E%2$d</string>
+    <string name="item_season_no">S%1$d</string>
+    <string name="item_episode_no">E%1$d</string>
+    <string name="item_episode_number">Episode %1$d</string>
+    <string name="item_left">Tersisa %1$s</string>
+    <string name="item_seasons">Musim</string>
+    <string name="item_episodes">Episode</string>
+    <string name="item_cast">Pemeran</string>
+    <string name="item_previous">Sebelumnya</string>
+    <string name="item_next">Berikutnya</string>
+    <string name="item_file">File</string>
+    <plurals name="item_seasons">
+        <item quantity="other">%d musim</item>
+    </plurals>
+    <plurals name="item_episodes">
+        <item quantity="other">%d episode</item>
+    </plurals>
+    <plurals name="item_audio_tracks">
+        <item quantity="other">%d trek audio</item>
+    </plurals>
+    <plurals name="item_subtitle_tracks">
+        <item quantity="other">%d subtitle</item>
+    </plurals>
+    <string name="format_hours_minutes">%1$dj %2$dm</string>
+    <string name="format_minutes">%1$dm</string>
+
+    <!-- Player -->
+    <string name="player_pause">Jeda</string>
+    <string name="player_stop">Berhenti</string>
+    <string name="player_volume">Volume</string>
+    <string name="player_brightness">Kecerahan</string>
+    <string name="player_boost">Penguat %1$d%%</string>
+    <string name="player_back10">Mundur 10 detik</string>
+    <string name="player_forward10">Maju 10 detik</string>
+    <string name="player_seconds">%1$d dtk</string>
+    <string name="player_next">Episode berikutnya</string>
+    <string name="player_up_next_in">Berikutnya dalam %1$s</string>
+    <string name="player_play_now">Putar sekarang</string>
+    <string name="player_dismiss">Sembunyikan</string>
+    <string name="player_skip_intro">Lewati intro</string>
+    <string name="player_skip_credits">Lewati kredit</string>
+    <string name="player_pip">Gambar-dalam-gambar</string>
+    <string name="player_fullscreen">Layar penuh</string>
+    <string name="player_exit_fullscreen">Keluar dari layar penuh</string>
+    <string name="player_minimize">Perkecil</string>
+    <string name="player_up_next_list">Episode dan lainnya</string>
+    <string name="watch_episodes">Episode</string>
+    <string name="watch_more">Lainnya untuk ditonton</string>
+    <string name="watch_now_playing">Sedang diputar</string>
+    <string name="watch_nothing">Belum ada hal lain untuk ditonton di sini</string>
+    <string name="player_tracks">Audio dan subtitle</string>
+    <string name="player_audio">Audio</string>
+    <string name="player_subtitles">Subtitle</string>
+    <string name="player_subtitles_off">Mati</string>
+    <string name="series_tracks">Audio &amp; subtitle untuk semua episode</string>
+    <string name="series_hint">Trek diambil dari episode pertama. Setiap episode menggunakan posisi trek yang sama, sehingga berfungsi jika semua episode berasal dari rilis yang sama.</string>
+    <string name="series_default">Default server</string>
+    <string name="series_no_streams">Episode pertama belum dipindai. Coba lagi setelah pemindaian selesai.</string>
+    <string name="player_subtitle_image">Subtitle gambar belum dapat ditampilkan</string>
+    <string name="player_fill">Isi layar</string>
+    <string name="player_fit">Sesuaikan dengan layar</string>
+    <string name="player_mode_direct">Putar langsung</string>
+    <string name="player_mode_remux">Streaming langsung</string>
+    <string name="player_mode_transcode">Mengonversi</string>
+    <string name="player_error_title">Tidak dapat memutar</string>
+    <string name="player_error">Video terhenti. Periksa koneksi dan coba lagi.</string>
+    <string name="player_no_file">Judul ini tidak memiliki file yang dapat diputar.</string>
+    <string name="track_mono">Mono</string>
+    <string name="track_stereo">Stereo</string>
+    <string name="track_numbered">Trek %1$d</string>
+
+    <!-- Settings -->
+    <string name="settings_switch_profile">Ganti</string>
+    <string name="settings_connection">Koneksi</string>
+    <string name="settings_route_local">Di rumah</string>
+    <string name="settings_route_public">Di luar · alamat publik</string>
+    <string name="settings_route_hint">Kinema menggunakan alamat rumah saat merespons dan beralih ke alamat publik saat Anda pergi.</string>
+    <string name="settings_local_url">Alamat rumah</string>
+    <string name="settings_public_url">Alamat publik</string>
+    <string name="settings_public_hint">Reverse proxy atau tunnel yang menjangkau server dari mana saja</string>
+    <string name="settings_public_from_server">Menggunakan milik server: %1$s</string>
+    <string name="settings_public_test">Uji</string>
+    <string name="settings_public_ok">Server merespons di alamat ini</string>
+    <string name="settings_public_unreachable">Tidak ada respons di alamat ini dari sini</string>
+    <string name="settings_appearance">Tampilan</string>
+    <string name="settings_theme_system">Sistem</string>
+    <string name="settings_theme_light">Terang</string>
+    <string name="settings_theme_dark">Gelap</string>
+    <string name="settings_dynamic">Warna wallpaper</string>
+    <string name="settings_dynamic_hint">Warnai aplikasi dengan warna dari wallpaper Anda</string>
+    <string name="settings_language">Bahasa</string>
+    <string name="settings_language_system">Default sistem</string>
+    <string name="settings_language_picker_title">Bahasa aplikasi</string>
+    <string name="player_notification_channel">Pemutaran Media</string>
+    <string name="player_notification_channel_desc">Kontrol pemutaran dan notifikasi media</string>
+    <string name="settings_playback">Pemutaran</string>
+    <string name="settings_pip">Gambar-dalam-gambar</string>
+    <string name="settings_pip_on">Meninggalkan aplikasi tetap memutar video di jendela kecil. Menutup jendela akan menjedanya.</string>
+    <string name="settings_pip_off">Meninggalkan aplikasi tetap memutar suara, dengan kontrol di notifikasi.</string>
+    <string name="settings_server">Server</string>
+    <string name="settings_cert_pinned">Sertifikat pribadi, disetujui di ponsel ini</string>
+    <string name="settings_cert_public">Sertifikat ditandatangani oleh otoritas publik</string>
+    <string name="settings_kinema">Kinema</string>
+    <string name="settings_updates">Pembaruan</string>
+    <string name="settings_updates_subtitle">Versi %1$s, catatan rilis, dan saluran</string>
+    <string name="settings_about_subtitle">Versi %1$s, pengembang, dan ucapan terima kasih</string>
+    <string name="update_title">Pembaruan</string>
+    <string name="update_checking">Memeriksa pembaruan…</string>
+    <string name="update_check_failed">Tidak dapat memeriksa pembaruan</string>
+    <string name="update_check_failed_body">Anda menggunakan %1$s. Periksa koneksi Anda dan coba lagi.</string>
+    <string name="update_failed">Tidak dapat memperbarui: %1$s</string>
+    <string name="update_up_to_date">Kinema sudah terbaru</string>
+    <string name="update_dev_build">Build pengembangan</string>
+    <string name="update_dev_build_body">Anda menggunakan %1$s. Build pengembangan diperbarui dengan membangunnya ulang.</string>
+    <string name="update_you_have">Anda menggunakan %1$s.</string>
+    <string name="update_available">Kinema %1$s tersedia</string>
+    <string name="update_prompt_body">Anda menggunakan %1$s. Android akan meminta konfirmasi sebelum memasang; server, info masuk, dan pengaturan Anda tetap tersimpan. Catatan rilis dan saluran ada di Pengaturan, di bawah Pembaruan.</string>
+    <string name="update_downloading_percent">Mengunduh %1$d%%</string>
+    <string name="update_install">Perbarui</string>
+    <string name="update_download_install">Unduh dan pasang</string>
+    <string name="update_check_again">Periksa lagi</string>
+    <string name="update_later">Nanti</string>
+    <string name="update_channel">Saluran</string>
+    <string name="update_channel_stable">Stable</string>
+    <string name="update_channel_beta">Beta</string>
+    <string name="update_channel_alpha">Alpha</string>
+    <string name="update_channel_hint">Beta dan Alpha mendapatkan build baru lebih awal, serta semua build Stable.</string>
+    <string name="update_whats_new_in">Yang baru di %1$s</string>
+    <string name="update_in_this_version">Di versi ini</string>
+    <string name="update_loading_notes">Memuat catatan rilis…</string>
+    <string name="update_no_notes">Tidak ada catatan rilis untuk versi ini.</string>
+    <string name="about_title">Tentang Kinema</string>
+    <string name="about_section_app">Aplikasi</string>
+    <string name="about_version_build">Versi %1$s · build %2$d</string>
+    <string name="about_privacy_title">Privasi</string>
+    <string name="about_privacy_subtitle">Berjalan di server Anda sendiri. Pustaka dan riwayat tontonan Anda tidak pernah keluar dari sana.</string>
+    <string name="about_source_code">Kode sumber</string>
+    <string name="about_section_developer">Pengembang</string>
+    <string name="about_developer_tagline">Dirancang dan dibangun oleh satu pengembang.</string>
+    <string name="about_github">GitHub</string>
+    <string name="about_portfolio">Portofolio</string>
+    <string name="about_section_open_source">Sumber terbuka</string>
+    <string name="about_acknowledgements">Ucapan terima kasih</string>
+    <string name="about_acknowledgements_subtitle">Pustaka dan proyek yang membangun aplikasi Android ini</string>
+    <string name="about_tmdb">Metadata dan gambar film serta serial, melalui server Anda. Produk ini menggunakan TMDB API tetapi tidak didukung atau disertifikasi oleh TMDB.</string>
+    <string name="about_plex">Inspirasi: ide server media pribadi. Tidak ada kode atau aset Plex yang digunakan.</string>
+    <string name="update_github_status">GitHub menjawab %1$d</string>
+    <string name="update_download_status">Unduhan menjawab %1$d</string>
+    <string name="update_conflict">Android menolak pembaruan: ditandatangani dengan kunci yang berbeda dari aplikasi terpasang. Copot pemasangan salinan ini terlebih dahulu.</string>
+
+    <!-- Playlists and Collections -->
+    <string name="home_shelf_playlists">Daftar putar</string>
+    <string name="home_shelf_collections">Koleksi</string>
+    <string name="playlist_title">Daftar putar</string>
+    <string name="playlist_play_all">Putar semua</string>
+    <string name="playlist_empty">Daftar putar ini kosong</string>
+    <string name="playlist_empty_body">Tambahkan film atau episode ke daftar putar ini.</string>
+    <string name="playlist_add">Tambahkan ke daftar putar</string>
+    <string name="playlist_create">Daftar putar baru</string>
+    <string name="playlist_name">Nama daftar putar</string>
+    <string name="playlist_delete">Hapus daftar putar</string>
+    <string name="playlist_delete_confirm">Hapus daftar putar “%1$s”?</string>
+    <string name="playlist_remove">Hapus dari daftar putar</string>
+    <string name="playlist_added">Ditambahkan ke %1$s</string>
+    <string name="playlist_created">Daftar putar dibuat</string>
+    <string name="playlist_delete_failed">Gagal menghapus daftar putar</string>
+    <string name="playlist_remove_failed">Gagal menghapus item</string>
+    <string name="collection_title">Koleksi</string>
+    <string name="collection_empty">Koleksi ini kosong</string>
+    <string name="collection_empty_body">Belum ada judul di koleksi ini.</string>
+    <string name="action_delete">Hapus</string>
+    <string name="action_create">Buat</string>
+    <plurals name="playlist_items_count">
+        <item quantity="other">%d item</item>
+    </plurals>
+    <plurals name="collection_items_count">
+        <item quantity="other">%d judul</item>
+    </plurals>
+    <string name="approval_title">Menunggu persetujuan</string>
+    <string name="approval_body">Menunggu administrator menyetujui perangkat ini.</string>
+    <string name="approval_device">Masuk sebagai %1$s dari %2$s</string>
+    <string name="settings_account">Akun Anda</string>
+    <string name="settings_requests">Permintaan</string>
+    <string name="settings_requests_subtitle">Minta penambahan film atau serial</string>
+    <string name="settings_activity">Aktivitas tontonan</string>
+    <string name="settings_activity_subtitle">Waktu dan riwayat tontonan Anda</string>
+    <string name="requests_title">Permintaan</string>
+    <string name="requests_new">Minta judul</string>
+    <string name="requests_empty">Belum ada permintaan</string>
+    <string name="requests_empty_body">Tidak menemukan sesuatu? Minta administrator untuk menambahkannya.</string>
+    <string name="requests_withdraw">Batalkan</string>
+    <string name="requests_status_pending">Menunggu</string>
+    <string name="requests_status_approved">Disetujui</string>
+    <string name="requests_status_declined">Ditolak</string>
+    <string name="requests_status_available">Tersedia</string>
+    <string name="requests_kind_movie">Film</string>
+    <string name="requests_kind_show">Serial</string>
+    <string name="requests_search">Judul</string>
+    <string name="requests_note">Catatan (opsional)</string>
+    <string name="requests_no_tmdb">Server tidak memiliki pencarian judul. Ketik judul yang Anda inginkan.</string>
+    <string name="requests_no_results">Tidak ada yang cocok</string>
+    <string name="requests_submit">Kirim permintaan</string>
+    <string name="requests_admin_note">Administrator: %1$s</string>
+    <string name="activity_title">Aktivitas tontonan</string>
+    <string name="activity_total">Total</string>
+    <string name="activity_week">7 hari terakhir</string>
+    <string name="activity_month">30 hari terakhir</string>
+    <string name="activity_titles">Judul</string>
+    <string name="activity_completed">Selesai</string>
+    <string name="activity_daily">Waktu tontonan harian</string>
+    <string name="activity_daily_peak">Puncak %1$s</string>
+    <string name="activity_top_titles">Paling sering ditonton</string>
+    <string name="activity_top_genres">Genre teratas</string>
+    <string name="activity_history">Baru saja diputar</string>
+    <string name="activity_empty">Belum ada yang ditonton</string>
+    <string name="activity_empty_body">Waktu tontonan Anda akan muncul di sini setelah Anda memutar sesuatu.</string>
+    <string name="duration_hm">%1$dj %2$dm</string>
+    <string name="duration_h">%1$dj</string>
+    <string name="duration_m">%1$dm</string>
+    <string name="role_owner">Pemilik situs</string>
+    <string name="role_admin">Administrator</string>
+    <string name="role_member">Anggota</string>
+</resources>
