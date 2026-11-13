@@ -35,6 +35,7 @@ Priorities: **near-zero idle CPU**, support for any media container and codec, a
 - **Native Android app**: Pure Jetpack Compose UI with Material 3 Expressive motion, Navigation 3 back-stack, Media3 ExoPlayer, and predictive back gestures.
 - **Zero-conf LAN discovery**: Automatic UDP beacon discovery (port `48555`) with seamless roaming between home LAN and public reverse-proxy addresses.
 - **HTTPS by default**: Generates an isolated self-signed TLS certificate on first boot; clients pin the certificate fingerprint to prevent MITM attacks on local networks.
+- **27-language internationalization & RTL**: Full localization across backend, web, desktop, and Android in 27 languages with automatic RTL layout for Arabic (`ar`) and Urdu (`ur`).
 
 ---
 
@@ -124,6 +125,7 @@ Full design documents, architectural decisions, and roadmaps are tracked in [`de
 - [`development/docs/metadata-and-artwork.md`](development/docs/metadata-and-artwork.md) — Filename parsing, TMDB matching, and thumbnail pipeline.
 - [`development/docs/android.md`](development/docs/android.md) — Android Jetpack Compose client architecture, TLS pinning, and address roaming.
 - [`development/docs/web-ui.md`](development/docs/web-ui.md) — React SPA structure, design tokens, and player implementation.
+- [`development/docs/i18n.md`](development/docs/i18n.md) — 27-language internationalization & RTL architecture across all platforms.
 - [`development/docs/api.md`](development/docs/api.md) — REST API and WebSocket specification.
 - [`development/docs/mvp.md`](development/docs/mvp.md) — MVP capabilities and verification.
 - [`development/docs/security.md`](development/docs/security.md) — Threat model, sandboxing, and security mitigations.
@@ -429,6 +431,21 @@ Kinema/
 - **Predictive back gesture**: Android's own back animation: the page shrinks and drifts with the finger while the page beneath slides in, then slides away on release.
 - **Certificate Pinning**: Reads and pins the server's self-signed TLS fingerprint on first connection.
 - **Home/Public Address Roaming**: Automatically checks whether the local server or public reverse proxy answers and switches transparently on network changes.
+
+---
+
+## Internationalization (27 Languages)
+
+Kinema is localized into **27 languages** across the Rust backend, React web UI, Electron desktop shell, and Android app, with full **RTL** support for Arabic (`ar`) and Urdu (`ur`). See [`development/docs/i18n.md`](development/docs/i18n.md) for the full architecture, locale resolution rules, and test matrix.
+
+```mermaid
+flowchart LR
+  Web["Web SPA<br/>668 keys · lazy chunks<br/>&lt;html lang dir='rtl|ltr'&gt;"] -->|Accept-Language| MW["Backend locale_middleware<br/>27 embedded catalogs (76 keys)"]
+  Desk["Desktop Shell<br/>31 keys · IPC + kinema.json"] --> Web
+  And["Android App<br/>270 strings + 7 plurals<br/>LocaleManager / AppLocale"] -->|Accept-Language| MW
+```
+
+Supported languages: `en` (English), `hi` (हिन्दी), `es` (Español), `pt-BR` (Português Brasil), `id` (Bahasa Indonesia), `ar` (العربية, RTL), `fr` (Français), `ru` (Русский), `de` (Deutsch), `tr` (Türkçe), `ja` (日本語), `ko` (한국어), `it` (Italiano), `vi` (Tiếng Việt), `th` (ไทย), `zh-CN` (中文 简体), `zh-TW` (中文 繁體), `pl` (Polski), `bn` (বাংলা), `ta` (தமிழ்), `te` (తెలుగు), `mr` (मराठी), `gu` (ગુજરાતી), `kn` (ಕನ್ನಡ), `ml` (മലയാളം), `pa` (ਪੰਜਾਬੀ), and `ur` (اردو, RTL).
 
 ---
 

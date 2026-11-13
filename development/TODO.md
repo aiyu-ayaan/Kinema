@@ -39,7 +39,7 @@
 - [x] Seek inside the buffered part of a remux stream: decision logic (`StreamSeek`) and player hook, only applies when the player reports the stream seekable
 - [ ] Make the piped fMP4 remux/transcode stream seekable inside the buffer for ExoPlayer (custom SeekMap + back buffer, or sidx/HLS) so the above takes effect; verify on a device
 - [x] Translations scaffolding: strings audited, es / fr / de / hi drafts for 51 core strings (machine quality, needs native review)
-- [ ] Finish and review the translations (Connect, Trust, Settings, Updates, About, watch page, plurals)
+- [x] Complete 27-language translations across all platforms (backend, web, desktop, Android) with RTL support (`ar`, `ur`), locale config, and in-app language pickers (see `docs/i18n.md`)
 
 ## Desktop app (2026-10-20)
 - [x] Electron scaffold (`apps/desktop`, `@kinema/desktop`) with isolated dev/prod flavors
