@@ -4,8 +4,9 @@ import { ArrowsLeftRight } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/Button'
 import { StatsView } from '@/features/activity/StatsView'
 import { Card, CardHeader, ErrorText, PageHeader, Skeleton } from '@/components/ui/Card'
+import { Select, SettingRow } from '@/components/ui/Controls'
 import { api } from '@/lib/api'
-import { t } from '@/lib/i18n'
+import { setLanguage, SUPPORTED_LANGUAGES, t, useLanguage } from '@/lib/i18n'
 import type { Languages } from '@/lib/types'
 import { LanguageFields, TransferModal } from './ProfileFields'
 import { ratingLabel } from './rating'
@@ -13,6 +14,7 @@ import { ratingLabel } from './rating'
 /** The signed-in profile's own settings: track languages, and export / import. */
 export function ProfilePage() {
   const qc = useQueryClient()
+  const lang = useLanguage()
   const { data, isLoading } = useQuery({ queryKey: ['my-profile'], queryFn: api.myProfile })
   const stats = useQuery({ queryKey: ['my-stats'], queryFn: api.myStats })
   const [langs, setLangs] = useState<Languages | null>(null)
@@ -60,6 +62,18 @@ export function ProfilePage() {
           <ErrorText>{save.error?.message}</ErrorText>
           {!data.user.is_admin && limit != null && <p className="text-caption text-muted">{t('profile.limitNote', { limit: ratingLabel(limit) })}</p>}
         </form>
+      </Card>
+      <Card>
+        <CardHeader title={t('profile.appLanguage')} />
+        <SettingRow label={t('profile.appLanguage')} description={t('profile.appLanguageHint')} htmlFor="app-language">
+          <Select id="app-language" value={lang} onChange={(e) => void setLanguage(e.target.value)} className="w-56">
+            {SUPPORTED_LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.nativeName}
+              </option>
+            ))}
+          </Select>
+        </SettingRow>
       </Card>
       <section aria-labelledby="watch-activity" className="space-y-3">
         <h2 id="watch-activity" className="text-title font-semibold">

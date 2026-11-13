@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { EmptyState, Skeleton } from '@/components/ui/Card'
 import { shareApi, type PlayCaps } from '@/lib/api'
 import { isDev } from '@/lib/flavor'
-import { t } from '@/lib/i18n'
+import { getLanguage, t } from '@/lib/i18n'
 import type { ItemCard, ShareFile } from '@/lib/types'
 
 /** Same codec probe idea as the main player, kept tiny: HEVC/AV1 only where the browser says so. */
@@ -72,7 +72,7 @@ export function SharePage({ token }: { token: string }) {
               <h1 className="text-page font-semibold">{itemLabel(data.item)}</h1>
               {data.item.year && <p className="text-caption text-muted">{data.item.year}</p>}
               {data.item.summary && <p className="mt-3 max-w-prose text-body">{data.item.summary}</p>}
-              <p className="mt-3 text-caption text-subtle">{t('sharePage.expires', { date: new Date(data.share.expires_at * 1000).toLocaleString() })}</p>
+              <p className="mt-3 text-caption text-subtle">{t('sharePage.expires', { date: new Date(data.share.expires_at * 1000).toLocaleString(getLanguage()) })}</p>
               {data.files.length > 0 && !playing && (
                 <Button variant="primary" className="mt-4" icon={<Play size={16} weight="fill" />} onClick={() => setPlaying(true)}>
                   {t('sharePage.play')}

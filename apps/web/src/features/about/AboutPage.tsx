@@ -5,7 +5,7 @@ import { UpdateProgress, useDesktopUpdate } from '@/components/UpdatePrompt'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader, ErrorText, PageHeader } from '@/components/ui/Card'
 import { useIsAdmin } from '@/lib/auth'
-import { DEVELOPER, REPO, REPO_URL, credits } from '@/lib/credits'
+import { DEVELOPER, getCredits, REPO, REPO_URL } from '@/lib/credits'
 import { isDesktop } from '@/lib/desktop'
 import { isDev } from '@/lib/flavor'
 import { useServerInfo } from '@/lib/queries'
@@ -190,7 +190,7 @@ export function AcknowledgementsSection() {
       <BackLink to="/settings/about" label={t('about.title')} />
       <PageHeader title={t('about.acknowledgements')} description={t('about.acknowledgementsDescription')} />
       <div className="grid gap-6">
-        {credits.map((g) => (
+        {getCredits().map((g) => (
           <Card key={g.group}>
             <CardHeader title={g.group} />
             <div className="divide-y divide-border">

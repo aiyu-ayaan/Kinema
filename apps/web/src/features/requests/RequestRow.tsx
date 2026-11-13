@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Artwork } from '@/components/media/Artwork'
 import { Badge } from '@/components/ui/Card'
-import { t } from '@/lib/i18n'
+import { getLanguage, t } from '@/lib/i18n'
 import type { MediaRequest, RequestStatus } from '@/lib/types'
 
 const tones = { pending: 'warn', approved: 'info', declined: 'danger', available: 'primary' } as const
@@ -26,7 +26,7 @@ export function RequestRow({ r, showUser, children }: { r: MediaRequest; showUse
         </p>
         <p className="text-caption text-muted">
           {showUser && `${r.user_name} · `}
-          {new Date(r.created_at * 1000).toLocaleDateString()}
+          {new Date(r.created_at * 1000).toLocaleDateString(getLanguage())}
         </p>
         {r.overview && <p className="mt-1 line-clamp-2 text-label text-muted">{r.overview}</p>}
         {r.note && <p className="mt-1 text-label">{t('requests.noteFrom', { note: r.note })}</p>}

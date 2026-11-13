@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge, Card, CardHeader, EmptyState, ErrorText, Skeleton } from '@/components/ui/Card'
 import { api } from '@/lib/api'
 import { clock, watchTime } from '@/lib/format'
-import { t } from '@/lib/i18n'
+import { getLanguage, t } from '@/lib/i18n'
 import { episodeCode, PAUSED_AFTER_S } from '@/lib/stats'
 import type { NowPlaying, User } from '@/lib/types'
 import { StatsView } from './StatsView'
@@ -102,7 +102,7 @@ export function ActivitySection() {
                   <span className="min-w-0">
                     <span className="block truncate text-body font-medium">{user.name}</span>
                     <span className="block text-caption text-muted">
-                      {totals.last_played_at ? t('activity.lastPlayed', { date: new Date(totals.last_played_at * 1000).toLocaleDateString() }) : t('activity.neverPlayed')}
+                      {totals.last_played_at ? t('activity.lastPlayed', { date: new Date(totals.last_played_at * 1000).toLocaleDateString(getLanguage()) }) : t('activity.neverPlayed')}
                     </span>
                   </span>
                 </span>

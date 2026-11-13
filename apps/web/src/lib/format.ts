@@ -1,4 +1,4 @@
-import { t } from './i18n'
+import { getLanguage, t } from './i18n'
 import type { ItemCard, Stream } from './types'
 
 /** 5400 -> "1h 30m"; 300 -> "5m". */
@@ -28,19 +28,26 @@ export function parseClock(text: string): number | null {
   return parts.reduce((acc, p) => acc * 60 + Number(p), 0)
 }
 
-const languageNames = (() => {
+let displayLocale: string | null = null
+let displayNames: Intl.DisplayNames | null = null
+
+function getLanguageDisplayNames(): Intl.DisplayNames | null {
+  const locale = getLanguage()
+  if (displayLocale === locale) return displayNames
+  displayLocale = locale
   try {
-    return new Intl.DisplayNames([navigator.language, 'en'], { type: 'language' })
+    displayNames = new Intl.DisplayNames([locale, 'en'], { type: 'language' })
   } catch {
-    return null
+    displayNames = null
   }
-})()
+  return displayNames
+}
 
 /** "eng" or "en" -> "English". */
 export function languageName(code: string | null): string | null {
   if (!code) return null
   try {
-    return languageNames?.of(code) ?? code.toUpperCase()
+    return getLanguageDisplayNames()?.of(code) ?? code.toUpperCase()
   } catch {
     return code.toUpperCase()
   }

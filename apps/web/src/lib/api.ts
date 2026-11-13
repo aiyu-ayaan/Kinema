@@ -1,4 +1,5 @@
 import { storageKeys } from './flavor'
+import { getLanguage } from './i18n'
 import type {
   ApprovalRequired,
   CollectionDetail,
@@ -90,7 +91,9 @@ export function setUnauthorizedHandler(fn: () => void) {
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const headers: Record<string, string> = {}
+  const headers: Record<string, string> = {
+    'Accept-Language': getLanguage(),
+  }
   const token = session.token
   if (token) headers.Authorization = `Bearer ${token}`
   if (body !== undefined) headers['Content-Type'] = 'application/json'

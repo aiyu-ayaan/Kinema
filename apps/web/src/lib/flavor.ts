@@ -3,6 +3,7 @@ export const isDev = import.meta.env.MODE === 'development' || import.meta.env.D
 export const storageKeys = {
   token: isDev ? 'kinema.dev.token' : 'kinema.token',
   theme: isDev ? 'kinema.dev.theme' : 'kinema.theme',
+  language: isDev ? 'kinema.dev.language' : 'kinema.language',
   theater: isDev ? 'kinema.dev.theater' : 'kinema.theater',
   device: isDev ? 'kinema.dev.device' : 'kinema.device',
   volume: isDev ? 'kinema.dev.volume' : 'kinema.volume',

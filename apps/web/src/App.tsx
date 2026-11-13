@@ -14,7 +14,7 @@ import { RequestsPage } from './features/requests/RequestsPage'
 import { SearchPage } from './features/search/SearchPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { useAuth } from './lib/auth'
-import { t } from './lib/i18n'
+import { t, useLanguage } from './lib/i18n'
 
 // The player is the heaviest screen; load it only when something plays.
 const PlayerPage = lazy(() => import('./features/player/PlayerPage'))
@@ -30,6 +30,7 @@ function Splash() {
 }
 
 export function App() {
+  useLanguage()
   const { user, loading } = useAuth()
   const { pathname } = useLocation()
   // Share links work without a profile, signed in or not.

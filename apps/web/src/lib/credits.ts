@@ -11,7 +11,8 @@ export interface Credit {
 }
 
 /** Keep in sync with apps/web/package.json and the Cargo.toml files. The Android app keeps its own list (ui/AboutScreens.kt). */
-export const credits: { group: string; items: Credit[] }[] = [
+export function getCredits(): { group: string; items: Credit[] }[] {
+  return [
   {
     group: t('credits.group.interface'),
     items: [
@@ -37,7 +38,7 @@ export const credits: { group: string; items: Credit[] }[] = [
       { name: 'axum and tower-http', url: 'https://github.com/tokio-rs/axum', license: 'MIT' },
       { name: 'axum-server', url: 'https://github.com/programatik29/axum-server', license: 'MIT' },
       { name: 'SQLx', url: 'https://github.com/launchbadge/sqlx', license: 'MIT / Apache-2.0' },
-      { name: 'SQLite', url: 'https://www.sqlite.org', license: 'Public domain' },
+      { name: 'SQLite', url: 'https://www.sqlite.org', license: t('credits.publicDomain') },
       { name: 'rustls', url: 'https://github.com/rustls/rustls', license: 'Apache-2.0 / ISC / MIT' },
       { name: 'rcgen', url: 'https://github.com/rustls/rcgen', license: 'MIT / Apache-2.0' },
       { name: 'reqwest', url: 'https://github.com/seanmonstar/reqwest', license: 'MIT / Apache-2.0' },
@@ -49,8 +50,8 @@ export const credits: { group: string; items: Credit[] }[] = [
       { name: 'chrono', url: 'https://github.com/chronotope/chrono', license: 'MIT / Apache-2.0' },
       { name: 'libc', url: 'https://github.com/rust-lang/libc', license: 'MIT / Apache-2.0' },
       { name: 'tracing', url: 'https://github.com/tokio-rs/tracing', license: 'MIT' },
-      { name: 'FFmpeg', url: 'https://ffmpeg.org', license: 'GPL (bundled build, run as a separate program)' },
-      { name: 'mpv', url: 'https://github.com/mpv-player/mpv', license: 'GPL-2.0+ / LGPL-2.1+ (bundled with the desktop app, run as a separate program; notice in resources/mpv/NOTICE-mpv.txt)' },
+      { name: 'FFmpeg', url: 'https://ffmpeg.org', license: t('credits.ffmpeg') },
+      { name: 'mpv', url: 'https://github.com/mpv-player/mpv', license: t('credits.mpv') },
     ],
   },
   {
@@ -64,4 +65,5 @@ export const credits: { group: string; items: Credit[] }[] = [
     group: t('credits.group.inspiration'),
     items: [{ name: 'Plex Media Server', url: 'https://www.plex.tv', license: t('credits.plex') }],
   },
-]
+  ]
+}

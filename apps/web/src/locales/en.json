@@ -659,5 +659,10 @@
   "notify.security.starttls": "STARTTLS (usually port 587)",
   "notify.security.none": "None",
   "users.owner": "Site owner",
-  "users.member": "Member"
+  "users.member": "Member",
+  "profile.appLanguage": "App language",
+  "profile.appLanguageHint": "Language used for buttons, menus and labels in this browser.",
+  "credits.publicDomain": "Public domain",
+  "credits.ffmpeg": "GPL (bundled build, run as a separate program)",
+  "credits.mpv": "GPL-2.0+ / LGPL-2.1+ (bundled with the desktop app, run as a separate program; notice in resources/mpv/NOTICE-mpv.txt)"
 }
