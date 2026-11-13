@@ -1,4 +1,9 @@
-const electron = require('electron')
+let electron = null
+try {
+  electron = require('electron')
+} catch {
+  // Running in plain Node.js (e.g. unit tests) without an Electron binary installed.
+}
 const { app, BrowserWindow, Menu, dialog, ipcMain, nativeTheme, net: electronNet, shell, session } =
   typeof electron === 'object' && electron !== null ? electron : {}
 const dgram = require('dgram')
@@ -11,7 +16,7 @@ const path = require('path')
 const { Readable } = require('stream')
 const { pipeline } = require('stream/promises')
 const { pathToFileURL } = require('url')
-const { t, setLanguage, getLanguage, messages } = require('./i18n')
+const { t, setLanguage, getLanguage, isRtl, messages, SUPPORTED_LANGUAGES } = require('./i18n')
 const updates = require('./updates')
 const mpv = require('./mpv')
 
@@ -55,7 +60,12 @@ const save = () => {
   }
 }
 
-const applyLanguage = () => setLanguage(config.language, app.getPreferredSystemLanguages(), app.getLocale())
+const applyLanguage = () =>
+  setLanguage(
+    config.language,
+    app ? app.getPreferredSystemLanguages() : [],
+    app ? app.getLocale() : 'en',
+  )
 
 const origin = (url) => {
   try {
@@ -383,11 +393,29 @@ if (ipcMain) {
   ipcMain.on('i18n:language', (event) => {
     event.returnValue = trusted(event) ? getLanguage() : 'en'
   })
+  ipcMain.on('i18n:preference', (event) => {
+    event.returnValue = trusted(event) ? config.language || 'system' : 'system'
+  })
+  ipcMain.on('i18n:languages', (event) => {
+    event.returnValue = trusted(event) ? SUPPORTED_LANGUAGES : []
+  })
+  ipcMain.on('i18n:rtl', (event) => {
+    event.returnValue = trusted(event) ? isRtl() : false
+  })
   ipcMain.on('i18n:set', (event, tag) => {
-    if (!trusted(event) || typeof tag !== 'string') return
-    config.language = tag
+    if (!trusted(event) || typeof tag !== 'string') {
+      event.returnValue = getLanguage()
+      return
+    }
+    const clean = tag.trim()
+    if (!clean || clean === 'system') {
+      delete config.language
+    } else {
+      config.language = clean
+    }
     save()
     applyLanguage()
+    event.returnValue = getLanguage()
   })
 }
 

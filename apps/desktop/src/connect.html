@@ -305,6 +305,33 @@
       }
       .cancel-btn:hover { color: var(--fg); text-decoration: underline; }
 
+      .lang-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+      }
+      .lang-row label {
+        font-size: 12px;
+        color: var(--subtle);
+      }
+      .lang-select {
+        background: var(--raised);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 5px 10px;
+        color: var(--fg);
+        font-size: 12px;
+        outline: none;
+        cursor: pointer;
+        max-width: 210px;
+      }
+      .lang-select:focus {
+        border-color: var(--primary);
+      }
+
       .spinner {
         display: inline-block;
         width: 14px;
@@ -314,7 +341,7 @@
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
         vertical-align: middle;
-        margin-right: 6px;
+        margin-inline-end: 6px;
       }
       @keyframes spin { to { transform: rotate(360deg); } }
     </style>
@@ -354,6 +381,11 @@
       </form>
 
       <button type="button" class="cancel-btn" id="cancel-btn" style="display: none;">Cancel and return to current server</button>
+
+      <div class="lang-row" id="lang-row">
+        <label for="lang-select" id="lang-label">Language</label>
+        <select id="lang-select" class="lang-select"></select>
+      </div>
     </div>
 
     <script>
@@ -369,17 +401,59 @@
         errorBox.style.display = 'block'
       }
 
-      const msgs = (bridge && bridge.getMessages) ? bridge.getMessages() : {}
+      let msgs = (bridge && bridge.getMessages) ? bridge.getMessages() : {}
       const t = (k, fb) => msgs[k] || fb
 
-      document.getElementById('title-text').textContent = t('connect.title', 'Connect to Kinema')
-      document.getElementById('subtitle-text').textContent = t('connect.subtitle', 'Your movies and shows, from your own server.')
-      document.getElementById('on-network-label').textContent = t('connect.onNetwork', 'On this network')
-      document.getElementById('rescan-btn').textContent = t('connect.rescan', 'Search again')
-      document.getElementById('address-label').textContent = t('connect.address', 'Server address')
-      document.getElementById('address-input').placeholder = t('connect.addressPlaceholder', '192.168.1.10:3000 or media.example.com')
-      document.getElementById('submit-btn').textContent = t('connect.connect', 'Connect')
-      document.getElementById('cancel-btn').textContent = t('connect.cancel', 'Cancel and return to current server')
+      function applyDirection() {
+        const lang = (bridge && bridge.getLanguage) ? bridge.getLanguage() : 'en'
+        const rtl = (bridge && bridge.isRtl) ? bridge.isRtl() : (lang === 'ar' || lang === 'ur')
+        document.documentElement.lang = lang
+        document.documentElement.dir = rtl ? 'rtl' : 'ltr'
+      }
+
+      function applyTranslations() {
+        document.getElementById('title-text').textContent = t('connect.title', 'Connect to Kinema')
+        document.getElementById('subtitle-text').textContent = t('connect.subtitle', 'Your movies and shows, from your own server.')
+        document.getElementById('on-network-label').textContent = t('connect.onNetwork', 'On this network')
+        document.getElementById('rescan-btn').textContent = t('connect.rescan', 'Search again')
+        document.getElementById('address-label').textContent = t('connect.address', 'Server address')
+        document.getElementById('address-input').placeholder = t('connect.addressPlaceholder', '192.168.1.10:3000 or media.example.com')
+        document.getElementById('submit-btn').textContent = t('connect.connect', 'Connect')
+        document.getElementById('cancel-btn').textContent = t('connect.cancel', 'Cancel and return to current server')
+        document.getElementById('lang-label').textContent = t('connect.language', 'Language')
+        const sysOpt = document.querySelector('#lang-select option[value="system"]')
+        if (sysOpt) sysOpt.textContent = t('connect.languageSystem', 'System default')
+      }
+
+      const langSelect = document.getElementById('lang-select')
+      const supportedLangs = (bridge && bridge.getSupportedLanguages) ? bridge.getSupportedLanguages() : []
+      if (supportedLangs.length > 0) {
+        const sysOpt = document.createElement('option')
+        sysOpt.value = 'system'
+        sysOpt.textContent = t('connect.languageSystem', 'System default')
+        langSelect.appendChild(sysOpt)
+        for (const item of supportedLangs) {
+          const opt = document.createElement('option')
+          opt.value = item.tag
+          opt.textContent = item.name
+          langSelect.appendChild(opt)
+        }
+        langSelect.value = (bridge && bridge.getLanguagePreference) ? bridge.getLanguagePreference() : 'system'
+        langSelect.addEventListener('change', () => {
+          if (bridge && bridge.setLanguage) {
+            bridge.setLanguage(langSelect.value)
+            msgs = bridge.getMessages ? bridge.getMessages() : {}
+            applyDirection()
+            applyTranslations()
+            renderServers(lastServers)
+          }
+        })
+      } else {
+        document.getElementById('lang-row').style.display = 'none'
+      }
+
+      applyDirection()
+      applyTranslations()
 
       if (bridge && bridge.hasSavedServer && bridge.hasSavedServer()) {
         document.getElementById('cancel-btn').style.display = 'block'
@@ -395,7 +469,35 @@
         if (bridge && bridge.cancel) bridge.cancel()
       })
 
+      let lastServers = null
+
+      function renderServers(list) {
+        if (!list) return
+        if (list.length === 0) {
+          serverList.innerHTML = `<div class="status-box">${t('connect.noneFound', 'No server answered. Make sure Kinema is running and on the same Wi-Fi, or enter its address below.')}</div>`
+          return
+        }
+        serverList.innerHTML = ''
+        for (const s of list) {
+          const row = document.createElement('div')
+          row.className = 'server-row'
+          const displayName = s.thisComputer
+            ? `${escapeHtml(s.name || 'Kinema')} · ${escapeHtml(t('connect.thisComputer', 'This computer'))}`
+            : escapeHtml(s.name || 'Kinema')
+          row.innerHTML = `
+            <div class="server-info">
+              <span class="server-name">${displayName}</span>
+              <span class="server-url">${escapeHtml(s.url)}</span>
+            </div>
+            <button type="button" class="badge-btn">${t('connect.connect', 'Connect')}</button>
+          `
+          row.addEventListener('click', () => doConnect(s.url, row))
+          serverList.appendChild(row)
+        }
+      }
+
       async function scan() {
+        lastServers = null
         serverList.innerHTML = `<div class="status-box"><span class="spinner"></span>${t('connect.searching', 'Looking for servers…')}</div>`
         errorBox.style.display = 'none'
         if (!bridge || !bridge.discover) {
@@ -404,24 +506,8 @@
         }
         try {
           const list = await bridge.discover()
-          if (!list || list.length === 0) {
-            serverList.innerHTML = `<div class="status-box">${t('connect.noneFound', 'No server answered. Make sure Kinema is running and on the same Wi-Fi, or enter its address below.')}</div>`
-            return
-          }
-          serverList.innerHTML = ''
-          for (const s of list) {
-            const row = document.createElement('div')
-            row.className = 'server-row'
-            row.innerHTML = `
-              <div class="server-info">
-                <span class="server-name">${escapeHtml(s.name || 'Kinema')}</span>
-                <span class="server-url">${escapeHtml(s.url)}</span>
-              </div>
-              <button type="button" class="badge-btn">${t('connect.connect', 'Connect')}</button>
-            `
-            row.addEventListener('click', () => doConnect(s.url, row))
-            serverList.appendChild(row)
-          }
+          lastServers = list || []
+          renderServers(lastServers)
         } catch (e) {
           serverList.innerHTML = `<div class="status-box">${escapeHtml(e.message || String(e))}</div>`
         }

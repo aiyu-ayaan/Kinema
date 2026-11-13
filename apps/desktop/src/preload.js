@@ -18,6 +18,11 @@ const desktopBridge = {
   hasSavedServer: () => ipcRenderer.sendSync('server:hasSaved'),
   getTheme: () => ipcRenderer.sendSync('theme:get'),
   getMessages: () => ipcRenderer.sendSync('i18n:get'),
+  getLanguage: () => ipcRenderer.sendSync('i18n:language'),
+  getLanguagePreference: () => ipcRenderer.sendSync('i18n:preference'),
+  setLanguage: (tag) => ipcRenderer.sendSync('i18n:set', tag),
+  getSupportedLanguages: () => ipcRenderer.sendSync('i18n:languages'),
+  isRtl: () => ipcRenderer.sendSync('i18n:rtl'),
   // Plays in mpv (mpv.js). play() resolves when mpv closes: { position, ended } or { error }.
   mpv: {
     available: () => ipcRenderer.invoke('mpv:available'),

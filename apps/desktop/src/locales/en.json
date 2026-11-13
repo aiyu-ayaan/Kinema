@@ -20,6 +20,8 @@
   "connect.title": "Connect to Kinema",
   "connect.thisComputer": "This computer",
   "connect.changeServer": "Use another server",
+  "connect.language": "Language",
+  "connect.languageSystem": "System default",
   "update.githubAnswered": "GitHub answered {status}.",
   "update.downloadAnswered": "The download answered {status}.",
   "update.notAppImage": "The download is not an AppImage.",
