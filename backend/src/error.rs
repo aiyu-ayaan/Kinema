@@ -4,7 +4,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde_json::json;
 
-/// `{"error": {"code", "message"}}`. The code is a key in `locales/en.json`.
+/// `{"error": {"code", "message"}}`. The code is a key in `locales/<lang>.json`.
 #[derive(Debug)]
 pub struct ApiError {
     status: StatusCode,
