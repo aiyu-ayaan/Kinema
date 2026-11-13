@@ -1,3 +1,12 @@
+## v0.0.1-alpha.14 (2026-11-13)
+
+- !alpha(all) : Release 27-language i18n support
+- docs(i18n) : document 27-language i18n architecture across all platforms
+- web(i18n) : add 27-language locale catalogs, language selector, and RTL support
+- android(i18n) : add 27-language translations, locale config, and in-app language picker
+- backend(i18n) : add 27-language locale catalogs, resolution middleware, and API endpoints
+- desktop(i18n) : add 27-language i18n catalogs, language picker, and RTL support
+
 ## v0.0.1-alpha.13 (2026-11-11)
 
 - !alpha(all) : Release alpha build
