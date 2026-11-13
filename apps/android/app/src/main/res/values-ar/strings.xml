@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kinema</string>
+    <!-- Shared actions -->
+    <string name="action_back">رجوع</string>
+    <string name="action_cancel">إلغاء</string>
+    <string name="action_details">التفاصيل</string>
+    <string name="action_play">تشغيل</string>
+    <string name="action_resume">استئناف</string>
+    <string name="action_retry">إعادة المحاولة</string>
+    <string name="action_save">حفظ</string>
+
+    <!-- Errors -->
+    <string name="error_title">حدث خطأ ما</string>
+    <string name="error_generic">لم ينجح ذلك. حاول مرة أخرى.</string>
+    <string name="error_offline">تعذر الوصول إلى الخادم. تأكد من أنه يعمل وأن هذا الهاتف على نفس الشبكة، أو عيّن عنوانًا عامًا.</string>
+    <string name="error_untrusted">شهادة الخادم ليست الشهادة التي وافقت عليها. اتصل مرة أخرى لمراجعتها.</string>
+
+    <!-- Connect -->
+    <string name="connect_title">Kinema</string>
+    <string name="connect_subtitle">أفلامك ومسلسلاتك، من خادمك الخاص.</string>
+    <string name="connect_found">على هذه الشبكة</string>
+    <string name="connect_rescan">بحث مرة أخرى</string>
+    <string name="connect_scanning">جارٍ البحث عن خوادم…</string>
+    <string name="connect_none">لم يستجب أي خادم. تأكد من أن Kinema يعمل وأن هذا الهاتف على نفس شبكة Wi-Fi، أو أدخل عنوانه أدناه.</string>
+    <string name="connect_this_computer">هذا الكمبيوتر · %1$s</string>
+    <string name="connect_manual">إدخال عنوان</string>
+    <string name="connect_address">عنوان الخادم</string>
+    <string name="connect_address_hint">يظهر في Kinema على الويب ضمن الإعدادات › الشبكة</string>
+    <string name="connect_invalid">أدخل عنوانًا مثل 192.168.1.10:3000 أو media.example.com.</string>
+    <string name="connect_action">اتصال</string>
+    <string name="connect_change_server">استخدام خادم آخر</string>
+
+    <string name="trust_title">هل تثق بهذا الخادم؟</string>
+    <string name="trust_body">أنشأ %1$s شهادة أمان خاصة به. تأكد من تطابق هذا الرمز مع الرمز الموجود في Kinema على الويب ضمن الإعدادات › الشبكة قبل الوثوق به.</string>
+    <string name="trust_accept">وثوق</string>
+
+    <string name="unreachable_title">تعذر الوصول إلى الخادم</string>
+    <string name="unreachable_body">لم يستجب Kinema على %1$s من عنوانه المنزلي أو العام.</string>
+
+    <string name="forget_title">استخدام خادم آخر؟</string>
+    <string name="forget_body">سينسى هذا الهاتف الخادم وعناوينه وشهادته. سيبقى سجل المشاهدة الخاص بك على الخادم.</string>
+    <string name="forget_action">نسيان الخادم</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">من يشاهد؟</string>
+    <string name="profiles_locked">مقفل</string>
+    <string name="profiles_setup_title">أكمل الإعداد أولاً</string>
+    <string name="profiles_setup_body">افتح %1$s في متصفح لإنشاء الحساب الأول وإضافة وسائطك. ثم عد إلى هنا.</string>
+    <string name="unlock_password">كلمة المرور</string>
+    <string name="unlock_pin">رمز PIN</string>
+    <string name="unlock_show">إظهار</string>
+    <string name="unlock_hide">إخفاء</string>
+    <string name="unlock_action">تسجيل الدخول</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">الرئيسية</string>
+    <string name="tab_library">المكتبة</string>
+    <string name="tab_search">بحث</string>
+    <string name="tab_settings">الإعدادات</string>
+
+    <!-- Home -->
+    <string name="home_continue">متابعة المشاهدة</string>
+    <string name="home_shelf_movies">أفلام مضافة حديثًا</string>
+    <string name="home_shelf_shows">مسلسلات مضافة حديثًا</string>
+    <string name="home_shelf_episodes">حلقات جديدة</string>
+    <string name="home_hero_continue">متابعة المشاهدة</string>
+    <string name="home_hero_new">جديد</string>
+    <string name="home_empty_title">لا يوجد شيء هنا بعد</string>
+    <string name="home_empty_body">تظهر العناوين هنا بمجرد أن يضيف مسؤول الخادم مكتبة في Kinema على الويب.</string>
+
+    <!-- Library and search -->
+    <string name="library_none_title">لا توجد مكتبات</string>
+    <string name="library_none_body">لا توجد مكتبات يمكنك رؤيتها على الخادم بعد.</string>
+    <string name="library_switcher_title">المكتبات</string>
+    <string name="library_expand">إظهار المسلسلات</string>
+    <string name="library_collapse">إخفاء المسلسلات</string>
+    <plurals name="library_show_count">
+        <item quantity="zero">%d مسلسلات</item>
+        <item quantity="one">%d مسلسل</item>
+        <item quantity="two">%d مسلسلان</item>
+        <item quantity="few">%d مسلسلات</item>
+        <item quantity="many">%d مسلسلًا</item>
+        <item quantity="other">%d مسلسل</item>
+    </plurals>
+    <string name="library_empty_title">هذه المكتبة فارغة</string>
+    <string name="library_empty_body">تظهر الملفات الجديدة هنا بعد أن يفحصها الخادم.</string>
+    <string name="search_hint">أفلام، مسلسلات، حلقات</string>
+    <string name="search_clear">مسح</string>
+    <string name="search_idle_title">ابحث عن شيء لمشاهدته</string>
+    <string name="search_idle_body">ابحث بالعنوان في كل مكتبة.</string>
+    <string name="search_none_title">لا توجد نتائج</string>
+    <string name="search_none_body">لا يوجد ما يطابق “%1$s”.</string>
+
+    <!-- Title page -->
+    <string name="item_watched">تمت المشاهدة</string>
+    <string name="item_mark_watched">تحديد كمشاهد</string>
+    <string name="item_mark_unwatched">تحديد كغير مشاهد</string>
+    <string name="item_from_start">التشغيل من البداية</string>
+    <string name="item_play_episode">تشغيل م%1$d · ح%2$d</string>
+    <string name="item_episode_short">م%1$d · ح%2$d</string>
+    <string name="item_season_no">م%1$d</string>
+    <string name="item_episode_no">ح%1$d</string>
+    <string name="item_episode_number">الحلقة %1$d</string>
+    <string name="item_left">متبقٍ %1$s</string>
+    <string name="item_seasons">المواسم</string>
+    <string name="item_episodes">الحلقات</string>
+    <string name="item_cast">طاقم التمثيل</string>
+    <string name="item_previous">السابق</string>
+    <string name="item_next">التالي</string>
+    <string name="item_file">الملف</string>
+    <plurals name="item_seasons">
+        <item quantity="zero">%d مواسم</item>
+        <item quantity="one">%d موسم</item>
+        <item quantity="two">%d موسمان</item>
+        <item quantity="few">%d مواسم</item>
+        <item quantity="many">%d موسمًا</item>
+        <item quantity="other">%d موسم</item>
+    </plurals>
+    <plurals name="item_episodes">
+        <item quantity="zero">%d حلقات</item>
+        <item quantity="one">%d حلقة</item>
+        <item quantity="two">%d حلقتان</item>
+        <item quantity="few">%d حلقات</item>
+        <item quantity="many">%d حلقة</item>
+        <item quantity="other">%d حلقة</item>
+    </plurals>
+    <plurals name="item_audio_tracks">
+        <item quantity="zero">%d مسارات صوتية</item>
+        <item quantity="one">%d مسار صوتي</item>
+        <item quantity="two">%d مساران صوتيان</item>
+        <item quantity="few">%d مسارات صوتية</item>
+        <item quantity="many">%d مسارًا صوتيًا</item>
+        <item quantity="other">%d مسار صوتي</item>
+    </plurals>
+    <plurals name="item_subtitle_tracks">
+        <item quantity="zero">%d ترجمات</item>
+        <item quantity="one">%d ترجمة</item>
+        <item quantity="two">%d ترجمتان</item>
+        <item quantity="few">%d ترجمات</item>
+        <item quantity="many">%d ترجمة</item>
+        <item quantity="other">%d ترجمة</item>
+    </plurals>
+    <string name="format_hours_minutes">%1$dس %2$dد</string>
+    <string name="format_minutes">%1$dد</string>
+
+    <!-- Player -->
+    <string name="player_pause">إيقاف مؤقت</string>
+    <string name="player_stop">إيقاف</string>
+    <string name="player_volume">مستوى الصوت</string>
+    <string name="player_brightness">السطوع</string>
+    <string name="player_boost">تعزيز %1$d%%</string>
+    <string name="player_back10">رجوع 10 ثوانٍ</string>
+    <string name="player_forward10">تقديم 10 ثوانٍ</string>
+    <string name="player_seconds">%1$d ث</string>
+    <string name="player_next">الحلقة التالية</string>
+    <string name="player_up_next_in">التالي خلال %1$s</string>
+    <string name="player_play_now">تشغيل الآن</string>
+    <string name="player_dismiss">إخفاء</string>
+    <string name="player_skip_intro">تخطي المقدمة</string>
+    <string name="player_skip_credits">تخطي الشارة</string>
+    <string name="player_pip">صورة داخل صورة</string>
+    <string name="player_fullscreen">ملء الشاشة</string>
+    <string name="player_exit_fullscreen">إنهاء ملء الشاشة</string>
+    <string name="player_minimize">تصغير</string>
+    <string name="player_up_next_list">الحلقات والمزيد</string>
+    <string name="watch_episodes">الحلقات</string>
+    <string name="watch_more">المزيد للمشاهدة</string>
+    <string name="watch_now_playing">قيد التشغيل الآن</string>
+    <string name="watch_nothing">لا يوجد شيء آخر للمشاهدة هنا بعد</string>
+    <string name="player_tracks">الصوت والترجمة</string>
+    <string name="player_audio">الصوت</string>
+    <string name="player_subtitles">الترجمة</string>
+    <string name="player_subtitles_off">إيقاف</string>
+    <string name="series_tracks">الصوت &amp; الترجمة لجميع الحلقات</string>
+    <string name="series_hint">تأتي المسارات من الحلقة الأولى. تستخدم كل حلقة نفس موضع المسار، لذا يعمل هذا عندما تكون جميع الحلقات من نفس الإصدار.</string>
+    <string name="series_default">افتراضي الخادم</string>
+    <string name="series_no_streams">لم يتم فحص الحلقة الأولى بعد. حاول مرة أخرى بعد انتهاء الفحص.</string>
+    <string name="player_subtitle_image">لا يمكن عرض ترجمات الصور بعد</string>
+    <string name="player_fill">ملء الشاشة</string>
+    <string name="player_fit">ملاءمة الشاشة</string>
+    <string name="player_mode_direct">تشغيل مباشر</string>
+    <string name="player_mode_remux">بث مباشر</string>
+    <string name="player_mode_transcode">جارٍ التحويل</string>
+    <string name="player_error_title">تعذر تشغيل هذا</string>
+    <string name="player_error">توقف الفيديو. تحقق من الاتصال وحاول مرة أخرى.</string>
+    <string name="player_no_file">لا يحتوي هذا العنوان على ملف قابل للتشغيل.</string>
+    <string name="track_mono">أحادي</string>
+    <string name="track_stereo">ستيريو</string>
+    <string name="track_numbered">المسار %1$d</string>
+
+    <!-- Settings -->
+    <string name="settings_switch_profile">تبديل</string>
+    <string name="settings_connection">الاتصال</string>
+    <string name="settings_route_local">في المنزل</string>
+    <string name="settings_route_public">خارج المنزل · عنوان عام</string>
+    <string name="settings_route_hint">يستخدم Kinema العنوان المنزلي عندما يستجيب وينتقل إلى العنوان العام عند مغادرتك.</string>
+    <string name="settings_local_url">العنوان المنزلي</string>
+    <string name="settings_public_url">العنوان العام</string>
+    <string name="settings_public_hint">وكيل عكسي أو نفق يصل إلى الخادم من أي مكان</string>
+    <string name="settings_public_from_server">استخدام عنوان الخادم: %1$s</string>
+    <string name="settings_public_test">اختبار</string>
+    <string name="settings_public_ok">الخادم يستجيب على هذا العنوان</string>
+    <string name="settings_public_unreachable">لا توجد استجابة على هذا العنوان من هنا</string>
+    <string name="settings_appearance">المظهر</string>
+    <string name="settings_theme_system">النظام</string>
+    <string name="settings_theme_light">فاتح</string>
+    <string name="settings_theme_dark">داكن</string>
+    <string name="settings_dynamic">ألوان الخلفية</string>
+    <string name="settings_dynamic_hint">تلوين التطبيق بألوان من خلفية شاشتك</string>
+    <string name="settings_language">اللغة</string>
+    <string name="settings_language_system">افتراضي النظام</string>
+    <string name="settings_language_picker_title">لغة التطبيق</string>
+    <string name="player_notification_channel">تشغيل الوسائط</string>
+    <string name="player_notification_channel_desc">عناصر التحكم في التشغيل وإشعار الوسائط</string>
+    <string name="settings_playback">التشغيل</string>
+    <string name="settings_pip">صورة داخل صورة</string>
+    <string name="settings_pip_on">يؤدي مغادرة التطبيق إلى استمرار تشغيل الفيديو في نافذة صغيرة. إغلاق النافذة يوقفه مؤقتًا.</string>
+    <string name="settings_pip_off">يؤدي مغادرة التطبيق إلى استمرار تشغيل الصوت، مع عناصر التحكم في الإشعار.</string>
+    <string name="settings_server">الخادم</string>
+    <string name="settings_cert_pinned">شهادة خاصة، معتمدة على هذا الهاتف</string>
+    <string name="settings_cert_public">شهادة موقعة من جهة عامة</string>
+    <string name="settings_kinema">Kinema</string>
+    <string name="settings_updates">التحديثات</string>
+    <string name="settings_updates_subtitle">الإصدار %1$s، ملاحظات الإصدار والقناة</string>
+    <string name="settings_about_subtitle">الإصدار %1$s، المطور والإقرارات</string>
+    <string name="update_title">التحديثات</string>
+    <string name="update_checking">جارٍ التحقق من التحديثات…</string>
+    <string name="update_check_failed">تعذر التحقق من التحديثات</string>
+    <string name="update_check_failed_body">لديك %1$s. تحقق من اتصالك وحاول مرة أخرى.</string>
+    <string name="update_failed">تعذر التحديث: %1$s</string>
+    <string name="update_up_to_date">Kinema محدّث</string>
+    <string name="update_dev_build">بنية تطوير</string>
+    <string name="update_dev_build_body">لديك %1$s. يتم تحديث بنية التطوير عن طريق إعادة بنائها.</string>
+    <string name="update_you_have">لديك %1$s.</string>
+    <string name="update_available">يتوفر Kinema %1$s</string>
+    <string name="update_prompt_body">لديك %1$s. يسأل Android قبل التثبيت؛ ويتم الاحتفاظ بالخادم وتسجيل الدخول والإعدادات. ملاحظات الإصدار والقناة موجودة في الإعدادات، ضمن التحديثات.</string>
+    <string name="update_downloading_percent">جارٍ التنزيل %1$d%%</string>
+    <string name="update_install">تحديث</string>
+    <string name="update_download_install">تنزيل وتثبيت</string>
+    <string name="update_check_again">التحقق مرة أخرى</string>
+    <string name="update_later">لاحقًا</string>
+    <string name="update_channel">القناة</string>
+    <string name="update_channel_stable">مستقر</string>
+    <string name="update_channel_beta">تجريبي (Beta)</string>
+    <string name="update_channel_alpha">ألفا (Alpha)</string>
+    <string name="update_channel_hint">تحصل قناتا Beta وAlpha على البنيات الجديدة مبكرًا، وعلى كل بنية مستقرة أيضًا.</string>
+    <string name="update_whats_new_in">ما الجديد في %1$s</string>
+    <string name="update_in_this_version">في هذا الإصدار</string>
+    <string name="update_loading_notes">جارٍ تحميل ملاحظات الإصدار…</string>
+    <string name="update_no_notes">لا توجد ملاحظات إصدار لهذا الإصدار.</string>
+    <string name="about_title">حول Kinema</string>
+    <string name="about_section_app">التطبيق</string>
+    <string name="about_version_build">الإصدار %1$s · البنية %2$d</string>
+    <string name="about_privacy_title">الخصوصية</string>
+    <string name="about_privacy_subtitle">يعمل على خادمك الخاص. مكتبتك وسجل المشاهدة لا يغادرانه أبدًا.</string>
+    <string name="about_source_code">الكود المصدري</string>
+    <string name="about_section_developer">المطور</string>
+    <string name="about_developer_tagline">صُمم وبُني بواسطة مطور واحد.</string>
+    <string name="about_github">GitHub</string>
+    <string name="about_portfolio">معرض الأعمال</string>
+    <string name="about_section_open_source">مصدر مفتوح</string>
+    <string name="about_acknowledgements">الإقرارات</string>
+    <string name="about_acknowledgements_subtitle">المكتبات والمشاريع التي بُني عليها تطبيق Android</string>
+    <string name="about_tmdb">بيانات وصفية وصور للأفلام والمسلسلات، عبر خادمك. يستخدم هذا المنتج واجهة برمجة تطبيقات TMDB ولكنه غير معتمد أو مصادق عليه من قِبل TMDB.</string>
+    <string name="about_plex">الإلهام: فكرة خادم وسائط شخصي. لم يتم استخدام أي كود أو أصول من Plex.</string>
+    <string name="update_github_status">استجاب GitHub بـ %1$d</string>
+    <string name="update_download_status">استجاب التنزيل بـ %1$d</string>
+    <string name="update_conflict">رفض Android التحديث: إنه موقّع بمفتاح مختلف عن التطبيق المثبت. قم بإلغاء تثبيت هذه النسخة أولاً.</string>
+
+    <!-- Playlists and Collections -->
+    <string name="home_shelf_playlists">قوائم التشغيل</string>
+    <string name="home_shelf_collections">المجموعات</string>
+    <string name="playlist_title">قائمة التشغيل</string>
+    <string name="playlist_play_all">تشغيل الكل</string>
+    <string name="playlist_empty">قائمة التشغيل هذه فارغة</string>
+    <string name="playlist_empty_body">أضف أفلامًا أو حلقات إلى قائمة التشغيل هذه.</string>
+    <string name="playlist_add">إضافة إلى قائمة التشغيل</string>
+    <string name="playlist_create">قائمة تشغيل جديدة</string>
+    <string name="playlist_name">اسم قائمة التشغيل</string>
+    <string name="playlist_delete">حذف قائمة التشغيل</string>
+    <string name="playlist_delete_confirm">هل تريد حذف قائمة التشغيل “%1$s”؟</string>
+    <string name="playlist_remove">إزالة من قائمة التشغيل</string>
+    <string name="playlist_added">تمت الإضافة إلى %1$s</string>
+    <string name="playlist_created">تم إنشاء قائمة التشغيل</string>
+    <string name="playlist_delete_failed">فشل حذف قائمة التشغيل</string>
+    <string name="playlist_remove_failed">فشلت إزالة العنصر</string>
+    <string name="collection_title">المجموعة</string>
+    <string name="collection_empty">هذه المجموعة فارغة</string>
+    <string name="collection_empty_body">لا توجد عناوين في هذه المجموعة بعد.</string>
+    <string name="action_delete">حذف</string>
+    <string name="action_create">إنشاء</string>
+    <plurals name="playlist_items_count">
+        <item quantity="zero">%d عناصر</item>
+        <item quantity="one">%d عنصر</item>
+        <item quantity="two">%d عنصران</item>
+        <item quantity="few">%d عناصر</item>
+        <item quantity="many">%d عنصرًا</item>
+        <item quantity="other">%d عنصر</item>
+    </plurals>
+    <plurals name="collection_items_count">
+        <item quantity="zero">%d عناوين</item>
+        <item quantity="one">%d عنوان</item>
+        <item quantity="two">%d عنوانان</item>
+        <item quantity="few">%d عناوين</item>
+        <item quantity="many">%d عنوانًا</item>
+        <item quantity="other">%d عنوان</item>
+    </plurals>
+    <string name="approval_title">في انتظار الموافقة</string>
+    <string name="approval_body">في انتظار موافقة المسؤول على هذا الجهاز.</string>
+    <string name="approval_device">تسجيل الدخول باسم %1$s من %2$s</string>
+    <string name="settings_account">حسابك</string>
+    <string name="settings_requests">الطلبات</string>
+    <string name="settings_requests_subtitle">اطلب إضافة فيلم أو مسلسل</string>
+    <string name="settings_activity">نشاط المشاهدة</string>
+    <string name="settings_activity_subtitle">وقت المشاهدة والسجل الخاص بك</string>
+    <string name="requests_title">الطلبات</string>
+    <string name="requests_new">طلب عنوان</string>
+    <string name="requests_empty">لا توجد طلبات بعد</string>
+    <string name="requests_empty_body">ألا تجد شيئًا؟ اطلب من المسؤول إضافته.</string>
+    <string name="requests_withdraw">سحب</string>
+    <string name="requests_status_pending">قيد الانتظار</string>
+    <string name="requests_status_approved">تمت الموافقة</string>
+    <string name="requests_status_declined">مرفوض</string>
+    <string name="requests_status_available">متاح</string>
+    <string name="requests_kind_movie">فيلم</string>
+    <string name="requests_kind_show">مسلسل</string>
+    <string name="requests_search">العنوان</string>
+    <string name="requests_note">ملاحظة (اختياري)</string>
+    <string name="requests_no_tmdb">لا يوجد بحث عن العناوين في الخادم. اكتب العنوان الذي تريده.</string>
+    <string name="requests_no_results">لا توجد مطابقات</string>
+    <string name="requests_submit">إرسال الطلب</string>
+    <string name="requests_admin_note">المسؤول: %1$s</string>
+    <string name="activity_title">نشاط المشاهدة</string>
+    <string name="activity_total">الإجمالي</string>
+    <string name="activity_week">آخر 7 أيام</string>
+    <string name="activity_month">آخر 30 يومًا</string>
+    <string name="activity_titles">العناوين</string>
+    <string name="activity_completed">مكتمل</string>
+    <string name="activity_daily">وقت المشاهدة اليومي</string>
+    <string name="activity_daily_peak">الذروة %1$s</string>
+    <string name="activity_top_titles">الأكثر مشاهدة</string>
+    <string name="activity_top_genres">أبرز الأنواع</string>
+    <string name="activity_history">تم تشغيله مؤخرًا</string>
+    <string name="activity_empty">لم تتم مشاهدة شيء بعد</string>
+    <string name="activity_empty_body">يظهر وقت مشاهدتك هنا بمجرد تشغيل أي شيء.</string>
+    <string name="duration_hm">%1$dس %2$dد</string>
+    <string name="duration_h">%1$dس</string>
+    <string name="duration_m">%1$dد</string>
+    <string name="role_owner">مالك الموقع</string>
+    <string name="role_admin">مسؤول</string>
+    <string name="role_member">عضو</string>
+</resources>

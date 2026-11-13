@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kinema</string>
+    <!-- Shared actions -->
+    <string name="action_back">戻る</string>
+    <string name="action_cancel">キャンセル</string>
+    <string name="action_details">詳細</string>
+    <string name="action_play">再生</string>
+    <string name="action_resume">再開</string>
+    <string name="action_retry">再試行</string>
+    <string name="action_save">保存</string>
+
+    <!-- Errors -->
+    <string name="error_title">問題が発生しました</string>
+    <string name="error_generic">うまくいきませんでした。もう一度お試しください。</string>
+    <string name="error_offline">サーバーに接続できません。サーバーが起動しており、このスマートフォンが同じネットワークに接続されているか確認するか、パブリックアドレスを設定してください。</string>
+    <string name="error_untrusted">サーバーの証明書が承認済みのものと一致しません。再度接続して確認してください。</string>
+
+    <!-- Connect -->
+    <string name="connect_title">Kinema</string>
+    <string name="connect_subtitle">あなたの映画や番組を、自分のサーバーから。</string>
+    <string name="connect_found">このネットワーク上</string>
+    <string name="connect_rescan">再検索</string>
+    <string name="connect_scanning">サーバーを検索中…</string>
+    <string name="connect_none">応答するサーバーが見つかりません。Kinema が起動しており、このスマートフォンが同じ Wi-Fi に接続されているか確認するか、下にアドレスを入力してください。</string>
+    <string name="connect_this_computer">このコンピューター · %1$s</string>
+    <string name="connect_manual">アドレスを入力</string>
+    <string name="connect_address">サーバーアドレス</string>
+    <string name="connect_address_hint">Web 版 Kinema の「設定 › ネットワーク」に表示されています</string>
+    <string name="connect_invalid">192.168.1.10:3000 または media.example.com のようなアドレスを入力してください。</string>
+    <string name="connect_action">接続</string>
+    <string name="connect_change_server">別のサーバーを使う</string>
+
+    <string name="trust_title">このサーバーを信頼しますか？</string>
+    <string name="trust_body">%1$s は独自のセキュリティ証明書を作成しました。信頼する前に、このコードが Web 版 Kinema の「設定 › ネットワーク」に表示されているものと一致することを確認してください。</string>
+    <string name="trust_accept">信頼する</string>
+
+    <string name="unreachable_title">サーバーに到達できません</string>
+    <string name="unreachable_body">%1$s の Kinema は、ホームアドレスおよびパブリックアドレスのいずれにも応答しませんでした。</string>
+
+    <string name="forget_title">別のサーバーを使いますか？</string>
+    <string name="forget_body">このスマートフォンからサーバー、アドレス、証明書を削除します。視聴履歴はサーバーに保持されます。</string>
+    <string name="forget_action">サーバーを削除</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">誰が視聴しますか？</string>
+    <string name="profiles_locked">ロック中</string>
+    <string name="profiles_setup_title">まずセットアップを完了してください</string>
+    <string name="profiles_setup_body">ブラウザーで %1$s を開いて最初のアカウントを作成し、メディアを追加してください。完了したらここに戻ってください。</string>
+    <string name="unlock_password">パスワード</string>
+    <string name="unlock_pin">PIN</string>
+    <string name="unlock_show">表示</string>
+    <string name="unlock_hide">非表示</string>
+    <string name="unlock_action">サインイン</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">ホーム</string>
+    <string name="tab_library">ライブラリ</string>
+    <string name="tab_search">検索</string>
+    <string name="tab_settings">設定</string>
+
+    <!-- Home -->
+    <string name="home_continue">視聴を続ける</string>
+    <string name="home_shelf_movies">最近追加された映画</string>
+    <string name="home_shelf_shows">最近追加された番組</string>
+    <string name="home_shelf_episodes">新しいエピソード</string>
+    <string name="home_hero_continue">視聴を続ける</string>
+    <string name="home_hero_new">新着</string>
+    <string name="home_empty_title">まだ何もありません</string>
+    <string name="home_empty_body">サーバー管理者が Web 版 Kinema でライブラリを追加すると、ここに作品が表示されます。</string>
+
+    <!-- Library and search -->
+    <string name="library_none_title">ライブラリがありません</string>
+    <string name="library_none_body">サーバーに閲覧可能なライブラリがまだありません。</string>
+    <string name="library_switcher_title">ライブラリ</string>
+    <string name="library_expand">番組を表示</string>
+    <string name="library_collapse">番組を隠す</string>
+    <plurals name="library_show_count">
+        <item quantity="other">%d 番組</item>
+    </plurals>
+    <string name="library_empty_title">このライブラリは空です</string>
+    <string name="library_empty_body">サーバーがファイルをスキャンすると、新しいファイルがここに表示されます。</string>
+    <string name="search_hint">映画、番組、エピソード</string>
+    <string name="search_clear">クリア</string>
+    <string name="search_idle_title">観たい作品を探す</string>
+    <string name="search_idle_body">すべてのライブラリからタイトルで検索します。</string>
+    <string name="search_none_title">結果がありません</string>
+    <string name="search_none_body">「%1$s」に一致するものはありません。</string>
+
+    <!-- Title page -->
+    <string name="item_watched">視聴済み</string>
+    <string name="item_mark_watched">視聴済みにする</string>
+    <string name="item_mark_unwatched">未視聴にする</string>
+    <string name="item_from_start">最初から再生</string>
+    <string name="item_play_episode">S%1$d · E%2$d を再生</string>
+    <string name="item_episode_short">S%1$d · E%2$d</string>
+    <string name="item_season_no">S%1$d</string>
+    <string name="item_episode_no">E%1$d</string>
+    <string name="item_episode_number">第%1$d話</string>
+    <string name="item_left">残り %1$s</string>
+    <string name="item_seasons">シーズン</string>
+    <string name="item_episodes">エピソード</string>
+    <string name="item_cast">キャスト</string>
+    <string name="item_previous">前へ</string>
+    <string name="item_next">次へ</string>
+    <string name="item_file">ファイル</string>
+    <plurals name="item_seasons">
+        <item quantity="other">%d シーズン</item>
+    </plurals>
+    <plurals name="item_episodes">
+        <item quantity="other">%d エピソード</item>
+    </plurals>
+    <plurals name="item_audio_tracks">
+        <item quantity="other">音声トラック %d 件</item>
+    </plurals>
+    <plurals name="item_subtitle_tracks">
+        <item quantity="other">字幕 %d 件</item>
+    </plurals>
+    <string name="format_hours_minutes">%1$d時間%2$d分</string>
+    <string name="format_minutes">%1$d分</string>
+
+    <!-- Player -->
+    <string name="player_pause">一時停止</string>
+    <string name="player_stop">停止</string>
+    <string name="player_volume">音量</string>
+    <string name="player_brightness">明るさ</string>
+    <string name="player_boost">ブースト %1$d%%</string>
+    <string name="player_back10">10秒戻す</string>
+    <string name="player_forward10">10秒進める</string>
+    <string name="player_seconds">%1$d 秒</string>
+    <string name="player_next">次のエピソード</string>
+    <string name="player_up_next_in">%1$s 後に次を再生</string>
+    <string name="player_play_now">今すぐ再生</string>
+    <string name="player_dismiss">非表示</string>
+    <string name="player_skip_intro">イントロをスキップ</string>
+    <string name="player_skip_credits">クレジットをスキップ</string>
+    <string name="player_pip">ピクチャー・イン・ピクチャー</string>
+    <string name="player_fullscreen">全画面</string>
+    <string name="player_exit_fullscreen">全画面を終了</string>
+    <string name="player_minimize">最小化</string>
+    <string name="player_up_next_list">エピソードとその他</string>
+    <string name="watch_episodes">エピソード</string>
+    <string name="watch_more">その他の作品</string>
+    <string name="watch_now_playing">再生中</string>
+    <string name="watch_nothing">ここには他に視聴できるものがありません</string>
+    <string name="player_tracks">音声と字幕</string>
+    <string name="player_audio">音声</string>
+    <string name="player_subtitles">字幕</string>
+    <string name="player_subtitles_off">オフ</string>
+    <string name="series_tracks">全エピソードの音声と字幕</string>
+    <string name="series_hint">トラック情報は第1話から取得されます。すべてのエピソードで同じトラック位置が使用されるため、全エピソードが同じリリースの場合に機能します。</string>
+    <string name="series_default">サーバーのデフォルト</string>
+    <string name="series_no_streams">第1話がまだ解析されていません。スキャン完了後にもう一度お試しください。</string>
+    <string name="player_subtitle_image">画像字幕はまだ表示できません</string>
+    <string name="player_fill">画面いっぱいに表示</string>
+    <string name="player_fit">画面に合わせる</string>
+    <string name="player_mode_direct">ダイレクト再生</string>
+    <string name="player_mode_remux">ダイレクトストリーム</string>
+    <string name="player_mode_transcode">変換中</string>
+    <string name="player_error_title">再生できません</string>
+    <string name="player_error">動画が停止しました。接続を確認してもう一度お試しください。</string>
+    <string name="player_no_file">この作品には再生可能なファイルがありません。</string>
+    <string name="track_mono">モノラル</string>
+    <string name="track_stereo">ステレオ</string>
+    <string name="track_numbered">トラック %1$d</string>
+
+    <!-- Settings -->
+    <string name="settings_switch_profile">切り替え</string>
+    <string name="settings_connection">接続</string>
+    <string name="settings_route_local">自宅</string>
+    <string name="settings_route_public">外出先 · パブリックアドレス</string>
+    <string name="settings_route_hint">Kinema は応答がある場合はホームアドレスを使用し、外出時にはパブリックアドレスに切り替えます。</string>
+    <string name="settings_local_url">ホームアドレス</string>
+    <string name="settings_public_url">パブリックアドレス</string>
+    <string name="settings_public_hint">どこからでもサーバーに到達できるリバースプロキシまたはトンネル</string>
+    <string name="settings_public_from_server">サーバーの設定を使用: %1$s</string>
+    <string name="settings_public_test">テスト</string>
+    <string name="settings_public_ok">サーバーはこのアドレスで応答しています</string>
+    <string name="settings_public_unreachable">この場所からはこのアドレスに応答がありません</string>
+    <string name="settings_appearance">外観</string>
+    <string name="settings_theme_system">システム</string>
+    <string name="settings_theme_light">ライト</string>
+    <string name="settings_theme_dark">ダーク</string>
+    <string name="settings_dynamic">壁紙の色</string>
+    <string name="settings_dynamic_hint">壁紙の色に合わせてアプリを配色</string>
+    <string name="settings_language">言語</string>
+    <string name="settings_language_system">システムのデフォルト</string>
+    <string name="settings_language_picker_title">アプリの言語</string>
+    <string name="player_notification_channel">メディア再生</string>
+    <string name="player_notification_channel_desc">再生コントロールとメディア通知</string>
+    <string name="settings_playback">再生</string>
+    <string name="settings_pip">ピクチャー・イン・ピクチャー</string>
+    <string name="settings_pip_on">アプリを離れても小さなウィンドウで動画の再生を続けます。ウィンドウを閉じると一時停止します。</string>
+    <string name="settings_pip_off">アプリを離れても音声の再生を続け、通知にコントロールを表示します。</string>
+    <string name="settings_server">サーバー</string>
+    <string name="settings_cert_pinned">プライベート証明書（このスマートフォンで承認済み）</string>
+    <string name="settings_cert_public">公的機関によって署名された証明書</string>
+    <string name="settings_kinema">Kinema</string>
+    <string name="settings_updates">アップデート</string>
+    <string name="settings_updates_subtitle">バージョン %1$s、リリースノートとチャンネル</string>
+    <string name="settings_about_subtitle">バージョン %1$s、開発者と謝辞</string>
+    <string name="update_title">アップデート</string>
+    <string name="update_checking">アップデートを確認中…</string>
+    <string name="update_check_failed">アップデートを確認できませんでした</string>
+    <string name="update_check_failed_body">現在のバージョンは %1$s です。接続を確認してもう一度お試しください。</string>
+    <string name="update_failed">アップデートできませんでした: %1$s</string>
+    <string name="update_up_to_date">Kinema は最新です</string>
+    <string name="update_dev_build">開発ビルド</string>
+    <string name="update_dev_build_body">現在のバージョンは %1$s です。開発ビルドは再ビルドして更新します。</string>
+    <string name="update_you_have">現在のバージョン: %1$s</string>
+    <string name="update_available">Kinema %1$s が利用可能です</string>
+    <string name="update_prompt_body">現在のバージョンは %1$s です。インストール前に Android が確認を求めます。サーバー、サインイン情報、設定は保持されます。リリースノートとチャンネルは「設定」の「アップデート」にあります。</string>
+    <string name="update_downloading_percent">ダウンロード中 %1$d%%</string>
+    <string name="update_install">アップデート</string>
+    <string name="update_download_install">ダウンロードしてインストール</string>
+    <string name="update_check_again">再確認</string>
+    <string name="update_later">後で</string>
+    <string name="update_channel">チャンネル</string>
+    <string name="update_channel_stable">Stable</string>
+    <string name="update_channel_beta">Beta</string>
+    <string name="update_channel_alpha">Alpha</string>
+    <string name="update_channel_hint">Beta と Alpha では新しいビルドがいち早く配信され、すべての Stable ビルドも含まれます。</string>
+    <string name="update_whats_new_in">%1$s の新機能</string>
+    <string name="update_in_this_version">このバージョンの変更点</string>
+    <string name="update_loading_notes">リリースノートを読み込み中…</string>
+    <string name="update_no_notes">このバージョンのリリースノートはありません。</string>
+    <string name="about_title">Kinema について</string>
+    <string name="about_section_app">アプリ</string>
+    <string name="about_version_build">バージョン %1$s · ビルド %2$d</string>
+    <string name="about_privacy_title">プライバシー</string>
+    <string name="about_privacy_subtitle">自分のサーバー上で動作します。ライブラリと視聴履歴が外部に出ることはありません。</string>
+    <string name="about_source_code">ソースコード</string>
+    <string name="about_section_developer">開発者</string>
+    <string name="about_developer_tagline">1人の開発者によって設計・開発されています。</string>
+    <string name="about_github">GitHub</string>
+    <string name="about_portfolio">ポートフォリオ</string>
+    <string name="about_section_open_source">オープンソース</string>
+    <string name="about_acknowledgements">謝辞</string>
+    <string name="about_acknowledgements_subtitle">この Android アプリが利用しているライブラリとプロジェクト</string>
+    <string name="about_tmdb">映画や番組のメタデータおよびアートワークはサーバー経由で取得されます。本製品は TMDB API を使用していますが、TMDB による承認または認定を受けたものではありません。</string>
+    <string name="about_plex">着想：個人用メディアサーバーというアイデア。Plex のコードやアセットは一切使用していません。</string>
+    <string name="update_github_status">GitHub の応答: %1$d</string>
+    <string name="update_download_status">ダウンロードの応答: %1$d</string>
+    <string name="update_conflict">Android がアップデートを拒否しました：インストール済みのアプリと異なるキーで署名されています。先にこのアプリをアンインストールしてください。</string>
+
+    <!-- Playlists and Collections -->
+    <string name="home_shelf_playlists">プレイリスト</string>
+    <string name="home_shelf_collections">コレクション</string>
+    <string name="playlist_title">プレイリスト</string>
+    <string name="playlist_play_all">すべて再生</string>
+    <string name="playlist_empty">このプレイリストは空です</string>
+    <string name="playlist_empty_body">このプレイリストに映画やエピソードを追加してください。</string>
+    <string name="playlist_add">プレイリストに追加</string>
+    <string name="playlist_create">新しいプレイリスト</string>
+    <string name="playlist_name">プレイリスト名</string>
+    <string name="playlist_delete">プレイリストを削除</string>
+    <string name="playlist_delete_confirm">プレイリスト「%1$s」を削除しますか？</string>
+    <string name="playlist_remove">プレイリストから削除</string>
+    <string name="playlist_added">「%1$s」に追加しました</string>
+    <string name="playlist_created">プレイリストを作成しました</string>
+    <string name="playlist_delete_failed">プレイリストの削除に失敗しました</string>
+    <string name="playlist_remove_failed">アイテムの削除に失敗しました</string>
+    <string name="collection_title">コレクション</string>
+    <string name="collection_empty">このコレクションは空です</string>
+    <string name="collection_empty_body">このコレクションにはまだ作品がありません。</string>
+    <string name="action_delete">削除</string>
+    <string name="action_create">作成</string>
+    <plurals name="playlist_items_count">
+        <item quantity="other">%d 件</item>
+    </plurals>
+    <plurals name="collection_items_count">
+        <item quantity="other">%d 作品</item>
+    </plurals>
+    <string name="approval_title">承認待ち</string>
+    <string name="approval_body">管理者がこのデバイスを承認するのを待っています。</string>
+    <string name="approval_device">%2$s から %1$s としてサインイン中</string>
+    <string name="settings_account">アカウント</string>
+    <string name="settings_requests">リクエスト</string>
+    <string name="settings_requests_subtitle">映画や番組の追加をリクエスト</string>
+    <string name="settings_activity">視聴アクティビティ</string>
+    <string name="settings_activity_subtitle">視聴時間と履歴</string>
+    <string name="requests_title">リクエスト</string>
+    <string name="requests_new">作品をリクエスト</string>
+    <string name="requests_empty">リクエストはまだありません</string>
+    <string name="requests_empty_body">見つからない作品がありますか？管理者に追加をリクエストしましょう。</string>
+    <string name="requests_withdraw">取り下げる</string>
+    <string name="requests_status_pending">保留中</string>
+    <string name="requests_status_approved">承認済み</string>
+    <string name="requests_status_declined">却下</string>
+    <string name="requests_status_available">利用可能</string>
+    <string name="requests_kind_movie">映画</string>
+    <string name="requests_kind_show">番組</string>
+    <string name="requests_search">タイトル</string>
+    <string name="requests_note">メモ（任意）</string>
+    <string name="requests_no_tmdb">サーバーでタイトル検索が利用できません。希望のタイトルを入力してください。</string>
+    <string name="requests_no_results">一致するものがありません</string>
+    <string name="requests_submit">リクエストを送信</string>
+    <string name="requests_admin_note">管理者: %1$s</string>
+    <string name="activity_title">視聴アクティビティ</string>
+    <string name="activity_total">合計</string>
+    <string name="activity_week">過去7日間</string>
+    <string name="activity_month">過去30日間</string>
+    <string name="activity_titles">作品数</string>
+    <string name="activity_completed">視聴完了</string>
+    <string name="activity_daily">日別視聴時間</string>
+    <string name="activity_daily_peak">最大 %1$s</string>
+    <string name="activity_top_titles">よく視聴した作品</string>
+    <string name="activity_top_genres">よく視聴したジャンル</string>
+    <string name="activity_history">最近の再生</string>
+    <string name="activity_empty">まだ視聴履歴がありません</string>
+    <string name="activity_empty_body">作品を再生すると、ここに視聴時間が表示されます。</string>
+    <string name="duration_hm">%1$d時間%2$d分</string>
+    <string name="duration_h">%1$d時間</string>
+    <string name="duration_m">%1$d分</string>
+    <string name="role_owner">サイトオーナー</string>
+    <string name="role_admin">管理者</string>
+    <string name="role_member">メンバー</string>
+</resources>

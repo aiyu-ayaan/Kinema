@@ -189,6 +189,9 @@
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_dynamic">Wallpaper colors</string>
     <string name="settings_dynamic_hint">Tint the app with colors from your wallpaper</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System default</string>
+    <string name="settings_language_picker_title">App language</string>
     <string name="player_notification_channel">Media Playback</string>
     <string name="player_notification_channel_desc">Playback controls and media notification</string>
     <string name="settings_playback">Playback</string>
@@ -261,6 +264,8 @@
     <string name="playlist_remove">Remove from playlist</string>
     <string name="playlist_added">Added to %1$s</string>
     <string name="playlist_created">Playlist created</string>
+    <string name="playlist_delete_failed">Failed to delete playlist</string>
+    <string name="playlist_remove_failed">Failed to remove item</string>
     <string name="collection_title">Collection</string>
     <string name="collection_empty">This collection is empty</string>
     <string name="collection_empty_body">No titles in this collection yet.</string>

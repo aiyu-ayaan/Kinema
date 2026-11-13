@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kinema</string>
+    <!-- Shared actions -->
+    <string name="action_back">પાછા</string>
+    <string name="action_cancel">રદ કરો</string>
+    <string name="action_details">વિગતો</string>
+    <string name="action_play">ચલાવો</string>
+    <string name="action_resume">ચાલુ રાખો</string>
+    <string name="action_retry">ફરી પ્રયાસ કરો</string>
+    <string name="action_save">સાચવો</string>
+
+    <!-- Errors -->
+    <string name="error_title">કંઈક ખોટું થયું</string>
+    <string name="error_generic">તે કામ ન કર્યું. ફરી પ્રયાસ કરો.</string>
+    <string name="error_offline">સર્વર સુધી પહોંચી શકાતું નથી. તપાસો કે તે ચાલુ છે અને આ ફોન તે જ નેટવર્ક પર છે, અથવા સાર્વજનિક સરનામું સેટ કરો.</string>
+    <string name="error_untrusted">સર્વરનું પ્રમાણપત્ર તમે મંજૂર કરેલું નથી. સમીક્ષા કરવા માટે ફરીથી કનેક્ટ કરો.</string>
+
+    <!-- Connect -->
+    <string name="connect_title">Kinema</string>
+    <string name="connect_subtitle">તમારી મૂવીઝ અને શો, તમારા પોતાના સર્વર પરથી.</string>
+    <string name="connect_found">આ નેટવર્ક પર</string>
+    <string name="connect_rescan">ફરીથી શોધો</string>
+    <string name="connect_scanning">સર્વર શોધી રહ્યાં છીએ…</string>
+    <string name="connect_none">કોઈ સર્વરે જવાબ આપ્યો નહીં. ખાતરી કરો કે Kinema ચાલુ છે અને આ ફોન તે જ Wi-Fi પર છે, અથવા નીચે તેનું સરનામું દાખલ કરો.</string>
+    <string name="connect_this_computer">આ કમ્પ્યુટર · %1$s</string>
+    <string name="connect_manual">સરનામું દાખલ કરો</string>
+    <string name="connect_address">સર્વર સરનામું</string>
+    <string name="connect_address_hint">વેબ પર Kinema માં સેટિંગ્સ › નેટવર્ક હેઠળ બતાવેલ છે</string>
+    <string name="connect_invalid">192.168.1.10:3000 અથવા media.example.com જેવું સરનામું દાખલ કરો.</string>
+    <string name="connect_action">કનેક્ટ કરો</string>
+    <string name="connect_change_server">બીજું સર્વર વાપરો</string>
+
+    <string name="trust_title">આ સર્વર પર વિશ્વાસ કરવો?</string>
+    <string name="trust_body">%1$s એ પોતાનું સુરક્ષા પ્રમાણપત્ર બનાવ્યું છે. વિશ્વાસ કરતા પહેલા તપાસો કે આ કોડ વેબ પર Kinema માં સેટિંગ્સ › નેટવર્કના કોડ સાથે મેળ ખાય છે.</string>
+    <string name="trust_accept">વિશ્વાસ કરો</string>
+
+    <string name="unreachable_title">સર્વર સુધી પહોંચી શકાયું નહીં</string>
+    <string name="unreachable_body">%1$s પરના Kinema એ તેના હોમ અથવા સાર્વજનિક સરનામા પર જવાબ આપ્યો નહીં.</string>
+
+    <string name="forget_title">બીજું સર્વર વાપરવું?</string>
+    <string name="forget_body">આ ફોન સર્વર, તેના સરનામાં અને તેના પ્રમાણપત્રને ભૂલી જશે. તમારો જોવાનો ઇતિહાસ સર્વર પર જ રહેશે.</string>
+    <string name="forget_action">સર્વર ભૂલી જાઓ</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">કોણ જોઈ રહ્યું છે?</string>
+    <string name="profiles_locked">લૉક કરેલ</string>
+    <string name="profiles_setup_title">પહેલા સેટઅપ પૂર્ણ કરો</string>
+    <string name="profiles_setup_body">પ્રથમ ખાતું બનાવવા અને તમારું મીડિયા ઉમેરવા માટે બ્રાઉઝરમાં %1$s ખોલો. પછી અહીં પાછા આવો.</string>
+    <string name="unlock_password">પાસવર્ડ</string>
+    <string name="unlock_pin">પિન</string>
+    <string name="unlock_show">બતાવો</string>
+    <string name="unlock_hide">છુપાવો</string>
+    <string name="unlock_action">સાઇન ઇન કરો</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">હોમ</string>
+    <string name="tab_library">લાઇબ્રેરી</string>
+    <string name="tab_search">શોધો</string>
+    <string name="tab_settings">સેટિંગ્સ</string>
+
+    <!-- Home -->
+    <string name="home_continue">જોવાનું ચાલુ રાખો</string>
+    <string name="home_shelf_movies">તાજેતરમાં ઉમેરેલી મૂવીઝ</string>
+    <string name="home_shelf_shows">તાજેતરમાં ઉમેરેલા શો</string>
+    <string name="home_shelf_episodes">નવા એપિસોડ</string>
+    <string name="home_hero_continue">જોવાનું ચાલુ રાખો</string>
+    <string name="home_hero_new">નવું</string>
+    <string name="home_empty_title">અહીં હજી કંઈ નથી</string>
+    <string name="home_empty_body">સર્વરના સંચાલક વેબ પર Kinema માં લાઇબ્રેરી ઉમેરે પછી શીર્ષકો અહીં દેખાશે.</string>
+
+    <!-- Library and search -->
+    <string name="library_none_title">કોઈ લાઇબ્રેરી નથી</string>
+    <string name="library_none_body">સર્વર પર હજી સુધી તમે જોઈ શકો તેવી કોઈ લાઇબ્રેરી નથી.</string>
+    <string name="library_switcher_title">લાઇબ્રેરીઓ</string>
+    <string name="library_expand">શો બતાવો</string>
+    <string name="library_collapse">શો છુપાવો</string>
+    <plurals name="library_show_count">
+        <item quantity="one">%d શો</item>
+        <item quantity="other">%d શો</item>
+    </plurals>
+    <string name="library_empty_title">આ લાઇબ્રેરી ખાલી છે</string>
+    <string name="library_empty_body">સર્વર સ્કેન કરે પછી નવી ફાઇલો અહીં દેખાશે.</string>
+    <string name="search_hint">મૂવીઝ, શો, એપિસોડ</string>
+    <string name="search_clear">સાફ કરો</string>
+    <string name="search_idle_title">જોવા માટે કંઈક શોધો</string>
+    <string name="search_idle_body">દરેક લાઇબ્રેરીમાં શીર્ષક દ્વારા શોધો.</string>
+    <string name="search_none_title">કોઈ પરિણામ નથી</string>
+    <string name="search_none_body">“%1$s” સાથે કંઈ મેળ ખાતું નથી.</string>
+
+    <!-- Title page -->
+    <string name="item_watched">જોયેલું</string>
+    <string name="item_mark_watched">જોયેલું તરીકે ચિહ્નિત કરો</string>
+    <string name="item_mark_unwatched">ન જોયેલું તરીકે ચિહ્નિત કરો</string>
+    <string name="item_from_start">શરૂઆતથી ચલાવો</string>
+    <string name="item_play_episode">ચલાવો S%1$d · E%2$d</string>
+    <string name="item_episode_short">S%1$d · E%2$d</string>
+    <string name="item_season_no">S%1$d</string>
+    <string name="item_episode_no">E%1$d</string>
+    <string name="item_episode_number">એપિસોડ %1$d</string>
+    <string name="item_left">%1$s બાકી</string>
+    <string name="item_seasons">સીઝન</string>
+    <string name="item_episodes">એપિસોડ</string>
+    <string name="item_cast">કલાકારો</string>
+    <string name="item_previous">પાછલું</string>
+    <string name="item_next">આગલું</string>
+    <string name="item_file">ફાઇલ</string>
+    <plurals name="item_seasons">
+        <item quantity="one">%d સીઝન</item>
+        <item quantity="other">%d સીઝન</item>
+    </plurals>
+    <plurals name="item_episodes">
+        <item quantity="one">%d એપિસોડ</item>
+        <item quantity="other">%d એપિસોડ</item>
+    </plurals>
+    <plurals name="item_audio_tracks">
+        <item quantity="one">%d ઓડિયો ટ્રેક</item>
+        <item quantity="other">%d ઓડિયો ટ્રેક</item>
+    </plurals>
+    <plurals name="item_subtitle_tracks">
+        <item quantity="one">%d સબટાઇટલ</item>
+        <item quantity="other">%d સબટાઇટલ</item>
+    </plurals>
+    <string name="format_hours_minutes">%1$d ક %2$d મિ</string>
+    <string name="format_minutes">%1$d મિ</string>
+
+    <!-- Player -->
+    <string name="player_pause">થોભાવો</string>
+    <string name="player_stop">બંધ કરો</string>
+    <string name="player_volume">અવાજ</string>
+    <string name="player_brightness">તેજસ્વિતા</string>
+    <string name="player_boost">બૂસ્ટ %1$d%%</string>
+    <string name="player_back10">10 સેકન્ડ પાછળ</string>
+    <string name="player_forward10">10 સેકન્ડ આગળ</string>
+    <string name="player_seconds">%1$d સે</string>
+    <string name="player_next">આગલો એપિસોડ</string>
+    <string name="player_up_next_in">આગલું %1$s માં</string>
+    <string name="player_play_now">હમણાં ચલાવો</string>
+    <string name="player_dismiss">છુપાવો</string>
+    <string name="player_skip_intro">ઇન્ટ્રો છોડો</string>
+    <string name="player_skip_credits">ક્રેડિટ્સ છોડો</string>
+    <string name="player_pip">પિક્ચર-ઇન-પિક્ચર</string>
+    <string name="player_fullscreen">પૂર્ણ સ્ક્રીન</string>
+    <string name="player_exit_fullscreen">પૂર્ણ સ્ક્રીનમાંથી બહાર નીકળો</string>
+    <string name="player_minimize">નાનું કરો</string>
+    <string name="player_up_next_list">એપિસોડ અને વધુ</string>
+    <string name="watch_episodes">એપિસોડ</string>
+    <string name="watch_more">જોવા માટે વધુ</string>
+    <string name="watch_now_playing">અત્યારે ચાલી રહ્યું છે</string>
+    <string name="watch_nothing">અહીં જોવા માટે હજી વધુ કંઈ નથી</string>
+    <string name="player_tracks">ઓડિયો અને સબટાઇટલ</string>
+    <string name="player_audio">ઓડિયો</string>
+    <string name="player_subtitles">સબટાઇટલ</string>
+    <string name="player_subtitles_off">બંધ</string>
+    <string name="series_tracks">બધા એપિસોડ માટે ઓડિયો અને સબટાઇટલ</string>
+    <string name="series_hint">ટ્રેક પ્રથમ એપિસોડમાંથી આવે છે. દરેક એપિસોડ સમાન ટ્રેક સ્થાનનો ઉપયોગ કરે છે, તેથી જ્યારે બધા એપિસોડ એક જ રિલીઝના હોય ત્યારે આ કામ કરે છે.</string>
+    <string name="series_default">સર્વર ડિફૉલ્ટ</string>
+    <string name="series_no_streams">પ્રથમ એપિસોડની હજી તપાસ થઈ નથી. સ્કેન પૂર્ણ થયા પછી ફરી પ્રયાસ કરો.</string>
+    <string name="player_subtitle_image">ચિત્ર સબટાઇટલ હજી બતાવી શકાતા નથી</string>
+    <string name="player_fill">સ્ક્રીન ભરો</string>
+    <string name="player_fit">સ્ક્રીનમાં ફિટ કરો</string>
+    <string name="player_mode_direct">ડાયરેક્ટ પ્લે</string>
+    <string name="player_mode_remux">ડાયરેક્ટ સ્ટ્રીમ</string>
+    <string name="player_mode_transcode">રૂપાંતરિત કરી રહ્યું છે</string>
+    <string name="player_error_title">આ ચલાવી શકાતું નથી</string>
+    <string name="player_error">વિડિઓ અટકી ગયો. કનેક્શન તપાસો અને ફરી પ્રયાસ કરો.</string>
+    <string name="player_no_file">આ શીર્ષક માટે કોઈ ચલાવી શકાય તેવી ફાઇલ નથી.</string>
+    <string name="track_mono">મોનો</string>
+    <string name="track_stereo">સ્ટિરિયો</string>
+    <string name="track_numbered">ટ્રેક %1$d</string>
+
+    <!-- Settings -->
+    <string name="settings_switch_profile">બદલો</string>
+    <string name="settings_connection">કનેક્શન</string>
+    <string name="settings_route_local">ઘરે</string>
+    <string name="settings_route_public">બહાર · સાર્વજનિક સરનામું</string>
+    <string name="settings_route_hint">જ્યારે હોમ સરનામું જવાબ આપે ત્યારે Kinema તેનો ઉપયોગ કરે છે અને તમે બહાર જાઓ ત્યારે સાર્વજનિક સરનામા પર જાય છે.</string>
+    <string name="settings_local_url">હોમ સરનામું</string>
+    <string name="settings_public_url">સાર્વજનિક સરનામું</string>
+    <string name="settings_public_hint">એક રિવર્સ પ્રોક્સી અથવા ટનલ જે ગમે ત્યાંથી સર્વર સુધી પહોંચે છે</string>
+    <string name="settings_public_from_server">સર્વરનું સરનામું વાપરી રહ્યાં છીએ: %1$s</string>
+    <string name="settings_public_test">તપાસો</string>
+    <string name="settings_public_ok">સર્વર આ સરનામા પર જવાબ આપે છે</string>
+    <string name="settings_public_unreachable">અહીંથી આ સરનામા પર કોઈ જવાબ નથી</string>
+    <string name="settings_appearance">દેખાવ</string>
+    <string name="settings_theme_system">સિસ્ટમ</string>
+    <string name="settings_theme_light">હળવું</string>
+    <string name="settings_theme_dark">ઘેરો</string>
+    <string name="settings_dynamic">વૉલપેપરના રંગો</string>
+    <string name="settings_dynamic_hint">તમારા વૉલપેપરના રંગોથી ઍપને સજાવો</string>
+    <string name="settings_language">ભાષા</string>
+    <string name="settings_language_system">સિસ્ટમ ડિફૉલ્ટ</string>
+    <string name="settings_language_picker_title">ઍપની ભાષા</string>
+    <string name="player_notification_channel">મીડિયા પ્લેબેક</string>
+    <string name="player_notification_channel_desc">પ્લેબેક નિયંત્રણો અને મીડિયા સૂચના</string>
+    <string name="settings_playback">પ્લેબેક</string>
+    <string name="settings_pip">પિક્ચર-ઇન-પિક્ચર</string>
+    <string name="settings_pip_on">ઍપમાંથી બહાર નીકળવા પર વિડિઓ નાની વિન્ડોમાં ચાલુ રહે છે. વિન્ડો બંધ કરવાથી તે થોભી જાય છે.</string>
+    <string name="settings_pip_off">ઍપમાંથી બહાર નીકળવા પર અવાજ ચાલુ રહે છે, સૂચનામાં નિયંત્રણો સાથે.</string>
+    <string name="settings_server">સર્વર</string>
+    <string name="settings_cert_pinned">ખાનગી પ્રમાણપત્ર, આ ફોન પર મંજૂર</string>
+    <string name="settings_cert_public">સાર્વજનિક સત્તાધિકારી દ્વારા હસ્તાક્ષરિત પ્રમાણપત્ર</string>
+    <string name="settings_kinema">Kinema</string>
+    <string name="settings_updates">અપડેટ્સ</string>
+    <string name="settings_updates_subtitle">સંસ્કરણ %1$s, રિલીઝ નોટ્સ અને ચેનલ</string>
+    <string name="settings_about_subtitle">સંસ્કરણ %1$s, ડેવલપર અને આભાર</string>
+    <string name="update_title">અપડેટ્સ</string>
+    <string name="update_checking">અપડેટ્સ તપાસી રહ્યાં છીએ…</string>
+    <string name="update_check_failed">અપડેટ્સ તપાસી શકાયા નહીં</string>
+    <string name="update_check_failed_body">તમારી પાસે %1$s છે. તમારું કનેક્શન તપાસો અને ફરી પ્રયાસ કરો.</string>
+    <string name="update_failed">અપડેટ કરી શકાયું નહીં: %1$s</string>
+    <string name="update_up_to_date">Kinema અદ્યતન છે</string>
+    <string name="update_dev_build">ડેવલપમેન્ટ બિલ્ડ</string>
+    <string name="update_dev_build_body">તમારી પાસે %1$s છે. ડેવલપમેન્ટ બિલ્ડને ફરીથી બિલ્ડ કરીને અપડેટ કરવામાં આવે છે.</string>
+    <string name="update_you_have">તમારી પાસે %1$s છે.</string>
+    <string name="update_available">Kinema %1$s ઉપલબ્ધ છે</string>
+    <string name="update_prompt_body">તમારી પાસે %1$s છે. ઇન્સ્ટોલ કરતા પહેલા Android પૂછશે; તમારું સર્વર, સાઇન-ઇન અને સેટિંગ્સ સચવાયેલા રહેશે. રિલીઝ નોટ્સ અને ચેનલ સેટિંગ્સમાં અપડેટ્સ હેઠળ છે.</string>
+    <string name="update_downloading_percent">ડાઉનલોડ થઈ રહ્યું છે %1$d%%</string>
+    <string name="update_install">અપડેટ કરો</string>
+    <string name="update_download_install">ડાઉનલોડ અને ઇન્સ્ટોલ કરો</string>
+    <string name="update_check_again">ફરી તપાસો</string>
+    <string name="update_later">પછી</string>
+    <string name="update_channel">ચેનલ</string>
+    <string name="update_channel_stable">સ્થિર</string>
+    <string name="update_channel_beta">બીટા</string>
+    <string name="update_channel_alpha">આલ્ફા</string>
+    <string name="update_channel_hint">બીટા અને આલ્ફાને નવા બિલ્ડ વહેલા મળે છે, અને દરેક સ્થિર બિલ્ડ પણ મળે છે.</string>
+    <string name="update_whats_new_in">%1$s માં નવું શું છે</string>
+    <string name="update_in_this_version">આ સંસ્કરણમાં</string>
+    <string name="update_loading_notes">રિલીઝ નોટ્સ લોડ થઈ રહી છે…</string>
+    <string name="update_no_notes">આ સંસ્કરણ માટે કોઈ રિલીઝ નોટ્સ નથી.</string>
+    <string name="about_title">Kinema વિશે</string>
+    <string name="about_section_app">ઍપ</string>
+    <string name="about_version_build">સંસ્કરણ %1$s · બિલ્ડ %2$d</string>
+    <string name="about_privacy_title">ગોપનીયતા</string>
+    <string name="about_privacy_subtitle">તમારા પોતાના સર્વર પર ચાલે છે. તમારી લાઇબ્રેરી અને જોવાનો ઇતિહાસ ક્યારેય બહાર જતો નથી.</string>
+    <string name="about_source_code">સોર્સ કોડ</string>
+    <string name="about_section_developer">ડેવલપર</string>
+    <string name="about_developer_tagline">એક ડેવલપર દ્વારા ડિઝાઇન અને નિર્મિત.</string>
+    <string name="about_github">GitHub</string>
+    <string name="about_portfolio">પોર્ટફોલિયો</string>
+    <string name="about_section_open_source">ઓપન સોર્સ</string>
+    <string name="about_acknowledgements">આભાર</string>
+    <string name="about_acknowledgements_subtitle">જે લાઇબ્રેરીઓ અને પ્રોજેક્ટ્સ પર Android ઍપ બનેલ છે</string>
+    <string name="about_tmdb">તમારા સર્વર દ્વારા મૂવી અને શોનો મેટાડેટા અને આર્ટવર્ક. આ ઉત્પાદન TMDB API નો ઉપયોગ કરે છે પરંતુ TMDB દ્વારા સમર્થિત કે પ્રમાણિત નથી.</string>
+    <string name="about_plex">પ્રેરણા: વ્યક્તિગત મીડિયા સર્વરનો વિચાર. કોઈ Plex કોડ કે સંપત્તિનો ઉપયોગ થયો નથી.</string>
+    <string name="update_github_status">GitHub એ %1$d જવાબ આપ્યો</string>
+    <string name="update_download_status">ડાઉનલોડે %1$d જવાબ આપ્યો</string>
+    <string name="update_conflict">Android એ અપડેટ નકાર્યું: તે ઇન્સ્ટોલ કરેલ ઍપ કરતા અલગ કીથી હસ્તાક્ષરિત છે. પહેલા આ નકલને અનઇન્સ્ટોલ કરો.</string>
+
+    <!-- Playlists and Collections -->
+    <string name="home_shelf_playlists">પ્લેલિસ્ટ</string>
+    <string name="home_shelf_collections">સંગ્રહ</string>
+    <string name="playlist_title">પ્લેલિસ્ટ</string>
+    <string name="playlist_play_all">બધું ચલાવો</string>
+    <string name="playlist_empty">આ પ્લેલિસ્ટ ખાલી છે</string>
+    <string name="playlist_empty_body">આ પ્લેલિસ્ટમાં મૂવીઝ અથવા એપિસોડ ઉમેરો.</string>
+    <string name="playlist_add">પ્લેલિસ્ટમાં ઉમેરો</string>
+    <string name="playlist_create">નવી પ્લેલિસ્ટ</string>
+    <string name="playlist_name">પ્લેલિસ્ટનું નામ</string>
+    <string name="playlist_delete">પ્લેલિસ્ટ કાઢી નાખો</string>
+    <string name="playlist_delete_confirm">પ્લેલિસ્ટ “%1$s” કાઢી નાખવી?</string>
+    <string name="playlist_remove">પ્લેલિસ્ટમાંથી દૂર કરો</string>
+    <string name="playlist_added">%1$s માં ઉમેર્યું</string>
+    <string name="playlist_created">પ્લેલિસ્ટ બનાવી</string>
+    <string name="playlist_delete_failed">પ્લેલિસ્ટ કાઢી નાખવામાં નિષ્ફળ</string>
+    <string name="playlist_remove_failed">આઇટમ દૂર કરવામાં નિષ્ફળ</string>
+    <string name="collection_title">સંગ્રહ</string>
+    <string name="collection_empty">આ સંગ્રહ ખાલી છે</string>
+    <string name="collection_empty_body">આ સંગ્રહમાં હજી કોઈ શીર્ષકો નથી.</string>
+    <string name="action_delete">કાઢી નાખો</string>
+    <string name="action_create">બનાવો</string>
+    <plurals name="playlist_items_count">
+        <item quantity="one">%d આઇટમ</item>
+        <item quantity="other">%d આઇટમ</item>
+    </plurals>
+    <plurals name="collection_items_count">
+        <item quantity="one">%d શીર્ષક</item>
+        <item quantity="other">%d શીર્ષકો</item>
+    </plurals>
+    <string name="approval_title">મંજૂરીની રાહ જોઈ રહ્યું છે</string>
+    <string name="approval_body">સંચાલક દ્વારા આ ઉપકરણને મંજૂર કરવાની રાહ જોઈ રહ્યું છે.</string>
+    <string name="approval_device">%2$s પરથી %1$s તરીકે સાઇન ઇન થઈ રહ્યું છે</string>
+    <string name="settings_account">તમારું ખાતું</string>
+    <string name="settings_requests">વિનંતીઓ</string>
+    <string name="settings_requests_subtitle">મૂવી અથવા શો ઉમેરવાની વિનંતી કરો</string>
+    <string name="settings_activity">જોવાની પ્રવૃત્તિ</string>
+    <string name="settings_activity_subtitle">તમારો જોવાનો સમય અને ઇતિહાસ</string>
+    <string name="requests_title">વિનંતીઓ</string>
+    <string name="requests_new">શીર્ષકની વિનંતી કરો</string>
+    <string name="requests_empty">હજી કોઈ વિનંતી નથી</string>
+    <string name="requests_empty_body">કંઈક મળતું નથી? સંચાલકને તે ઉમેરવા કહો.</string>
+    <string name="requests_withdraw">પાછી ખેંચો</string>
+    <string name="requests_status_pending">બાકી</string>
+    <string name="requests_status_approved">મંજૂર</string>
+    <string name="requests_status_declined">નકાર્યું</string>
+    <string name="requests_status_available">ઉપલબ્ધ</string>
+    <string name="requests_kind_movie">મૂવી</string>
+    <string name="requests_kind_show">શો</string>
+    <string name="requests_search">શીર્ષક</string>
+    <string name="requests_note">નોંધ (વૈકલ્પિક)</string>
+    <string name="requests_no_tmdb">સર્વર પર શીર્ષક શોધ નથી. તમને જોઈતું શીર્ષક ટાઇપ કરો.</string>
+    <string name="requests_no_results">કોઈ મેળ ખાતું નથી</string>
+    <string name="requests_submit">વિનંતી મોકલો</string>
+    <string name="requests_admin_note">સંચાલક: %1$s</string>
+    <string name="activity_title">જોવાની પ્રવૃત્તિ</string>
+    <string name="activity_total">કુલ</string>
+    <string name="activity_week">છેલ્લા 7 દિવસ</string>
+    <string name="activity_month">છેલ્લા 30 દિવસ</string>
+    <string name="activity_titles">શીર્ષકો</string>
+    <string name="activity_completed">પૂર્ણ</string>
+    <string name="activity_daily">દૈનિક જોવાનો સમય</string>
+    <string name="activity_daily_peak">મહત્તમ %1$s</string>
+    <string name="activity_top_titles">સૌથી વધુ જોવાયેલ</string>
+    <string name="activity_top_genres">ટોચની શૈલીઓ</string>
+    <string name="activity_history">તાજેતરમાં ચલાવેલ</string>
+    <string name="activity_empty">હજી કંઈ જોયું નથી</string>
+    <string name="activity_empty_body">તમે કંઈક ચલાવશો એટલે તમારો જોવાનો સમય અહીં દેખાશે.</string>
+    <string name="duration_hm">%1$d ક %2$d મિ</string>
+    <string name="duration_h">%1$d ક</string>
+    <string name="duration_m">%1$d મિ</string>
+    <string name="role_owner">સાઇટ માલિક</string>
+    <string name="role_admin">સંચાલક</string>
+    <string name="role_member">સભ્ય</string>
+</resources>

@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kinema</string>
+    <!-- Shared actions -->
+    <string name="action_back">返回</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_details">详情</string>
+    <string name="action_play">播放</string>
+    <string name="action_resume">继续播放</string>
+    <string name="action_retry">重试</string>
+    <string name="action_save">保存</string>
+
+    <!-- Errors -->
+    <string name="error_title">出错了</string>
+    <string name="error_generic">操作失败，请重试。</string>
+    <string name="error_offline">无法连接到服务器。请检查服务器是否正在运行且此手机在同一网络中，或设置公共地址。</string>
+    <string name="error_untrusted">服务器证书与您之前批准的不一致。请重新连接以检查证书。</string>
+
+    <!-- Connect -->
+    <string name="connect_title">Kinema</string>
+    <string name="connect_subtitle">来自您自己的服务器的电影和剧集。</string>
+    <string name="connect_found">在此网络上</string>
+    <string name="connect_rescan">重新搜索</string>
+    <string name="connect_scanning">正在查找服务器…</string>
+    <string name="connect_none">没有服务器响应。请确保 Kinema 正在运行且此手机连接在同一 Wi-Fi 下，或在下方输入地址。</string>
+    <string name="connect_this_computer">此电脑 · %1$s</string>
+    <string name="connect_manual">输入地址</string>
+    <string name="connect_address">服务器地址</string>
+    <string name="connect_address_hint">显示在网页版 Kinema 的“设置 › 网络”中</string>
+    <string name="connect_invalid">请输入类似 192.168.1.10:3000 或 media.example.com 的地址。</string>
+    <string name="connect_action">连接</string>
+    <string name="connect_change_server">使用其他服务器</string>
+
+    <string name="trust_title">信任此服务器？</string>
+    <string name="trust_body">%1$s 生成了自己的安全证书。在信任之前，请检查此代码是否与网页版 Kinema“设置 › 网络”中的一致。</string>
+    <string name="trust_accept">信任</string>
+
+    <string name="unreachable_title">无法访问服务器</string>
+    <string name="unreachable_body">位于 %1$s 的 Kinema 在家庭地址和公共地址均未响应。</string>
+
+    <string name="forget_title">使用其他服务器？</string>
+    <string name="forget_body">此手机将忘记该服务器、其地址和证书。您的观看历史仍保留在服务器上。</string>
+    <string name="forget_action">忘记服务器</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">谁在观看？</string>
+    <string name="profiles_locked">已锁定</string>
+    <string name="profiles_setup_title">请先完成设置</string>
+    <string name="profiles_setup_body">在浏览器中打开 %1$s 以创建第一个账户并添加您的媒体，然后返回此处。</string>
+    <string name="unlock_password">密码</string>
+    <string name="unlock_pin">PIN 码</string>
+    <string name="unlock_show">显示</string>
+    <string name="unlock_hide">隐藏</string>
+    <string name="unlock_action">登录</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">首页</string>
+    <string name="tab_library">媒体库</string>
+    <string name="tab_search">搜索</string>
+    <string name="tab_settings">设置</string>
+
+    <!-- Home -->
+    <string name="home_continue">继续观看</string>
+    <string name="home_shelf_movies">最近添加的电影</string>
+    <string name="home_shelf_shows">最近添加的剧集</string>
+    <string name="home_shelf_episodes">新剧集</string>
+    <string name="home_hero_continue">继续观看</string>
+    <string name="home_hero_new">新上线</string>
+    <string name="home_empty_title">暂无内容</string>
+    <string name="home_empty_body">当服务器管理员在网页版 Kinema 中添加媒体库后，影片将显示在此处。</string>
+
+    <!-- Library and search -->
+    <string name="library_none_title">没有媒体库</string>
+    <string name="library_none_body">服务器上暂无您可查看的媒体库。</string>
+    <string name="library_switcher_title">媒体库</string>
+    <string name="library_expand">显示剧集</string>
+    <string name="library_collapse">隐藏剧集</string>
+    <plurals name="library_show_count">
+        <item quantity="other">%d 部剧集</item>
+    </plurals>
+    <string name="library_empty_title">此媒体库为空</string>
+    <string name="library_empty_body">服务器扫描新文件后，它们将显示在此处。</string>
+    <string name="search_hint">电影、剧集、单集</string>
+    <string name="search_clear">清除</string>
+    <string name="search_idle_title">查找想看的内容</string>
+    <string name="search_idle_body">在所有媒体库中按标题搜索。</string>
+    <string name="search_none_title">无结果</string>
+    <string name="search_none_body">没有与“%1$s”匹配的内容。</string>
+
+    <!-- Title page -->
+    <string name="item_watched">已观看</string>
+    <string name="item_mark_watched">标记为已观看</string>
+    <string name="item_mark_unwatched">标记为未观看</string>
+    <string name="item_from_start">从头播放</string>
+    <string name="item_play_episode">播放第 %1$d 季 · 第 %2$d 集</string>
+    <string name="item_episode_short">S%1$d · E%2$d</string>
+    <string name="item_season_no">S%1$d</string>
+    <string name="item_episode_no">E%1$d</string>
+    <string name="item_episode_number">第 %1$d 集</string>
+    <string name="item_left">剩余 %1$s</string>
+    <string name="item_seasons">季</string>
+    <string name="item_episodes">剧集</string>
+    <string name="item_cast">演职员</string>
+    <string name="item_previous">上一集</string>
+    <string name="item_next">下一集</string>
+    <string name="item_file">文件</string>
+    <plurals name="item_seasons">
+        <item quantity="other">%d 季</item>
+    </plurals>
+    <plurals name="item_episodes">
+        <item quantity="other">%d 集</item>
+    </plurals>
+    <plurals name="item_audio_tracks">
+        <item quantity="other">%d 条音轨</item>
+    </plurals>
+    <plurals name="item_subtitle_tracks">
+        <item quantity="other">%d 条字幕</item>
+    </plurals>
+    <string name="format_hours_minutes">%1$d 小时 %2$d 分钟</string>
+    <string name="format_minutes">%1$d 分钟</string>
+
+    <!-- Player -->
+    <string name="player_pause">暂停</string>
+    <string name="player_stop">停止</string>
+    <string name="player_volume">音量</string>
+    <string name="player_brightness">亮度</string>
+    <string name="player_boost">增益 %1$d%%</string>
+    <string name="player_back10">后退 10 秒</string>
+    <string name="player_forward10">前进 10 秒</string>
+    <string name="player_seconds">%1$d 秒</string>
+    <string name="player_next">下一集</string>
+    <string name="player_up_next_in">%1$s 后播放下一集</string>
+    <string name="player_play_now">立即播放</string>
+    <string name="player_dismiss">隐藏</string>
+    <string name="player_skip_intro">跳过片头</string>
+    <string name="player_skip_credits">跳过片尾</string>
+    <string name="player_pip">画中画</string>
+    <string name="player_fullscreen">全屏</string>
+    <string name="player_exit_fullscreen">退出全屏</string>
+    <string name="player_minimize">最小化</string>
+    <string name="player_up_next_list">剧集与更多</string>
+    <string name="watch_episodes">剧集</string>
+    <string name="watch_more">更多可看内容</string>
+    <string name="watch_now_playing">正在播放</string>
+    <string name="watch_nothing">这里暂时没有其他可看的内容</string>
+    <string name="player_tracks">音频和字幕</string>
+    <string name="player_audio">音频</string>
+    <string name="player_subtitles">字幕</string>
+    <string name="player_subtitles_off">关闭</string>
+    <string name="series_tracks">所有剧集的音频和字幕</string>
+    <string name="series_hint">轨道信息来自第一集。每集使用相同的轨道位置，因此当所有剧集来自同一版本时此设置有效。</string>
+    <string name="series_default">服务器默认</string>
+    <string name="series_no_streams">第一集尚未分析。请在扫描完成后重试。</string>
+    <string name="player_subtitle_image">暂无法显示图形字幕</string>
+    <string name="player_fill">填充屏幕</string>
+    <string name="player_fit">适应屏幕</string>
+    <string name="player_mode_direct">直接播放</string>
+    <string name="player_mode_remux">直接串流</string>
+    <string name="player_mode_transcode">正在转码</string>
+    <string name="player_error_title">无法播放</string>
+    <string name="player_error">视频已停止。请检查连接并重试。</string>
+    <string name="player_no_file">此影片没有可播放的文件。</string>
+    <string name="track_mono">单声道</string>
+    <string name="track_stereo">立体声</string>
+    <string name="track_numbered">轨道 %1$d</string>
+
+    <!-- Settings -->
+    <string name="settings_switch_profile">切换</string>
+    <string name="settings_connection">连接</string>
+    <string name="settings_route_local">在家</string>
+    <string name="settings_route_public">外出 · 公共地址</string>
+    <string name="settings_route_hint">Kinema 在家庭地址有响应时使用家庭地址，在您离开后切换为公共地址。</string>
+    <string name="settings_local_url">家庭地址</string>
+    <string name="settings_public_url">公共地址</string>
+    <string name="settings_public_hint">可从任何地方访问服务器的反向代理或隧道</string>
+    <string name="settings_public_from_server">使用服务器的地址：%1$s</string>
+    <string name="settings_public_test">测试</string>
+    <string name="settings_public_ok">服务器在此地址有响应</string>
+    <string name="settings_public_unreachable">从此处无法访问该地址</string>
+    <string name="settings_appearance">外观</string>
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_dynamic">壁纸取色</string>
+    <string name="settings_dynamic_hint">使用壁纸颜色为应用着色</string>
+    <string name="settings_language">语言</string>
+    <string name="settings_language_system">系统默认</string>
+    <string name="settings_language_picker_title">应用语言</string>
+    <string name="player_notification_channel">媒体播放</string>
+    <string name="player_notification_channel_desc">播放控制和媒体通知</string>
+    <string name="settings_playback">播放</string>
+    <string name="settings_pip">画中画</string>
+    <string name="settings_pip_on">离开应用后视频将在小窗口中继续播放。关闭窗口将暂停播放。</string>
+    <string name="settings_pip_off">离开应用后声音将继续播放，并在通知中显示控制按钮。</string>
+    <string name="settings_server">服务器</string>
+    <string name="settings_cert_pinned">私有证书，已在此手机上批准</string>
+    <string name="settings_cert_public">由公共机构签名的证书</string>
+    <string name="settings_kinema">Kinema</string>
+    <string name="settings_updates">更新</string>
+    <string name="settings_updates_subtitle">版本 %1$s、发行说明和频道</string>
+    <string name="settings_about_subtitle">版本 %1$s、开发者与致谢</string>
+    <string name="update_title">更新</string>
+    <string name="update_checking">正在检查更新…</string>
+    <string name="update_check_failed">无法检查更新</string>
+    <string name="update_check_failed_body">当前版本为 %1$s。请检查连接并重试。</string>
+    <string name="update_failed">无法更新：%1$s</string>
+    <string name="update_up_to_date">Kinema 已是最新版本</string>
+    <string name="update_dev_build">开发版构建</string>
+    <string name="update_dev_build_body">当前版本为 %1$s。开发版需通过重新构建来更新。</string>
+    <string name="update_you_have">当前版本：%1$s。</string>
+    <string name="update_available">Kinema %1$s 可用</string>
+    <string name="update_prompt_body">当前版本为 %1$s。安装前 Android 会提示确认；您的服务器、登录信息和设置都会保留。发行说明和更新频道可在“设置”的“更新”中查看。</string>
+    <string name="update_downloading_percent">正在下载 %1$d%%</string>
+    <string name="update_install">更新</string>
+    <string name="update_download_install">下载并安装</string>
+    <string name="update_check_again">重新检查</string>
+    <string name="update_later">稍后</string>
+    <string name="update_channel">频道</string>
+    <string name="update_channel_stable">Stable</string>
+    <string name="update_channel_beta">Beta</string>
+    <string name="update_channel_alpha">Alpha</string>
+    <string name="update_channel_hint">Beta 和 Alpha 频道会更早获得新构建，同时也包含所有 Stable 构建。</string>
+    <string name="update_whats_new_in">%1$s 的新特性</string>
+    <string name="update_in_this_version">此版本更新内容</string>
+    <string name="update_loading_notes">正在加载发行说明…</string>
+    <string name="update_no_notes">此版本暂无发行说明。</string>
+    <string name="about_title">关于 Kinema</string>
+    <string name="about_section_app">应用</string>
+    <string name="about_version_build">版本 %1$s · 构建 %2$d</string>
+    <string name="about_privacy_title">隐私</string>
+    <string name="about_privacy_subtitle">运行在您自己的服务器上。您的媒体库和观看历史绝不会离开服务器。</string>
+    <string name="about_source_code">源代码</string>
+    <string name="about_section_developer">开发者</string>
+    <string name="about_developer_tagline">由一名开发者独立设计与构建。</string>
+    <string name="about_github">GitHub</string>
+    <string name="about_portfolio">作品集</string>
+    <string name="about_section_open_source">开源</string>
+    <string name="about_acknowledgements">致谢</string>
+    <string name="about_acknowledgements_subtitle">Android 应用所使用的库和项目</string>
+    <string name="about_tmdb">电影和剧集的元数据及图片均通过您的服务器获取。本产品使用了 TMDB API，但未获得 TMDB 的认可或认证。</string>
+    <string name="about_plex">灵感来源：个人媒体服务器的理念。未使用任何 Plex 代码或资源。</string>
+    <string name="update_github_status">GitHub 返回 %1$d</string>
+    <string name="update_download_status">下载返回 %1$d</string>
+    <string name="update_conflict">Android 拒绝了此次更新：它使用了与已安装应用不同的密钥签名。请先卸载当前版本。</string>
+
+    <!-- Playlists and Collections -->
+    <string name="home_shelf_playlists">播放列表</string>
+    <string name="home_shelf_collections">合集</string>
+    <string name="playlist_title">播放列表</string>
+    <string name="playlist_play_all">全部播放</string>
+    <string name="playlist_empty">此播放列表为空</string>
+    <string name="playlist_empty_body">向此播放列表添加电影或剧集。</string>
+    <string name="playlist_add">添加到播放列表</string>
+    <string name="playlist_create">新建播放列表</string>
+    <string name="playlist_name">播放列表名称</string>
+    <string name="playlist_delete">删除播放列表</string>
+    <string name="playlist_delete_confirm">删除播放列表“%1$s”？</string>
+    <string name="playlist_remove">从播放列表中移除</string>
+    <string name="playlist_added">已添加到 %1$s</string>
+    <string name="playlist_created">播放列表已创建</string>
+    <string name="playlist_delete_failed">删除播放列表失败</string>
+    <string name="playlist_remove_failed">移除项目失败</string>
+    <string name="collection_title">合集</string>
+    <string name="collection_empty">此合集为空</string>
+    <string name="collection_empty_body">此合集中暂无影片。</string>
+    <string name="action_delete">删除</string>
+    <string name="action_create">创建</string>
+    <plurals name="playlist_items_count">
+        <item quantity="other">%d 项</item>
+    </plurals>
+    <plurals name="collection_items_count">
+        <item quantity="other">%d 部影片</item>
+    </plurals>
+    <string name="approval_title">等待批准</string>
+    <string name="approval_body">正在等待管理员批准此设备。</string>
+    <string name="approval_device">正在从 %2$s 以 %1$s 身份登录</string>
+    <string name="settings_account">您的账户</string>
+    <string name="settings_requests">片源请求</string>
+    <string name="settings_requests_subtitle">请求添加电影或剧集</string>
+    <string name="settings_activity">观看记录</string>
+    <string name="settings_activity_subtitle">您的观看时长和历史</string>
+    <string name="requests_title">片源请求</string>
+    <string name="requests_new">请求影片</string>
+    <string name="requests_empty">暂无请求</string>
+    <string name="requests_empty_body">找不到想看的影片？请管理员添加。</string>
+    <string name="requests_withdraw">撤回</string>
+    <string name="requests_status_pending">待处理</string>
+    <string name="requests_status_approved">已批准</string>
+    <string name="requests_status_declined">已拒绝</string>
+    <string name="requests_status_available">已上线</string>
+    <string name="requests_kind_movie">电影</string>
+    <string name="requests_kind_show">剧集</string>
+    <string name="requests_search">标题</string>
+    <string name="requests_note">备注（可选）</string>
+    <string name="requests_no_tmdb">服务器未启用片名搜索。请输入您想要的影片名称。</string>
+    <string name="requests_no_results">无匹配项</string>
+    <string name="requests_submit">发送请求</string>
+    <string name="requests_admin_note">管理员：%1$s</string>
+    <string name="activity_title">观看记录</string>
+    <string name="activity_total">总计</string>
+    <string name="activity_week">过去 7 天</string>
+    <string name="activity_month">过去 30 天</string>
+    <string name="activity_titles">影片数</string>
+    <string name="activity_completed">已看完</string>
+    <string name="activity_daily">每日观看时长</string>
+    <string name="activity_daily_peak">峰值 %1$s</string>
+    <string name="activity_top_titles">最常观看</string>
+    <string name="activity_top_genres">热门类型</string>
+    <string name="activity_history">最近播放</string>
+    <string name="activity_empty">尚未观看任何内容</string>
+    <string name="activity_empty_body">播放内容后，您的观看时长将显示在此处。</string>
+    <string name="duration_hm">%1$d 小时 %2$d 分钟</string>
+    <string name="duration_h">%1$d 小时</string>
+    <string name="duration_m">%1$d 分钟</string>
+    <string name="role_owner">站点所有者</string>
+    <string name="role_admin">管理员</string>
+    <string name="role_member">成员</string>
+</resources>

@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kinema</string>
+    <!-- Shared actions -->
+    <string name="action_back">వెనుకకు</string>
+    <string name="action_cancel">రద్దు చేయి</string>
+    <string name="action_details">వివరాలు</string>
+    <string name="action_play">ప్లే చేయి</string>
+    <string name="action_resume">కొనసాగించు</string>
+    <string name="action_retry">మళ్ళీ ప్రయత్నించండి</string>
+    <string name="action_save">సేవ్ చేయి</string>
+
+    <!-- Errors -->
+    <string name="error_title">ఏదో తప్పు జరిగింది</string>
+    <string name="error_generic">అది పనిచేయలేదు. మళ్ళీ ప్రయత్నించండి.</string>
+    <string name="error_offline">సర్వర్‌ను చేరుకోలేకపోయాము. అది నడుస్తుందో లేదో మరియు ఈ ఫోన్ అదే నెట్‌వర్క్‌లో ఉందో లేదో తనిఖీ చేయండి లేదా పబ్లిక్ చిరునామాను సెట్ చేయండి.</string>
+    <string name="error_untrusted">సర్వర్ సర్టిఫికెట్ మీరు ఆమోదించినది కాదు. దాన్ని సమీక్షించడానికి మళ్ళీ కనెక్ట్ చేయండి.</string>
+
+    <!-- Connect -->
+    <string name="connect_title">Kinema</string>
+    <string name="connect_subtitle">మీ సినిమాలు మరియు షోలు, మీ స్వంత సర్వర్ నుండి.</string>
+    <string name="connect_found">ఈ నెట్‌వర్క్‌లో</string>
+    <string name="connect_rescan">మళ్ళీ వెతకండి</string>
+    <string name="connect_scanning">సర్వర్ల కోసం వెతుకుతోంది…</string>
+    <string name="connect_none">ఏ సర్వర్ సమాధానం ఇవ్వలేదు. Kinema నడుస్తోందని మరియు ఈ ఫోన్ అదే Wi-Fiలో ఉందని నిర్ధారించుకోండి లేదా దిగువన దాని చిరునామాను నమోదు చేయండి.</string>
+    <string name="connect_this_computer">ఈ కంప్యూటర్ · %1$s</string>
+    <string name="connect_manual">చిరునామాను నమోదు చేయండి</string>
+    <string name="connect_address">సర్వర్ చిరునామా</string>
+    <string name="connect_address_hint">వెబ్‌లోని Kinemaలో Settings › Network కింద చూపబడింది</string>
+    <string name="connect_invalid">192.168.1.10:3000 లేదా media.example.com వంటి చిరునామాను నమోదు చేయండి.</string>
+    <string name="connect_action">కనెక్ట్ చేయి</string>
+    <string name="connect_change_server">మరొక సర్వర్‌ను ఉపయోగించండి</string>
+
+    <string name="trust_title">ఈ సర్వర్‌ను విశ్వసించాలా?</string>
+    <string name="trust_body">%1$s తన స్వంత భద్రతా సర్టిఫికెట్‌ను రూపొందించింది. మీరు దాన్ని విశ్వసించే ముందు ఈ కోడ్ వెబ్‌లోని Kinemaలో Settings › Network కింద ఉన్న కోడ్‌తో సరిపోలుతుందో లేదో తనిఖీ చేయండి.</string>
+    <string name="trust_accept">విశ్వసించు</string>
+
+    <string name="unreachable_title">సర్వర్ అందుబాటులో లేదు</string>
+    <string name="unreachable_body">%1$s వద్ద ఉన్న Kinema దాని హోమ్ లేదా పబ్లిక్ చిరునామా వద్ద సమాధానం ఇవ్వలేదు.</string>
+
+    <string name="forget_title">మరొక సర్వర్‌ను ఉపయోగించాలా?</string>
+    <string name="forget_body">ఈ ఫోన్ సర్వర్, దాని చిరునామాలు మరియు దాని సర్టిఫికెట్‌ను మర్చిపోతుంది. మీ వీక్షణ చరిత్ర సర్వర్‌లో అలాగే ఉంటుంది.</string>
+    <string name="forget_action">సర్వర్‌ను మర్చిపో</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">ఎవరు చూస్తున్నారు?</string>
+    <string name="profiles_locked">లాక్ చేయబడింది</string>
+    <string name="profiles_setup_title">ముందుగా సెటప్ పూర్తి చేయండి</string>
+    <string name="profiles_setup_body">మొదటి ఖాతాను సృష్టించడానికి మరియు మీ మీడియాను జోడించడానికి బ్రౌజర్‌లో %1$s తెరవండి. ఆపై ఇక్కడకు తిరిగి రండి.</string>
+    <string name="unlock_password">పాస్‌వర్డ్</string>
+    <string name="unlock_pin">PIN</string>
+    <string name="unlock_show">చూపించు</string>
+    <string name="unlock_hide">దాచు</string>
+    <string name="unlock_action">సైన్ ఇన్ చేయి</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">హోమ్</string>
+    <string name="tab_library">లైబ్రరీ</string>
+    <string name="tab_search">వెతకండి</string>
+    <string name="tab_settings">సెట్టింగ్‌లు</string>
+
+    <!-- Home -->
+    <string name="home_continue">చూడటం కొనసాగించండి</string>
+    <string name="home_shelf_movies">ఇటీవల జోడించిన సినిమాలు</string>
+    <string name="home_shelf_shows">ఇటీవల జోడించిన షోలు</string>
+    <string name="home_shelf_episodes">కొత్త ఎపిసోడ్‌లు</string>
+    <string name="home_hero_continue">చూడటం కొనసాగించండి</string>
+    <string name="home_hero_new">కొత్తది</string>
+    <string name="home_empty_title">ఇక్కడ ఇంకా ఏమీ లేదు</string>
+    <string name="home_empty_body">సర్వర్ నిర్వాహకుడు వెబ్‌లోని Kinemaలో లైబ్రరీని జోడించిన తర్వాత టైటిల్‌లు ఇక్కడ కనిపిస్తాయి.</string>
+
+    <!-- Library and search -->
+    <string name="library_none_title">లైబ్రరీలు లేవు</string>
+    <string name="library_none_body">మీరు చూడగలిగే లైబ్రరీలు సర్వర్‌లో ఇంకా లేవు.</string>
+    <string name="library_switcher_title">లైబ్రరీలు</string>
+    <string name="library_expand">షోలను చూపించు</string>
+    <string name="library_collapse">షోలను దాచు</string>
+    <plurals name="library_show_count">
+        <item quantity="one">%d షో</item>
+        <item quantity="other">%d షోలు</item>
+    </plurals>
+    <string name="library_empty_title">ఈ లైబ్రరీ ఖాళీగా ఉంది</string>
+    <string name="library_empty_body">సర్వర్ కొత్త ఫైళ్లను స్కాన్ చేసిన తర్వాత అవి ఇక్కడ కనిపిస్తాయి.</string>
+    <string name="search_hint">సినిమాలు, షోలు, ఎపిసోడ్‌లు</string>
+    <string name="search_clear">క్లియర్ చేయి</string>
+    <string name="search_idle_title">చూడటానికి ఏదైనా కనుగొనండి</string>
+    <string name="search_idle_body">ప్రతి లైబ్రరీలో టైటిల్ ద్వారా వెతకండి.</string>
+    <string name="search_none_title">ఫలితాలు లేవు</string>
+    <string name="search_none_body">“%1$s” కు సరిపోయేవి ఏవీ లేవు.</string>
+
+    <!-- Title page -->
+    <string name="item_watched">చూసినవి</string>
+    <string name="item_mark_watched">చూసినట్లు గుర్తించు</string>
+    <string name="item_mark_unwatched">చూడనట్లు గుర్తించు</string>
+    <string name="item_from_start">మొదటి నుండి ప్లే చేయి</string>
+    <string name="item_play_episode">S%1$d · E%2$d ప్లే చేయి</string>
+    <string name="item_episode_short">S%1$d · E%2$d</string>
+    <string name="item_season_no">S%1$d</string>
+    <string name="item_episode_no">E%1$d</string>
+    <string name="item_episode_number">ఎపిసోడ్ %1$d</string>
+    <string name="item_left">%1$s మిగిలి ఉంది</string>
+    <string name="item_seasons">సీజన్లు</string>
+    <string name="item_episodes">ఎపిసోడ్‌లు</string>
+    <string name="item_cast">నటీనటులు</string>
+    <string name="item_previous">మునుపటిది</string>
+    <string name="item_next">తరువాతిది</string>
+    <string name="item_file">ఫైల్</string>
+    <plurals name="item_seasons">
+        <item quantity="one">%d సీజన్</item>
+        <item quantity="other">%d సీజన్లు</item>
+    </plurals>
+    <plurals name="item_episodes">
+        <item quantity="one">%d ఎపిసోడ్</item>
+        <item quantity="other">%d ఎపిసోడ్‌లు</item>
+    </plurals>
+    <plurals name="item_audio_tracks">
+        <item quantity="one">%d ఆడియో ట్రాక్</item>
+        <item quantity="other">%d ఆడియో ట్రాక్‌లు</item>
+    </plurals>
+    <plurals name="item_subtitle_tracks">
+        <item quantity="one">%d ఉపశీర్షిక</item>
+        <item quantity="other">%d ఉపశీర్షికలు</item>
+    </plurals>
+    <string name="format_hours_minutes">%1$dగం %2$dని</string>
+    <string name="format_minutes">%1$dని</string>
+
+    <!-- Player -->
+    <string name="player_pause">పాజ్ చేయి</string>
+    <string name="player_stop">ఆపు</string>
+    <string name="player_volume">వాల్యూమ్</string>
+    <string name="player_brightness">ప్రకాశం</string>
+    <string name="player_boost">బూస్ట్ %1$d%%</string>
+    <string name="player_back10">10 సెకన్లు వెనుకకు</string>
+    <string name="player_forward10">10 సెకన్లు ముందుకు</string>
+    <string name="player_seconds">%1$d సె</string>
+    <string name="player_next">తరువాతి ఎపిసోడ్</string>
+    <string name="player_up_next_in">%1$sలో తరువాతిది</string>
+    <string name="player_play_now">ఇప్పుడే ప్లే చేయి</string>
+    <string name="player_dismiss">దాచు</string>
+    <string name="player_skip_intro">పరిచయాన్ని దాటవేయి</string>
+    <string name="player_skip_credits">క్రెడిట్‌లను దాటవేయి</string>
+    <string name="player_pip">పిక్చర్-ఇన్-పిక్చర్</string>
+    <string name="player_fullscreen">పూర్తి స్క్రీన్</string>
+    <string name="player_exit_fullscreen">పూర్తి స్క్రీన్ నుండి నిష్క్రమించు</string>
+    <string name="player_minimize">చిన్నదిగా చేయి</string>
+    <string name="player_up_next_list">ఎపిసోడ్‌లు మరియు మరిన్ని</string>
+    <string name="watch_episodes">ఎపిసోడ్‌లు</string>
+    <string name="watch_more">చూడటానికి మరిన్ని</string>
+    <string name="watch_now_playing">ఇప్పుడు ప్లే అవుతోంది</string>
+    <string name="watch_nothing">ఇక్కడ చూడటానికి ఇంకేమీ లేదు</string>
+    <string name="player_tracks">ఆడియో మరియు ఉపశీర్షికలు</string>
+    <string name="player_audio">ఆడియో</string>
+    <string name="player_subtitles">ఉపశీర్షికలు</string>
+    <string name="player_subtitles_off">ఆఫ్</string>
+    <string name="series_tracks">అన్ని ఎపిసోడ్‌లకు ఆడియో &amp; ఉపశీర్షికలు</string>
+    <string name="series_hint">ట్రాక్‌లు మొదటి ఎపిసోడ్ నుండి వస్తాయి. ప్రతి ఎపిసోడ్ ఒకే ట్రాక్ స్థానాన్ని ఉపయోగిస్తుంది, కాబట్టి అన్ని ఎపిసోడ్‌లు ఒకే విడుదల నుండి వచ్చినప్పుడు ఇది పనిచేస్తుంది.</string>
+    <string name="series_default">సర్వర్ డిఫాల్ట్</string>
+    <string name="series_no_streams">మొదటి ఎపిసోడ్ ఇంకా ప్రోబ్ చేయబడలేదు. స్కాన్ పూర్తయిన తర్వాత మళ్ళీ ప్రయత్నించండి.</string>
+    <string name="player_subtitle_image">చిత్ర ఉపశీర్షికలను ఇంకా చూపించలేము</string>
+    <string name="player_fill">స్క్రీన్‌ను నింపు</string>
+    <string name="player_fit">స్క్రీన్‌కు సరిపోయేలా చేయి</string>
+    <string name="player_mode_direct">డైరెక్ట్ ప్లే</string>
+    <string name="player_mode_remux">డైరెక్ట్ స్ట్రీమ్</string>
+    <string name="player_mode_transcode">మార్చబడుతోంది</string>
+    <string name="player_error_title">దీన్ని ప్లే చేయలేము</string>
+    <string name="player_error">వీడియో ఆగిపోయింది. కనెక్షన్‌ను తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి.</string>
+    <string name="player_no_file">ఈ టైటిల్‌కు ప్లే చేయగల ఫైల్ లేదు.</string>
+    <string name="track_mono">మోనో</string>
+    <string name="track_stereo">స్టీరియో</string>
+    <string name="track_numbered">ట్రాక్ %1$d</string>
+
+    <!-- Settings -->
+    <string name="settings_switch_profile">మార్చు</string>
+    <string name="settings_connection">కనెక్షన్</string>
+    <string name="settings_route_local">ఇంట్లో</string>
+    <string name="settings_route_public">బయట · పబ్లిక్ చిరునామా</string>
+    <string name="settings_route_hint">ఇంటి చిరునామా సమాధానం ఇచ్చినప్పుడు Kinema దాన్ని ఉపయోగిస్తుంది మరియు మీరు బయటకు వెళ్ళినప్పుడు పబ్లిక్ చిరునామాకు మారుతుంది.</string>
+    <string name="settings_local_url">ఇంటి చిరునామా</string>
+    <string name="settings_public_url">పబ్లిక్ చిరునామా</string>
+    <string name="settings_public_hint">ఎక్కడి నుండైనా సర్వర్‌ను చేరుకునే రివర్స్ ప్రాక్సీ లేదా టన్నెల్</string>
+    <string name="settings_public_from_server">సర్వర్ చిరునామా ఉపయోగించబడుతోంది: %1$s</string>
+    <string name="settings_public_test">పరీక్షించు</string>
+    <string name="settings_public_ok">ఈ చిరునామాలో సర్వర్ సమాధానం ఇస్తోంది</string>
+    <string name="settings_public_unreachable">ఇక్కడి నుండి ఈ చిరునామాలో సమాధానం లేదు</string>
+    <string name="settings_appearance">రూపం</string>
+    <string name="settings_theme_system">సిస్టమ్</string>
+    <string name="settings_theme_light">లైట్</string>
+    <string name="settings_theme_dark">డార్క్</string>
+    <string name="settings_dynamic">వాల్‌పేపర్ రంగులు</string>
+    <string name="settings_dynamic_hint">మీ వాల్‌పేపర్ నుండి రంగులతో యాప్‌కు రంగు వేయండి</string>
+    <string name="settings_language">భాష</string>
+    <string name="settings_language_system">సిస్టమ్ డిఫాల్ట్</string>
+    <string name="settings_language_picker_title">యాప్ భాష</string>
+    <string name="player_notification_channel">మీడియా ప్లేబ్యాక్</string>
+    <string name="player_notification_channel_desc">ప్లేబ్యాక్ నియంత్రణలు మరియు మీడియా నోటిఫికేషన్</string>
+    <string name="settings_playback">ప్లేబ్యాక్</string>
+    <string name="settings_pip">పిక్చర్-ఇన్-పిక్చర్</string>
+    <string name="settings_pip_on">యాప్ నుండి నిష్క్రమించినా వీడియో చిన్న విండోలో ప్లే అవుతూ ఉంటుంది. విండోను మూసివేస్తే అది పాజ్ అవుతుంది.</string>
+    <string name="settings_pip_off">యాప్ నుండి నిష్క్రమించినా నోటిఫికేషన్‌లో నియంత్రణలతో ధ్వని ప్లే అవుతూ ఉంటుంది.</string>
+    <string name="settings_server">సర్వర్</string>
+    <string name="settings_cert_pinned">ప్రైవేట్ సర్టిఫికెట్, ఈ ఫోన్‌లో ఆమోదించబడింది</string>
+    <string name="settings_cert_public">పబ్లిక్ అథారిటీ సంతకం చేసిన సర్టిఫికెట్</string>
+    <string name="settings_kinema">Kinema</string>
+    <string name="settings_updates">నవీకరణలు</string>
+    <string name="settings_updates_subtitle">వెర్షన్ %1$s, విడుదల గమనికలు మరియు ఛానెల్</string>
+    <string name="settings_about_subtitle">వెర్షన్ %1$s, డెవలపర్ మరియు కృతజ్ఞతలు</string>
+    <string name="update_title">నవీకరణలు</string>
+    <string name="update_checking">నవీకరణల కోసం తనిఖీ చేస్తోంది…</string>
+    <string name="update_check_failed">నవీకరణల కోసం తనిఖీ చేయలేకపోయాము</string>
+    <string name="update_check_failed_body">మీ వద్ద %1$s ఉంది. మీ కనెక్షన్‌ను తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి.</string>
+    <string name="update_failed">నవీకరించలేకపోయాము: %1$s</string>
+    <string name="update_up_to_date">Kinema తాజా వెర్షన్‌లో ఉంది</string>
+    <string name="update_dev_build">డెవలప్‌మెంట్ బిల్డ్</string>
+    <string name="update_dev_build_body">మీ వద్ద %1$s ఉంది. డెవలప్‌మెంట్ బిల్డ్‌ను మళ్ళీ నిర్మించడం ద్వారా నవీకరించవచ్చు.</string>
+    <string name="update_you_have">మీ వద్ద %1$s ఉంది.</string>
+    <string name="update_available">Kinema %1$s అందుబాటులో ఉంది</string>
+    <string name="update_prompt_body">మీ వద్ద %1$s ఉంది. ఇన్‌స్టాల్ చేసే ముందు Android అడుగుతుంది; మీ సర్వర్, సైన్-ఇన్ మరియు సెట్టింగ్‌లు అలాగే ఉంటాయి. విడుదల గమనికలు మరియు ఛానెల్ సెట్టింగ్‌లలో, నవీకరణల కింద ఉన్నాయి.</string>
+    <string name="update_downloading_percent">డౌన్‌లోడ్ అవుతోంది %1$d%%</string>
+    <string name="update_install">నవీకరించు</string>
+    <string name="update_download_install">డౌన్‌లోడ్ చేసి ఇన్‌స్టాల్ చేయి</string>
+    <string name="update_check_again">మళ్ళీ తనిఖీ చేయి</string>
+    <string name="update_later">తరువాత</string>
+    <string name="update_channel">ఛానెల్</string>
+    <string name="update_channel_stable">స్థిరమైనది</string>
+    <string name="update_channel_beta">బీటా</string>
+    <string name="update_channel_alpha">ఆల్ఫా</string>
+    <string name="update_channel_hint">బీటా మరియు ఆల్ఫాకు కొత్త బిల్డ్‌లు ముందుగా వస్తాయి, మరియు ప్రతి స్థిరమైన బిల్డ్ కూడా వస్తుంది.</string>
+    <string name="update_whats_new_in">%1$sలో కొత్తవి ఏమిటి</string>
+    <string name="update_in_this_version">ఈ వెర్షన్‌లో</string>
+    <string name="update_loading_notes">విడుదల గమనికలు లోడ్ అవుతున్నాయి…</string>
+    <string name="update_no_notes">ఈ వెర్షన్‌కు విడుదల గమనికలు లేవు.</string>
+    <string name="about_title">Kinema గురించి</string>
+    <string name="about_section_app">యాప్</string>
+    <string name="about_version_build">వెర్షన్ %1$s · బిల్డ్ %2$d</string>
+    <string name="about_privacy_title">గోప్యత</string>
+    <string name="about_privacy_subtitle">మీ స్వంత సర్వర్‌లో నడుస్తుంది. మీ లైబ్రరీ మరియు వీక్షణ చరిత్ర దాన్ని ఎప్పటికీ వదిలి వెళ్ళవు.</string>
+    <string name="about_source_code">సోర్స్ కోడ్</string>
+    <string name="about_section_developer">డెవలపర్</string>
+    <string name="about_developer_tagline">ఒక డెవలపర్ ద్వారా రూపొందించబడింది మరియు నిర్మించబడింది.</string>
+    <string name="about_github">GitHub</string>
+    <string name="about_portfolio">పోర్ట్‌ఫోలియో</string>
+    <string name="about_section_open_source">ఓపెన్ సోర్స్</string>
+    <string name="about_acknowledgements">కృతజ్ఞతలు</string>
+    <string name="about_acknowledgements_subtitle">Android యాప్ నిర్మించబడిన లైబ్రరీలు మరియు ప్రాజెక్ట్‌లు</string>
+    <string name="about_tmdb">మీ సర్వర్ ద్వారా సినిమా మరియు షో మెటాడేటా మరియు ఆర్ట్‌వర్క్. ఈ ఉత్పత్తి TMDB APIని ఉపయోగిస్తుంది కానీ TMDB ద్వారా ఆమోదించబడలేదు లేదా ధృవీకరించబడలేదు.</string>
+    <string name="about_plex">స్ఫూర్తి: వ్యక్తిగత మీడియా సర్వర్ ఆలోచన. ఎటువంటి Plex కోడ్ లేదా ఆస్తులు ఉపయోగించబడలేదు.</string>
+    <string name="update_github_status">GitHub %1$d సమాధానం ఇచ్చింది</string>
+    <string name="update_download_status">డౌన్‌లోడ్ %1$d సమాధానం ఇచ్చింది</string>
+    <string name="update_conflict">Android నవీకరణను తిరస్కరించింది: ఇది ఇన్‌స్టాల్ చేసిన యాప్ నుండి వేరే కీతో సంతకం చేయబడింది. ముందుగా ఈ కాపీని అన్‌ఇన్‌స్టాల్ చేయండి.</string>
+
+    <!-- Playlists and Collections -->
+    <string name="home_shelf_playlists">ప్లేలిస్ట్‌లు</string>
+    <string name="home_shelf_collections">సేకరణలు</string>
+    <string name="playlist_title">ప్లేలిస్ట్</string>
+    <string name="playlist_play_all">అన్నీ ప్లే చేయి</string>
+    <string name="playlist_empty">ఈ ప్లేలిస్ట్ ఖాళీగా ఉంది</string>
+    <string name="playlist_empty_body">ఈ ప్లేలిస్ట్‌కు సినిమాలు లేదా ఎపిసోడ్‌లను జోడించండి.</string>
+    <string name="playlist_add">ప్లేలిస్ట్‌కు జోడించు</string>
+    <string name="playlist_create">కొత్త ప్లేలిస్ట్</string>
+    <string name="playlist_name">ప్లేలిస్ట్ పేరు</string>
+    <string name="playlist_delete">ప్లేలిస్ట్‌ను తొలగించు</string>
+    <string name="playlist_delete_confirm">“%1$s” ప్లేలిస్ట్‌ను తొలగించాలా?</string>
+    <string name="playlist_remove">ప్లేలిస్ట్ నుండి తీసివేయి</string>
+    <string name="playlist_added">%1$sకు జోడించబడింది</string>
+    <string name="playlist_created">ప్లేలిస్ట్ సృష్టించబడింది</string>
+    <string name="playlist_delete_failed">ప్లేలిస్ట్‌ను తొలగించడం విఫలమైంది</string>
+    <string name="playlist_remove_failed">అంశాన్ని తీసివేయడం విఫలమైంది</string>
+    <string name="collection_title">సేకరణ</string>
+    <string name="collection_empty">ఈ సేకరణ ఖాళీగా ఉంది</string>
+    <string name="collection_empty_body">ఈ సేకరణలో ఇంకా టైటిల్‌లు లేవు.</string>
+    <string name="action_delete">తొలగించు</string>
+    <string name="action_create">సృష్టించు</string>
+    <plurals name="playlist_items_count">
+        <item quantity="one">%d అంశం</item>
+        <item quantity="other">%d అంశాలు</item>
+    </plurals>
+    <plurals name="collection_items_count">
+        <item quantity="one">%d టైటిల్</item>
+        <item quantity="other">%d టైటిల్‌లు</item>
+    </plurals>
+    <string name="approval_title">ఆమోదం కోసం వేచి ఉంది</string>
+    <string name="approval_body">నిర్వాహకుడు ఈ పరికరాన్ని ఆమోదించడానికి వేచి ఉంది.</string>
+    <string name="approval_device">%2$s నుండి %1$sగా సైన్ ఇన్ చేస్తోంది</string>
+    <string name="settings_account">మీ ఖాతా</string>
+    <string name="settings_requests">అభ్యర్థనలు</string>
+    <string name="settings_requests_subtitle">సినిమా లేదా షోను జోడించమని అడగండి</string>
+    <string name="settings_activity">వీక్షణ కార్యాచరణ</string>
+    <string name="settings_activity_subtitle">మీ వీక్షణ సమయం మరియు చరిత్ర</string>
+    <string name="requests_title">అభ్యర్థనలు</string>
+    <string name="requests_new">టైటిల్‌ను అభ్యర్థించండి</string>
+    <string name="requests_empty">ఇంకా అభ్యర్థనలు లేవు</string>
+    <string name="requests_empty_body">ఏదైనా దొరకడం లేదా? దాన్ని జోడించమని నిర్వాహకుడిని అడగండి.</string>
+    <string name="requests_withdraw">వెనక్కి తీసుకో</string>
+    <string name="requests_status_pending">పెండింగ్‌లో ఉంది</string>
+    <string name="requests_status_approved">ఆమోదించబడింది</string>
+    <string name="requests_status_declined">తిరస్కరించబడింది</string>
+    <string name="requests_status_available">అందుబాటులో ఉంది</string>
+    <string name="requests_kind_movie">సినిమా</string>
+    <string name="requests_kind_show">షో</string>
+    <string name="requests_search">టైటిల్</string>
+    <string name="requests_note">గమనిక (ఐచ్ఛికం)</string>
+    <string name="requests_no_tmdb">సర్వర్‌లో టైటిల్ శోధన లేదు. మీకు కావలసిన టైటిల్‌ను టైప్ చేయండి.</string>
+    <string name="requests_no_results">సరిపోలికలు లేవు</string>
+    <string name="requests_submit">అభ్యర్థన పంపు</string>
+    <string name="requests_admin_note">నిర్వాహకుడు: %1$s</string>
+    <string name="activity_title">వీక్షణ కార్యాచరణ</string>
+    <string name="activity_total">మొత్తం</string>
+    <string name="activity_week">గత 7 రోజులు</string>
+    <string name="activity_month">గత 30 రోజులు</string>
+    <string name="activity_titles">టైటిల్‌లు</string>
+    <string name="activity_completed">పూర్తయినవి</string>
+    <string name="activity_daily">రోజువారీ వీక్షణ సమయం</string>
+    <string name="activity_daily_peak">గరిష్టం %1$s</string>
+    <string name="activity_top_titles">ఎక్కువగా చూసినవి</string>
+    <string name="activity_top_genres">అగ్ర శైలులు</string>
+    <string name="activity_history">ఇటీవల ప్లే చేసినవి</string>
+    <string name="activity_empty">ఇంకా ఏమీ చూడలేదు</string>
+    <string name="activity_empty_body">మీరు ఏదైనా ప్లే చేసిన తర్వాత మీ వీక్షణ సమయం ఇక్కడ కనిపిస్తుంది.</string>
+    <string name="duration_hm">%1$dగం %2$dని</string>
+    <string name="duration_h">%1$dగం</string>
+    <string name="duration_m">%1$dని</string>
+    <string name="role_owner">సైట్ యజమాని</string>
+    <string name="role_admin">నిర్వాహకుడు</string>
+    <string name="role_member">సభ్యుడు</string>
+</resources>

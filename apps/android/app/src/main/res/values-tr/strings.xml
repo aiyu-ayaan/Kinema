@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kinema</string>
+    <!-- Shared actions -->
+    <string name="action_back">Geri</string>
+    <string name="action_cancel">İptal</string>
+    <string name="action_details">Ayrıntılar</string>
+    <string name="action_play">Oynat</string>
+    <string name="action_resume">Sürdür</string>
+    <string name="action_retry">Tekrar dene</string>
+    <string name="action_save">Kaydet</string>
+
+    <!-- Errors -->
+    <string name="error_title">Bir şeyler ters gitti</string>
+    <string name="error_generic">İşlem başarısız oldu. Tekrar deneyin.</string>
+    <string name="error_offline">Sunucuya ulaşılamıyor. Çalıştığından ve bu telefonun aynı ağda olduğundan emin olun ya da genel bir adres ayarlayın.</string>
+    <string name="error_untrusted">Sunucunun sertifikası onayladığınız sertifika değil. İncelemek için yeniden bağlanın.</string>
+
+    <!-- Connect -->
+    <string name="connect_title">Kinema</string>
+    <string name="connect_subtitle">Filmleriniz ve dizileriniz, kendi sunucunuzdan.</string>
+    <string name="connect_found">Bu ağda</string>
+    <string name="connect_rescan">Tekrar ara</string>
+    <string name="connect_scanning">Sunucular aranıyor…</string>
+    <string name="connect_none">Hiçbir sunucu yanıt vermedi. Kinema’nın çalıştığından ve bu telefonun aynı Wi-Fi ağında olduğundan emin olun veya aşağıya adresini girin.</string>
+    <string name="connect_this_computer">Bu bilgisayar · %1$s</string>
+    <string name="connect_manual">Adres gir</string>
+    <string name="connect_address">Sunucu adresi</string>
+    <string name="connect_address_hint">Web üzerindeki Kinema’da Ayarlar › Ağ altında gösterilir</string>
+    <string name="connect_invalid">192.168.1.10:3000 veya media.example.com gibi bir adres girin.</string>
+    <string name="connect_action">Bağlan</string>
+    <string name="connect_change_server">Başka bir sunucu kullan</string>
+
+    <string name="trust_title">Bu sunucuya güvenilsin mi?</string>
+    <string name="trust_body">%1$s kendi güvenlik sertifikasını oluşturdu. Güvenmeden önce bu kodun web üzerindeki Kinema’da Ayarlar › Ağ altındaki kodla eşleştiğini doğrulayın.</string>
+    <string name="trust_accept">Güven</string>
+
+    <string name="unreachable_title">Sunucuya ulaşılamıyor</string>
+    <string name="unreachable_body">%1$s adresindeki Kinema, ev veya genel adresinden yanıt vermedi.</string>
+
+    <string name="forget_title">Başka bir sunucu kullanılsın mı?</string>
+    <string name="forget_body">Bu telefon sunucuyu, adreslerini ve sertifikasını unutur. İzleme geçmişiniz sunucuda kalır.</string>
+    <string name="forget_action">Sunucuyu unut</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">Kim izliyor?</string>
+    <string name="profiles_locked">Kilitli</string>
+    <string name="profiles_setup_title">Önce kurulumu tamamlayın</string>
+    <string name="profiles_setup_body">İlk hesabı oluşturmak ve medyanızı eklemek için tarayıcıda %1$s adresini açın. Ardından buraya geri dönün.</string>
+    <string name="unlock_password">Parola</string>
+    <string name="unlock_pin">PIN</string>
+    <string name="unlock_show">Göster</string>
+    <string name="unlock_hide">Gizle</string>
+    <string name="unlock_action">Oturum aç</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">Ana Sayfa</string>
+    <string name="tab_library">Kitaplık</string>
+    <string name="tab_search">Ara</string>
+    <string name="tab_settings">Ayarlar</string>
+
+    <!-- Home -->
+    <string name="home_continue">İzlemeye devam et</string>
+    <string name="home_shelf_movies">Son eklenen filmler</string>
+    <string name="home_shelf_shows">Son eklenen diziler</string>
+    <string name="home_shelf_episodes">Yeni bölümler</string>
+    <string name="home_hero_continue">İzlemeye devam et</string>
+    <string name="home_hero_new">Yeni</string>
+    <string name="home_empty_title">Burada henüz bir şey yok</string>
+    <string name="home_empty_body">Sunucu yöneticisi web üzerindeki Kinema’da bir kitaplık eklediğinde içerikler burada görünür.</string>
+
+    <!-- Library and search -->
+    <string name="library_none_title">Kitaplık yok</string>
+    <string name="library_none_body">Sunucuda henüz görebileceğiniz bir kitaplık yok.</string>
+    <string name="library_switcher_title">Kitaplıklar</string>
+    <string name="library_expand">Dizileri göster</string>
+    <string name="library_collapse">Dizileri gizle</string>
+    <plurals name="library_show_count">
+        <item quantity="one">%d dizi</item>
+        <item quantity="other">%d dizi</item>
+    </plurals>
+    <string name="library_empty_title">Bu kitaplık boş</string>
+    <string name="library_empty_body">Sunucu yeni dosyaları taradıktan sonra burada görünürler.</string>
+    <string name="search_hint">Filmler, diziler, bölümler</string>
+    <string name="search_clear">Temizle</string>
+    <string name="search_idle_title">İzleyecek bir şey bulun</string>
+    <string name="search_idle_body">Tüm kitaplıklarda başlığa göre arayın.</string>
+    <string name="search_none_title">Sonuç yok</string>
+    <string name="search_none_body">“%1$s” ile eşleşen bir şey yok.</string>
+
+    <!-- Title page -->
+    <string name="item_watched">İzlendi</string>
+    <string name="item_mark_watched">İzlendi olarak işaretle</string>
+    <string name="item_mark_unwatched">İzlenmedi olarak işaretle</string>
+    <string name="item_from_start">Baştan oynat</string>
+    <string name="item_play_episode">S%1$d · E%2$d oynat</string>
+    <string name="item_episode_short">S%1$d · E%2$d</string>
+    <string name="item_season_no">S%1$d</string>
+    <string name="item_episode_no">E%1$d</string>
+    <string name="item_episode_number">Bölüm %1$d</string>
+    <string name="item_left">%1$s kaldı</string>
+    <string name="item_seasons">Sezonlar</string>
+    <string name="item_episodes">Bölümler</string>
+    <string name="item_cast">Oyuncular</string>
+    <string name="item_previous">Önceki</string>
+    <string name="item_next">Sonraki</string>
+    <string name="item_file">Dosya</string>
+    <plurals name="item_seasons">
+        <item quantity="one">%d sezon</item>
+        <item quantity="other">%d sezon</item>
+    </plurals>
+    <plurals name="item_episodes">
+        <item quantity="one">%d bölüm</item>
+        <item quantity="other">%d bölüm</item>
+    </plurals>
+    <plurals name="item_audio_tracks">
+        <item quantity="one">%d ses parçası</item>
+        <item quantity="other">%d ses parçası</item>
+    </plurals>
+    <plurals name="item_subtitle_tracks">
+        <item quantity="one">%d altyazı</item>
+        <item quantity="other">%d altyazı</item>
+    </plurals>
+    <string name="format_hours_minutes">%1$dsa %2$ddk</string>
+    <string name="format_minutes">%1$ddk</string>
+
+    <!-- Player -->
+    <string name="player_pause">Duraklat</string>
+    <string name="player_stop">Durdur</string>
+    <string name="player_volume">Ses</string>
+    <string name="player_brightness">Parlaklık</string>
+    <string name="player_boost">Artır %%%1$d</string>
+    <string name="player_back10">10 saniye geri</string>
+    <string name="player_forward10">10 saniye ileri</string>
+    <string name="player_seconds">%1$d sn</string>
+    <string name="player_next">Sonraki bölüm</string>
+    <string name="player_up_next_in">%1$s içinde sonraki</string>
+    <string name="player_play_now">Şimdi oynat</string>
+    <string name="player_dismiss">Gizle</string>
+    <string name="player_skip_intro">Girişi atla</string>
+    <string name="player_skip_credits">Jeneriği atla</string>
+    <string name="player_pip">Resim içinde resim</string>
+    <string name="player_fullscreen">Tam ekran</string>
+    <string name="player_exit_fullscreen">Tam ekrandan çık</string>
+    <string name="player_minimize">Küçült</string>
+    <string name="player_up_next_list">Bölümler ve daha fazlası</string>
+    <string name="watch_episodes">Bölümler</string>
+    <string name="watch_more">İzlenecek diğerleri</string>
+    <string name="watch_now_playing">Şimdi oynatılıyor</string>
+    <string name="watch_nothing">Burada izlenecek başka bir şey yok</string>
+    <string name="player_tracks">Ses ve altyazılar</string>
+    <string name="player_audio">Ses</string>
+    <string name="player_subtitles">Altyazılar</string>
+    <string name="player_subtitles_off">Kapalı</string>
+    <string name="series_tracks">Tüm bölümler için ses &amp; altyazılar</string>
+    <string name="series_hint">Parçalar ilk bölümden alınır. Her bölüm aynı parça konumunu kullanır, bu nedenle tüm bölümler aynı sürümden geldiğinde çalışır.</string>
+    <string name="series_default">Sunucu varsayılanı</string>
+    <string name="series_no_streams">İlk bölüm henüz taranmadı. Tarama bittikten sonra tekrar deneyin.</string>
+    <string name="player_subtitle_image">Resim altyazıları henüz gösterilemiyor</string>
+    <string name="player_fill">Ekranı doldur</string>
+    <string name="player_fit">Ekrana sığdır</string>
+    <string name="player_mode_direct">Doğrudan oynatma</string>
+    <string name="player_mode_remux">Doğrudan akış</string>
+    <string name="player_mode_transcode">Dönüştürülüyor</string>
+    <string name="player_error_title">Bu oynatılamıyor</string>
+    <string name="player_error">Video durdu. Bağlantıyı kontrol edip tekrar deneyin.</string>
+    <string name="player_no_file">Bu başlığın oynatılabilir bir dosyası yok.</string>
+    <string name="track_mono">Mono</string>
+    <string name="track_stereo">Stereo</string>
+    <string name="track_numbered">Parça %1$d</string>
+
+    <!-- Settings -->
+    <string name="settings_switch_profile">Değiştir</string>
+    <string name="settings_connection">Bağlantı</string>
+    <string name="settings_route_local">Evde</string>
+    <string name="settings_route_public">Dışarıda · genel adres</string>
+    <string name="settings_route_hint">Kinema, ev adresi yanıt verdiğinde onu kullanır ve dışarı çıktığınızda genel adrese geçer.</string>
+    <string name="settings_local_url">Ev adresi</string>
+    <string name="settings_public_url">Genel adres</string>
+    <string name="settings_public_hint">Sunucuya her yerden ulaşan bir ters proxy veya tünel</string>
+    <string name="settings_public_from_server">Sunucununki kullanılıyor: %1$s</string>
+    <string name="settings_public_test">Test et</string>
+    <string name="settings_public_ok">Sunucu bu adreste yanıt veriyor</string>
+    <string name="settings_public_unreachable">Buradan bu adreste yanıt yok</string>
+    <string name="settings_appearance">Görünüm</string>
+    <string name="settings_theme_system">Sistem</string>
+    <string name="settings_theme_light">Açık</string>
+    <string name="settings_theme_dark">Koyu</string>
+    <string name="settings_dynamic">Duvar kağıdı renkleri</string>
+    <string name="settings_dynamic_hint">Uygulamayı duvar kağıdınızdaki renklerle renklendirin</string>
+    <string name="settings_language">Dil</string>
+    <string name="settings_language_system">Sistem varsayılanı</string>
+    <string name="settings_language_picker_title">Uygulama dili</string>
+    <string name="player_notification_channel">Medya Oynatma</string>
+    <string name="player_notification_channel_desc">Oynatma denetimleri ve medya bildirimi</string>
+    <string name="settings_playback">Oynatma</string>
+    <string name="settings_pip">Resim içinde resim</string>
+    <string name="settings_pip_on">Uygulamadan ayrılmak videoyu küçük bir pencerede oynatmaya devam eder. Pencereyi kapatmak videoyu duraklatır.</string>
+    <string name="settings_pip_off">Uygulamadan ayrılmak bildirimdeki denetimlerle sesi çalmaya devam eder.</string>
+    <string name="settings_server">Sunucu</string>
+    <string name="settings_cert_pinned">Özel sertifika, bu telefonda onaylandı</string>
+    <string name="settings_cert_public">Genel bir otorite tarafından imzalanmış sertifika</string>
+    <string name="settings_kinema">Kinema</string>
+    <string name="settings_updates">Güncellemeler</string>
+    <string name="settings_updates_subtitle">Sürüm %1$s, sürüm notları ve kanal</string>
+    <string name="settings_about_subtitle">Sürüm %1$s, geliştirici ve teşekkürler</string>
+    <string name="update_title">Güncellemeler</string>
+    <string name="update_checking">Güncellemeler denetleniyor…</string>
+    <string name="update_check_failed">Güncellemeler denetlenemedi</string>
+    <string name="update_check_failed_body">Sizde %1$s var. Bağlantınızı kontrol edip tekrar deneyin.</string>
+    <string name="update_failed">Güncellenemedi: %1$s</string>
+    <string name="update_up_to_date">Kinema güncel</string>
+    <string name="update_dev_build">Geliştirme derlemesi</string>
+    <string name="update_dev_build_body">Sizde %1$s var. Geliştirme derlemesi yeniden derlenerek güncellenir.</string>
+    <string name="update_you_have">Sizde %1$s var.</string>
+    <string name="update_available">Kinema %1$s mevcut</string>
+    <string name="update_prompt_body">Sizde %1$s var. Yüklemeden önce Android sorar; sunucunuz, oturumunuz ve ayarlarınız korunur. Sürüm notları ve kanal Ayarlar altında Güncellemeler bölümündedir.</string>
+    <string name="update_downloading_percent">İndiriliyor %%%1$d</string>
+    <string name="update_install">Güncelle</string>
+    <string name="update_download_install">İndir ve yükle</string>
+    <string name="update_check_again">Tekrar denetle</string>
+    <string name="update_later">Sonra</string>
+    <string name="update_channel">Kanal</string>
+    <string name="update_channel_stable">Kararlı</string>
+    <string name="update_channel_beta">Beta</string>
+    <string name="update_channel_alpha">Alfa</string>
+    <string name="update_channel_hint">Beta ve Alfa yeni derlemeleri daha erken alır, ayrıca her kararlı derlemeyi de alır.</string>
+    <string name="update_whats_new_in">%1$s sürümündeki yenilikler</string>
+    <string name="update_in_this_version">Bu sürümde</string>
+    <string name="update_loading_notes">Sürüm notları yükleniyor…</string>
+    <string name="update_no_notes">Bu sürüm için sürüm notu yok.</string>
+    <string name="about_title">Kinema Hakkında</string>
+    <string name="about_section_app">Uygulama</string>
+    <string name="about_version_build">Sürüm %1$s · derleme %2$d</string>
+    <string name="about_privacy_title">Gizlilik</string>
+    <string name="about_privacy_subtitle">Kendi sunucunuzda çalışır. Kitaplığınız ve izleme geçmişiniz asla sunucunuzdan çıkmaz.</string>
+    <string name="about_source_code">Kaynak kodu</string>
+    <string name="about_section_developer">Geliştirici</string>
+    <string name="about_developer_tagline">Tek bir geliştirici tarafından tasarlandı ve geliştirildi.</string>
+    <string name="about_github">GitHub</string>
+    <string name="about_portfolio">Portföy</string>
+    <string name="about_section_open_source">Açık kaynak</string>
+    <string name="about_acknowledgements">Teşekkürler</string>
+    <string name="about_acknowledgements_subtitle">Android uygulamasının üzerine kurulduğu kitaplıklar ve projeler</string>
+    <string name="about_tmdb">Sunucunuz aracılığıyla film ve dizi meta verileri ve görselleri. Bu ürün TMDB API’sini kullanır ancak TMDB tarafından onaylanmamış veya sertifikalandırılmamıştır.</string>
+    <string name="about_plex">İlham: kişisel bir medya sunucusu fikri. Hiçbir Plex kodu veya varlığı kullanılmamıştır.</string>
+    <string name="update_github_status">GitHub %1$d yanıtı verdi</string>
+    <string name="update_download_status">İndirme %1$d yanıtı verdi</string>
+    <string name="update_conflict">Android güncellemeyi reddetti: yüklü uygulamadan farklı bir anahtarla imzalanmış. Önce bu kopyayı kaldırın.</string>
+
+    <!-- Playlists and Collections -->
+    <string name="home_shelf_playlists">Oynatma listeleri</string>
+    <string name="home_shelf_collections">Koleksiyonlar</string>
+    <string name="playlist_title">Oynatma listesi</string>
+    <string name="playlist_play_all">Tümünü oynat</string>
+    <string name="playlist_empty">Bu oynatma listesi boş</string>
+    <string name="playlist_empty_body">Bu oynatma listesine filmler veya bölümler ekleyin.</string>
+    <string name="playlist_add">Oynatma listesine ekle</string>
+    <string name="playlist_create">Yeni oynatma listesi</string>
+    <string name="playlist_name">Oynatma listesi adı</string>
+    <string name="playlist_delete">Oynatma listesini sil</string>
+    <string name="playlist_delete_confirm">“%1$s” oynatma listesi silinsin mi?</string>
+    <string name="playlist_remove">Oynatma listesinden kaldır</string>
+    <string name="playlist_added">%1$s listesine eklendi</string>
+    <string name="playlist_created">Oynatma listesi oluşturuldu</string>
+    <string name="playlist_delete_failed">Oynatma listesi silinemedi</string>
+    <string name="playlist_remove_failed">Öğe kaldırılamadı</string>
+    <string name="collection_title">Koleksiyon</string>
+    <string name="collection_empty">Bu koleksiyon boş</string>
+    <string name="collection_empty_body">Bu koleksiyonda henüz başlık yok.</string>
+    <string name="action_delete">Sil</string>
+    <string name="action_create">Oluştur</string>
+    <plurals name="playlist_items_count">
+        <item quantity="one">%d öğe</item>
+        <item quantity="other">%d öğe</item>
+    </plurals>
+    <plurals name="collection_items_count">
+        <item quantity="one">%d başlık</item>
+        <item quantity="other">%d başlık</item>
+    </plurals>
+    <string name="approval_title">Onay bekleniyor</string>
+    <string name="approval_body">Yöneticinin bu cihazı onaylaması bekleniyor.</string>
+    <string name="approval_device">%2$s cihazından %1$s olarak oturum açılıyor</string>
+    <string name="settings_account">Hesabınız</string>
+    <string name="settings_requests">İstekler</string>
+    <string name="settings_requests_subtitle">Bir film veya dizi eklenmesini isteyin</string>
+    <string name="settings_activity">İzleme etkinliği</string>
+    <string name="settings_activity_subtitle">İzleme süreniz ve geçmişiniz</string>
+    <string name="requests_title">İstekler</string>
+    <string name="requests_new">Başlık iste</string>
+    <string name="requests_empty">Henüz istek yok</string>
+    <string name="requests_empty_body">Bir şey bulamadınız mı? Yöneticiden eklemesini isteyin.</string>
+    <string name="requests_withdraw">Geri çek</string>
+    <string name="requests_status_pending">Beklemede</string>
+    <string name="requests_status_approved">Onaylandı</string>
+    <string name="requests_status_declined">Reddedildi</string>
+    <string name="requests_status_available">Mevcut</string>
+    <string name="requests_kind_movie">Film</string>
+    <string name="requests_kind_show">Dizi</string>
+    <string name="requests_search">Başlık</string>
+    <string name="requests_note">Not (isteğe bağlı)</string>
+    <string name="requests_no_tmdb">Sunucuda başlık araması yok. İstediğiniz başlığı yazın.</string>
+    <string name="requests_no_results">Eşleşme yok</string>
+    <string name="requests_submit">İstek gönder</string>
+    <string name="requests_admin_note">Yönetici: %1$s</string>
+    <string name="activity_title">İzleme etkinliği</string>
+    <string name="activity_total">Toplam</string>
+    <string name="activity_week">Son 7 gün</string>
+    <string name="activity_month">Son 30 gün</string>
+    <string name="activity_titles">Başlıklar</string>
+    <string name="activity_completed">Tamamlanan</string>
+    <string name="activity_daily">Günlük izleme süresi</string>
+    <string name="activity_daily_peak">En yüksek %1$s</string>
+    <string name="activity_top_titles">En çok izlenenler</string>
+    <string name="activity_top_genres">En popüler türler</string>
+    <string name="activity_history">Son oynatılanlar</string>
+    <string name="activity_empty">Henüz bir şey izlenmedi</string>
+    <string name="activity_empty_body">Bir şey oynattığınızda izleme süreniz burada görünür.</string>
+    <string name="duration_hm">%1$dsa %2$ddk</string>
+    <string name="duration_h">%1$dsa</string>
+    <string name="duration_m">%1$ddk</string>
+    <string name="role_owner">Site sahibi</string>
+    <string name="role_admin">Yönetici</string>
+    <string name="role_member">Üye</string>
+</resources>

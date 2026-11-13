@@ -27,6 +27,14 @@ android {
         versionName = rootManifest["version"] as String
     }
 
+    androidResources {
+        localeFilters += listOf(
+            "en", "hi", "es", "pt", "in", "ar", "fr", "ru", "de", "tr",
+            "ja", "ko", "it", "vi", "th", "zh", "pl", "bn", "ta", "te",
+            "mr", "gu", "kn", "ml", "pa", "ur",
+        )
+    }
+
     flavorDimensions += "environment"
     productFlavors {
         create("dev") {
@@ -112,5 +120,6 @@ dependencies {
     implementation(libs.markdown.coil3) // images in release notes
     implementation(libs.profileinstaller) // installs the profile on first run, without waiting for the Play cloud profile
     "baselineProfile"(project(":baselineprofile"))
+    testImplementation(libs.junit)
     debugImplementation(libs.compose.ui.tooling)
 }
