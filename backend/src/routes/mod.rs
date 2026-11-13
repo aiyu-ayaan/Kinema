@@ -23,6 +23,7 @@ pub fn api_router() -> Router<AppState> {
     Router::new()
         .nest("/server", server::router())
         .nest("/auth", auth::router())
+        .merge(crate::i18n::router())
         .merge(libraries::router())
         .merge(items::router())
         .merge(matching::router())
@@ -38,4 +39,5 @@ pub fn api_router() -> Router<AppState> {
         .merge(devices::router())
         .merge(activity::router())
         .merge(requests::router())
+        .layer(axum::middleware::from_fn(crate::i18n::locale_middleware))
 }
