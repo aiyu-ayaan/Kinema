@@ -4,10 +4,10 @@ import { LinkBreak, ShareNetwork } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/Button'
 import { Badge, Card, CardHeader, EmptyState, ErrorText, Skeleton } from '@/components/ui/Card'
 import { api } from '@/lib/api'
-import { t } from '@/lib/i18n'
+import { getLanguage, t } from '@/lib/i18n'
 import type { Share } from '@/lib/types'
 
-const date = (s: number) => new Date(s * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+const date = (s: number) => new Date(s * 1000).toLocaleString(getLanguage(), { dateStyle: 'medium', timeStyle: 'short' })
 
 function state(s: Share): 'live' | 'expired' | 'revoked' {
   if (s.revoked_at) return 'revoked'

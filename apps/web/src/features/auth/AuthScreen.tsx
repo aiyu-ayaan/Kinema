@@ -4,13 +4,14 @@ import { ArrowLeft, Backspace, CircleNotch, HouseLine, LockSimple, ShieldWarning
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { ErrorText, Skeleton } from '@/components/ui/Card'
+import { Select } from '@/components/ui/Controls'
 import { Field } from '@/components/ui/Field'
 import { api, ApiError } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { clientDevice } from '@/lib/device'
 import { isDev } from '@/lib/flavor'
-import { t } from '@/lib/i18n'
+import { setLanguage, SUPPORTED_LANGUAGES, t, useLanguage } from '@/lib/i18n'
 import { useServerInfo } from '@/lib/queries'
 import type { ApprovalRequired, ProfileCard, User } from '@/lib/types'
 
@@ -73,8 +74,18 @@ function WaitingForApproval({ waiting, onBack }: { waiting: Waiting; onBack: () 
 }
 
 function Backdrop({ children, wide }: { children: ReactNode; wide?: boolean }) {
+  const lang = useLanguage()
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10">
+      <div className="absolute end-4 top-4 z-10">
+        <Select aria-label={t('profile.appLanguage')} value={lang} onChange={(e) => void setLanguage(e.target.value)} className="h-8 w-40 text-caption">
+          {SUPPORTED_LANGUAGES.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.nativeName}
+            </option>
+          ))}
+        </Select>
+      </div>
       {/* Soft ember glow behind the content; decoration only. */}
       <div
         aria-hidden

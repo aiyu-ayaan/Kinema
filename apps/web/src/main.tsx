@@ -6,6 +6,7 @@ import { App } from './App'
 import { AuthProvider } from './lib/auth'
 import { initializeDesktop } from './lib/desktop'
 import { initializeFlavor } from './lib/flavor'
+import { initLanguage } from './lib/i18n'
 import { applyStoredTheme } from './lib/theme'
 import './index.css'
 
@@ -24,17 +25,19 @@ const queryClient = new QueryClient({
   },
 })
 
-const root = document.getElementById('root')
-if (root) {
-  ReactDOM.createRoot(root).render(
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </React.StrictMode>,
-  )
-}
+void initLanguage().then(() => {
+  const root = document.getElementById('root')
+  if (root) {
+    ReactDOM.createRoot(root).render(
+      <React.StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </BrowserRouter>
+        </QueryClientProvider>
+      </React.StrictMode>,
+    )
+  }
+})

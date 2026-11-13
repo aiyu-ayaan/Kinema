@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/Button'
 import { Badge, Card, CardHeader, EmptyState, ErrorText, Skeleton } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { api } from '@/lib/api'
-import { t } from '@/lib/i18n'
+import { getLanguage, t } from '@/lib/i18n'
 import type { Device } from '@/lib/types'
 import { useDevices } from './usePendingDevices'
 
 const kindIcon = { desktop: DesktopTower, mobile: DeviceMobile, web: Globe }
-const date = (s: number) => new Date(s * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+const date = (s: number) => new Date(s * 1000).toLocaleString(getLanguage(), { dateStyle: 'medium', timeStyle: 'short' })
 
 function DeviceRow({ d, actions }: { d: Device; actions: ReactNode }) {
   const I = kindIcon[d.kind] ?? Globe

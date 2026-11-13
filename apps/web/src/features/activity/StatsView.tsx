@@ -2,12 +2,12 @@ import { Link } from 'react-router-dom'
 import { Artwork } from '@/components/media/Artwork'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { watchTime } from '@/lib/format'
-import { t } from '@/lib/i18n'
+import { getLanguage, t } from '@/lib/i18n'
 import { fillDaily } from '@/lib/stats'
 import type { WatchStats } from '@/lib/types'
 
-const day = (d: number) => new Date(d * 86_400_000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' })
-const when = (s: number) => new Date(s * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+const day = (d: number) => new Date(d * 86_400_000).toLocaleDateString(getLanguage(), { month: 'short', day: 'numeric', timeZone: 'UTC' })
+const when = (s: number) => new Date(s * 1000).toLocaleString(getLanguage(), { dateStyle: 'medium', timeStyle: 'short' })
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
