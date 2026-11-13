@@ -87,11 +87,16 @@ if [ -n "$FROM_FILE" ]; then
   label="${label%-linux-*}"
 else
   if command -v curl >/dev/null 2>&1; then
-    fetch() { curl -fsSL --retry 3 "$1"; }
-    fetch_to() { curl -fL --retry 3 --progress-bar -o "$2" "$1"; }
+    fetch() { curl -fsSL --connect-timeout 10 --speed-limit 1024 --speed-time 15 --retry 5 --retry-delay 2 "$1"; }
+    fetch_to() {
+      if command -v aria2c >/dev/null 2>&1; then
+        aria2c -x 8 -s 8 --connect-timeout=10 --lowest-speed-limit=10K -d "$(dirname "$2")" -o "$(basename "$2")" "$1" && return 0
+      fi
+      curl -fL --connect-timeout 10 --speed-limit 10240 --speed-time 15 --retry 5 --retry-delay 2 -C - --progress-bar -o "$2" "$1"
+    }
   elif command -v wget >/dev/null 2>&1; then
-    fetch() { wget -qO- "$1"; }
-    fetch_to() { wget -q --show-progress -O "$2" "$1"; }
+    fetch() { wget -qO- --connect-timeout=10 --read-timeout=15 "$1"; }
+    fetch_to() { wget -q --show-progress --connect-timeout=10 --read-timeout=15 -c -O "$2" "$1"; }
   else
     die "curl or wget is needed to download Kinema."
   fi
